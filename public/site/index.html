@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salon de Coiffure</title>
+    <meta name="description" content="Salon de coiffure">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/_assets/styles.css">
+    <style>
+        .loading-overlay { position: fixed; inset: 0; background: #f8f5f0; display: flex; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.3s; }
+        .loading-overlay.fade { opacity: 0; pointer-events: none; }
+        .loading-overlay::after { content: ''; width: 40px; height: 40px; border: 3px solid #c9a96e; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .google-rating { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-top: 20px; }
+        .google-rating .stars { color: #fbbc04; font-size: 1.2rem; letter-spacing: 2px; }
+        .google-rating .score { font-weight: 600; color: #1a1a1a; }
+        .google-rating .count { color: #6b6b6b; font-size: 0.9rem; }
+        .opening-hours-table { display: grid; grid-template-columns: auto 1fr; gap: 8px 20px; font-size: 0.95rem; }
+        .opening-hours-table .day { font-weight: 500; }
+        .opening-hours-table .hours.closed { color: #999; }
+        .social-icons { display: flex; gap: 16px; margin-top: 16px; }
+        .social-icons a { width: 40px; height: 40px; border-radius: 50%; background: #c9a96e; color: white; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+        .social-icons a:hover { transform: translateY(-2px); }
+        .social-icons svg { width: 20px; height: 20px; }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loading-overlay"></div>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo">
+                <span class="logo-text" id="logo-text">Salon</span>
+                <span class="logo-sub" id="logo-sub">Coiffure</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="#accueil">Accueil</a></li>
+                <li><a href="#services">Services</a></li>
+                <li><a href="#galerie">Galerie</a></li>
+                <li><a href="#avis">Avis</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+            <a href="#" class="nav-cta" id="nav-cta">Réserver</a>
+            <button class="mobile-menu-btn" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <section class="hero" id="accueil">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <span class="hero-tagline" id="hero-tagline">Bienvenue chez</span>
+            <h1 class="hero-title" id="hero-title">Salon</h1>
+            <p class="hero-subtitle" id="hero-subtitle">Votre coiffeur de proximité</p>
+            <div class="hero-buttons">
+                <a href="#contact" class="btn btn-primary">Prendre Rendez-vous</a>
+                <a href="#services" class="btn btn-secondary">Nos Services</a>
+            </div>
+            <div id="google-rating-container"></div>
+        </div>
+        <div class="hero-scroll">
+            <span>Découvrir</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+        </div>
+    </section>
+
+    <section class="intro">
+        <div class="container">
+            <div class="intro-content">
+                <div class="intro-text">
+                    <span class="section-label">Notre Histoire</span>
+                    <h2 class="section-title" id="intro-title">Un savoir-faire d'exception</h2>
+                    <p id="intro-description">Notre équipe vous accueille pour vous offrir des prestations de coiffure soignées dans une ambiance chaleureuse. Nous mettons notre savoir-faire au service de votre style.</p>
+                </div>
+                <div class="intro-stats" id="intro-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="stat-rating">—</span>
+                        <span class="stat-label">Note Google</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="stat-reviews">—</span>
+                        <span class="stat-label">Avis clients</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">100%</span>
+                        <span class="stat-label">Satisfaction</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="services" id="services">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Ce que nous proposons</span>
+                <h2 class="section-title">Nos Services</h2>
+            </div>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M3 21v-2a7 7 0 0 1 7-7h4a7 7 0 0 1 7 7v2"/></svg>
+                    </div>
+                    <h3>Coupe Femme & Homme</h3>
+                    <p>Des coupes personnalisées qui subliment votre style et votre personnalité.</p>
+                    <span class="service-price">Sur demande</span>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z"/></svg>
+                    </div>
+                    <h3>Coloration</h3>
+                    <p>Des couleurs vibrantes et naturelles réalisées avec des produits de haute qualité.</p>
+                    <span class="service-price">Sur demande</span>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/></svg>
+                    </div>
+                    <h3>Soin & Lissage</h3>
+                    <p>Soins capillaires, lissages et traitements pour des cheveux brillants et en bonne santé.</p>
+                    <span class="service-price">Sur demande</span>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </div>
+                    <h3>Mariage & Événement</h3>
+                    <p>Coiffures pour vos occasions spéciales : mariage, soirée, cérémonies.</p>
+                    <span class="service-price">Sur demande</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="gallery" id="galerie">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Nos réalisations</span>
+                <h2 class="section-title">Galerie</h2>
+            </div>
+            <div class="gallery-grid" id="gallery-grid"></div>
+        </div>
+    </section>
+
+    <section class="testimonials" id="avis">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Ils nous font confiance</span>
+                <h2 class="section-title">Avis Clients</h2>
+            </div>
+            <div class="testimonials-slider" id="testimonials-slider"></div>
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="#" id="google-reviews-link" target="_blank" rel="noopener" class="btn btn-secondary">Voir tous les avis Google</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="contact" id="contact">
+        <div class="container">
+            <div class="contact-wrapper">
+                <div class="contact-info">
+                    <span class="section-label">Nous contacter</span>
+                    <h2 class="section-title">Venez nous rendre visite</h2>
+                    <p class="contact-description" id="contact-description">Notre équipe vous accueille pour tous vos besoins en coiffure.</p>
+                    <div class="contact-details">
+                        <div class="contact-item">
+                            <div class="contact-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            </div>
+                            <div>
+                                <strong>Adresse</strong>
+                                <p id="contact-address">—</p>
+                            </div>
+                        </div>
+                        <div class="contact-item" id="contact-phone-block">
+                            <div class="contact-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            </div>
+                            <div>
+                                <strong>Téléphone</strong>
+                                <p><a href="#" id="contact-phone">—</a></p>
+                            </div>
+                        </div>
+                        <div class="contact-item" id="contact-email-block">
+                            <div class="contact-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                            </div>
+                            <div>
+                                <strong>Email</strong>
+                                <p><a href="#" id="contact-email">—</a></p>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            </div>
+                            <div>
+                                <strong>Horaires</strong>
+                                <div id="contact-hours"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="social-icons" id="social-icons"></div>
+                </div>
+                <div class="contact-map">
+                    <iframe id="map-iframe" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo-text" id="footer-logo-text">Salon</span>
+                    <span class="logo-sub" id="footer-logo-sub">Coiffure</span>
+                    <p id="footer-tagline">Votre salon de coiffure</p>
+                </div>
+                <div class="footer-links">
+                    <a href="#accueil">Accueil</a>
+                    <a href="#services">Services</a>
+                    <a href="#galerie">Galerie</a>
+                    <a href="#contact">Contact</a>
+                </div>
+                <div class="footer-social" id="footer-social"></div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; <span id="footer-year">2026</span> <span id="footer-name">Salon Coiffure</span>. Tous droits réservés.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/_assets/main.js"></script>
+</body>
+</html>

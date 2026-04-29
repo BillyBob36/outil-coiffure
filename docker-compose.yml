@@ -1,0 +1,23 @@
+services:
+  outil-coiffure:
+    build: .
+    container_name: outil-coiffure
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_PATH: /data/salons.db
+      SCREENSHOTS_DIR: /data/screenshots
+      INTERNAL_SCREENSHOT_BASE_URL: http://localhost:3000
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://coiffure.lamidetlm.com}
+      ADMIN_BASE_URL: ${ADMIN_BASE_URL:-https://outil-coiffure.lamidetlm.com}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      SESSION_SECRET: ${SESSION_SECRET}
+    volumes:
+      - outil-coiffure-data:/data
+
+volumes:
+  outil-coiffure-data:

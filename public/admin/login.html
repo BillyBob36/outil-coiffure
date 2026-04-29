@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion — Outil coiffure</title>
+    <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body class="login-page">
+    <div class="login-box">
+        <h1>Outil coiffure</h1>
+        <p class="login-subtitle">Connexion administrateur</p>
+        <form id="login-form">
+            <label>
+                <span>Email</span>
+                <input type="email" name="email" required autocomplete="username">
+            </label>
+            <label>
+                <span>Mot de passe</span>
+                <input type="password" name="password" required autocomplete="current-password">
+            </label>
+            <button type="submit">Se connecter</button>
+            <p class="error-message" id="error-message"></p>
+        </form>
+    </div>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const errEl = document.getElementById('error-message');
+            errEl.textContent = '';
+            try {
+                const res = await fetch('/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: fd.get('email'), password: fd.get('password') })
+                });
+                const data = await res.json();
+                if (res.ok) location.href = '/admin';
+                else errEl.textContent = data.error || 'Erreur de connexion';
+            } catch (err) {
+                errEl.textContent = err.message;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+.env
+.git
+.gitignore
+.dockerignore
+data/*.db
+data/*.db-journal
+data/csv-uploads/*.csv
+data/csv-exports/*.csv
+public/screenshots/*.jpg
+public/screenshots/*.png
+desktop.ini

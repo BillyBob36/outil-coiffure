@@ -1,0 +1,16 @@
+node_modules/
+.env
+data/*.db
+data/*.db-journal
+data/*.db-shm
+data/*.db-wal
+data/csv-uploads/*
+data/csv-exports/*
+public/screenshots/*.jpg
+public/screenshots/*.png
+!data/csv-uploads/.gitkeep
+!data/csv-exports/.gitkeep
+!public/screenshots/.gitkeep
+.DS_Store
+desktop.ini
+*.log
