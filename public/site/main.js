@@ -272,6 +272,18 @@ function renderSalon(view) {
     ratingBlock.innerHTML = `<span class="stat-fallback-text">${escapeHtml(c.intro.ratingFallback || '')}</span>`;
   }
 
+  // Bloc Satisfaction (toggle + valeurs editables)
+  const satisfactionBlock = $('stat-satisfaction-block');
+  if (satisfactionBlock) {
+    if (c.intro.showSatisfaction === false) {
+      satisfactionBlock.style.display = 'none';
+    } else {
+      satisfactionBlock.style.display = '';
+      setText('stat-satisfaction-value', c.intro.satisfactionValue || '100%');
+      setText('stat-satisfaction-label', c.intro.satisfactionLabel || 'Satisfaction');
+    }
+  }
+
   // SERVICES
   buildServices(c.services);
 

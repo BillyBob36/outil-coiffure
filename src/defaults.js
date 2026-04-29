@@ -86,10 +86,13 @@ export function buildDefaults(csvData) {
       showRating
     },
     intro: {
-      title: ville ? `Bienvenue ${deburr(ville).startsWith('a') || deburr(ville).startsWith('e') || deburr(ville).startsWith('i') || deburr(ville).startsWith('o') || deburr(ville).startsWith('u') ? `a ${ville}` : `a ${ville}`}` : 'Bienvenue',
+      title: ville ? `Bienvenue à ${ville}` : 'Bienvenue',
       description: csvData.meta_description || `Notre equipe vous accueille ${ville ? `a ${ville} ` : ''}pour vous offrir des prestations de coiffure soignees dans une ambiance chaleureuse. Nous mettons notre savoir-faire au service de votre style.`,
       showRating,
-      ratingFallback: 'Une qualite de service reconnue par nos clients fideles, jour apres jour.'
+      ratingFallback: 'Une qualite de service reconnue par nos clients fideles, jour apres jour.',
+      showSatisfaction: true,
+      satisfactionValue: '100%',
+      satisfactionLabel: 'Satisfaction'
     },
     services: {
       title: 'Nos Services',

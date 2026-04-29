@@ -8,6 +8,7 @@ import db from '../db.js';
 import { importCsvFile } from '../csv-importer.js';
 import { captureSalon, captureBatch } from '../screenshot-worker.js';
 import { startCleanNames, getCleanJob } from '../name-cleaner.js';
+import { startCorrectPresentation, getPresentationJob } from '../presentation-cleaner.js';
 
 const router = express.Router();
 const UPLOAD_DIR = './data/csv-uploads';
@@ -196,13 +197,21 @@ router.put('/salons/bulk-assign-group', express.json(), (req, res) => {
   res.json({ ok: true, moved: result.changes });
 });
 
-// Supprimer en masse des salons (filtre group_id/csv_source/search)
+// Supprimer en masse des salons (par slugs explicites OU par filtre)
 router.delete('/salons/bulk', express.json(), (req, res) => {
-  const { confirm, group_id, csv_source, search } = req.body || {};
+  const { confirm, group_id, csv_source, search, slugs } = req.body || {};
   if (confirm !== true) return res.status(400).json({ error: 'confirm: true requis pour valider la suppression' });
 
+  if (Array.isArray(slugs) && slugs.length > 0) {
+    // Mode selection : delete exactement ces slugs
+    const placeholders = slugs.map(() => '?').join(',');
+    const result = db.prepare(`DELETE FROM salons WHERE slug IN (${placeholders})`).run(...slugs);
+    return res.json({ ok: true, deleted: result.changes, expected: slugs.length });
+  }
+
+  // Mode filtre
   const { where, params } = buildFilterWhere({ group_id, csv_source, search });
-  if (!where) return res.status(400).json({ error: 'Au moins un filtre est requis pour eviter une suppression totale accidentelle' });
+  if (!where) return res.status(400).json({ error: 'Au moins un filtre ou une selection est requis pour eviter une suppression totale accidentelle' });
 
   const count = db.prepare(`SELECT COUNT(*) AS n FROM salons ${where}`).get(...params).n;
   const result = db.prepare(`DELETE FROM salons ${where}`).run(...params);
@@ -218,18 +227,30 @@ router.post('/screenshot/:slug', async (req, res) => {
 const activeJobs = new Map();
 
 router.post('/screenshot-batch', async (req, res) => {
-  const { csv_source, group_id, only_missing = true } = req.body || {};
-  let query = 'SELECT slug FROM salons';
-  const params = [];
-  const conds = [];
-  if (csv_source) { conds.push('csv_source = ?'); params.push(csv_source); }
-  if (group_id === 'none') conds.push('group_id IS NULL');
-  else if (group_id) { conds.push('group_id = ?'); params.push(parseInt(group_id, 10)); }
-  if (only_missing) conds.push('screenshot_path IS NULL');
-  if (conds.length) query += ' WHERE ' + conds.join(' AND ');
-  query += ' ORDER BY id ASC';
-
-  const slugs = db.prepare(query).all(...params).map(r => r.slug);
+  const { csv_source, group_id, only_missing = true, slugs: explicitSlugs } = req.body || {};
+  let slugs;
+  if (Array.isArray(explicitSlugs) && explicitSlugs.length > 0) {
+    // Mode selection : on capture exactement ces slugs (filtre only_missing applique en plus si demande)
+    if (only_missing) {
+      const placeholders = explicitSlugs.map(() => '?').join(',');
+      slugs = db.prepare(`SELECT slug FROM salons WHERE slug IN (${placeholders}) AND screenshot_path IS NULL`)
+        .all(...explicitSlugs).map(r => r.slug);
+    } else {
+      slugs = explicitSlugs;
+    }
+  } else {
+    // Mode filtre : group_id / csv_source / only_missing
+    let query = 'SELECT slug FROM salons';
+    const params = [];
+    const conds = [];
+    if (csv_source) { conds.push('csv_source = ?'); params.push(csv_source); }
+    if (group_id === 'none') conds.push('group_id IS NULL');
+    else if (group_id) { conds.push('group_id = ?'); params.push(parseInt(group_id, 10)); }
+    if (only_missing) conds.push('screenshot_path IS NULL');
+    if (conds.length) query += ' WHERE ' + conds.join(' AND ');
+    query += ' ORDER BY id ASC';
+    slugs = db.prepare(query).all(...params).map(r => r.slug);
+  }
   const jobId = 'job_' + Date.now();
   activeJobs.set(jobId, { total: slugs.length, done: 0, errors: 0, status: 'running', last: null });
 
@@ -251,9 +272,23 @@ router.post('/screenshot-batch', async (req, res) => {
 });
 
 router.get('/job/:jobId', (req, res) => {
-  const job = activeJobs.get(req.params.jobId) || getCleanJob(req.params.jobId);
+  const job = activeJobs.get(req.params.jobId) || getCleanJob(req.params.jobId) || getPresentationJob(req.params.jobId);
   if (!job) return res.status(404).json({ error: 'Job inconnu' });
   res.json(job);
+});
+
+// Correction de la presentation (texte d'intro) via GPT pour les slugs selectionnes
+router.post('/correct-presentation', express.json(), async (req, res) => {
+  const { slugs } = req.body || {};
+  if (!Array.isArray(slugs) || slugs.length === 0) {
+    return res.status(400).json({ error: 'slugs requis (tableau non vide)' });
+  }
+  try {
+    const result = await startCorrectPresentation({ slugs });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 router.post('/clean-names', express.json(), async (req, res) => {

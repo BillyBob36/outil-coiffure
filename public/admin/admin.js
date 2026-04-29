@@ -8,7 +8,8 @@ const state = {
   groupId: '',     // '' = tous les salons, 'none' = sans groupe, '<id>' = groupe specifique
   groups: [],
   orphanCount: 0,
-  total: 0
+  total: 0,
+  selectedSlugs: new Set()  // slugs des lignes cochees (persiste entre pages)
 };
 
 // Persistance du groupe actif (utile pour reprendre apres reload)
@@ -133,11 +134,15 @@ function salonRow(r) {
     </div>
   `;
 
-  // Pour l'affichage compact, on montre juste le path (sans le https://host)
   const landingDisplay = `/preview/${r.slug}`;
   const editDisplay = editUrl ? `/admin/${r.slug}?token=...` : null;
 
-  return `<tr data-slug="${escapeHtml(r.slug)}">
+  const checked = state.selectedSlugs.has(r.slug) ? 'checked' : '';
+
+  return `<tr data-slug="${escapeHtml(r.slug)}" class="${checked ? 'row-selected' : ''}">
+    <td class="col-checkbox">
+      <input type="checkbox" class="row-checkbox" ${checked} aria-label="Sélectionner ${escapeHtml(r.slug)}">
+    </td>
     <td>${nomScrappeCell}</td>
     <td>${nomFinalCell}</td>
     <td>${escapeHtml(r.ville || '')}</td>
@@ -145,45 +150,23 @@ function salonRow(r) {
     <td class="url-cell">${urlCell(landingDisplay, fullLanding, landingUrl)}</td>
     <td class="url-cell">${editDisplay ? urlCell(editDisplay, fullEdit, editUrl) : '<span class="no-screenshot">—</span>'}</td>
     <td>${screenshotCell}</td>
-    <td class="actions">
-      <button class="btn-small btn-primary action-screenshot">${escapeHtml(t('action.capture'))}</button>
-      <button class="btn-small btn-danger action-delete" title="${escapeHtml(t('action.delete'))}">×</button>
-    </td>
   </tr>`;
 }
 
 function bindRowActions() {
-  document.querySelectorAll('.action-screenshot').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const tr = btn.closest('tr');
+  // Selection : checkbox par ligne
+  document.querySelectorAll('.row-checkbox').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      const tr = cb.closest('tr');
       const slug = tr.dataset.slug;
-      btn.disabled = true;
-      btn.textContent = t('action.deleting');
-      try {
-        await api(`/admin/screenshot/${encodeURIComponent(slug)}`, { method: 'POST' });
-        await loadSalons();
-        await loadStats();
-      } catch (e) {
-        alert(t('err.generic') + ': ' + e.message);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = t('action.capture');
+      if (cb.checked) {
+        state.selectedSlugs.add(slug);
+        tr.classList.add('row-selected');
+      } else {
+        state.selectedSlugs.delete(slug);
+        tr.classList.remove('row-selected');
       }
-    });
-  });
-
-  document.querySelectorAll('.action-delete').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const tr = btn.closest('tr');
-      const slug = tr.dataset.slug;
-      if (!confirm(t('confirm.delete_salon', { slug }))) return;
-      try {
-        await api(`/admin/salon/${encodeURIComponent(slug)}`, { method: 'DELETE' });
-        await loadSalons();
-        await loadStats();
-      } catch (e) {
-        alert(e.message);
-      }
+      updateSelectionUI();
     });
   });
 
@@ -425,21 +408,8 @@ $('screenshot-modal').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) $('screenshot-modal').hidden = true;
 });
 
-$('batch-screenshots-btn').addEventListener('click', async () => {
-  const csvSource = state.csvSource || null;
-  const suffix = csvSource ? t('confirm.batch_screenshots_source', { source: csvSource }) : t('confirm.batch_screenshots_all');
-  if (!confirm(t('confirm.batch_screenshots') + suffix)) return;
-  try {
-    const res = await api('/admin/screenshot-batch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ csv_source: csvSource, group_id: state.groupId || null, only_missing: true })
-    });
-    pollJob(res.jobId);
-  } catch (e) {
-    alert(e.message);
-  }
-});
+// Le handler du bouton "Generer les captures" est maintenant base sur la selection :
+// voir runCaptureSelection() plus bas dans la section "SELECTION".
 
 async function pollJob(jobId, expectedTotal) {
   const status = $('job-status');
@@ -690,115 +660,135 @@ $('btn-delete-group').addEventListener('click', async () => {
 });
 
 // ==============================
-// BULK ACTIONS (déplacer / supprimer en masse)
+// SELECTION (cases a cocher) + actions sur la selection
 // ==============================
-function currentBulkFilter() {
-  return {
-    group_id: state.groupId || null,
-    csv_source: state.csvSource || null,
-    search: state.search || null
-  };
-}
-
-function isFilterActive() {
-  return !!(state.groupId || state.csvSource || state.search);
-}
-
 function updateBulkActionsBar() {
-  const bar = $('bulk-actions');
-  if (!bar) return;
-  if (!isFilterActive()) { bar.hidden = true; return; }
-  bar.hidden = false;
+  // Compatibilite : cette fonction etait appelee dans loadSalons, on garde son nom
+  // mais elle gere maintenant la selection.
+  updateSelectionUI();
+}
 
-  // Count = state.total (deja calcule par loadSalons)
-  const countLabel = $('bulk-count');
-  if (countLabel) {
-    countLabel.textContent = t('bulk.count_label', { count: state.total });
+function updateSelectionUI() {
+  const count = state.selectedSlugs.size;
+  const info = $('selection-info');
+  const span = info?.querySelector('span');
+
+  if (count === 0) {
+    if (info) info.hidden = true;
+  } else {
+    if (info) {
+      info.hidden = false;
+      if (span) span.innerHTML = t('table.selection_count', { count });
+    }
   }
 
-  // Repeupler le select target avec les groupes (sauf le groupe actif)
-  const sel = $('bulk-target-group');
-  if (sel) {
-    const opts = [`<option value="">${escapeHtml(t('bulk.choose_target'))}</option>`];
-    // Option "Sans groupe" si on est dans un groupe specifique (pour retirer)
-    if (state.groupId && state.groupId !== 'none') {
-      opts.push(`<option value="__none__">${escapeHtml(t('bulk.target_no_group'))}</option>`);
+  // Boutons qui dependent de la selection
+  const captureBtn = $('batch-screenshots-btn');
+  const correctBtn = $('correct-presentation-btn');
+  const deleteBtn = $('bulk-delete-selection-btn');
+  if (captureBtn) captureBtn.disabled = count === 0;
+  if (correctBtn) correctBtn.disabled = count === 0;
+  if (deleteBtn) deleteBtn.disabled = count === 0;
+
+  // Master checkbox : etat (checked / unchecked / indeterminate)
+  const master = $('select-all-checkbox');
+  if (master) {
+    const visibleSlugs = Array.from(document.querySelectorAll('.row-checkbox')).map(cb => cb.closest('tr').dataset.slug);
+    if (visibleSlugs.length === 0) {
+      master.checked = false;
+      master.indeterminate = false;
+    } else {
+      const allSelected = visibleSlugs.every(s => state.selectedSlugs.has(s));
+      const noneSelected = visibleSlugs.every(s => !state.selectedSlugs.has(s));
+      master.checked = allSelected;
+      master.indeterminate = !allSelected && !noneSelected;
     }
-    for (const g of state.groups) {
-      // Ne pas proposer le groupe actif comme cible
-      if (state.groupId && String(g.id) === String(state.groupId)) continue;
-      opts.push(`<option value="${g.id}">${escapeHtml(g.name)}</option>`);
-    }
-    const prev = sel.value;
-    sel.innerHTML = opts.join('');
-    sel.value = prev || '';
-    $('btn-bulk-move').disabled = !sel.value;
   }
 }
 
-document.addEventListener('change', (e) => {
-  if (e.target && e.target.id === 'bulk-target-group') {
-    $('btn-bulk-move').disabled = !e.target.value;
-  }
-});
+function clearSelection() {
+  state.selectedSlugs.clear();
+  document.querySelectorAll('.row-checkbox').forEach(cb => { cb.checked = false; });
+  document.querySelectorAll('tr.row-selected').forEach(tr => tr.classList.remove('row-selected'));
+  updateSelectionUI();
+}
 
-async function bulkMoveToGroup() {
-  const sel = $('bulk-target-group');
-  if (!sel || !sel.value) return;
-  const targetGroupId = sel.value === '__none__' ? null : parseInt(sel.value, 10);
-  const targetName = sel.options[sel.selectedIndex].text;
-  const filter = currentBulkFilter();
-  const count = state.total;
-  if (!confirm(t('bulk.confirm_move', { count, target: targetName }))) return;
-  try {
-    const res = await api('/admin/salons/bulk-assign-group', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        target_group_id: targetGroupId,
-        ...filter
-      })
+// Master checkbox
+if ($('select-all-checkbox')) {
+  $('select-all-checkbox').addEventListener('change', (e) => {
+    const checked = e.target.checked;
+    document.querySelectorAll('.row-checkbox').forEach(cb => {
+      const slug = cb.closest('tr').dataset.slug;
+      cb.checked = checked;
+      if (checked) {
+        state.selectedSlugs.add(slug);
+        cb.closest('tr').classList.add('row-selected');
+      } else {
+        state.selectedSlugs.delete(slug);
+        cb.closest('tr').classList.remove('row-selected');
+      }
     });
-    // Si on etait dans un groupe specifique ou "sans groupe", la vue se vide ; on bascule vers le groupe cible
-    if (targetGroupId) {
-      state.groupId = String(targetGroupId);
-      localStorage.setItem(ACTIVE_GROUP_KEY, state.groupId);
-    } else {
-      state.groupId = '';
-      localStorage.removeItem(ACTIVE_GROUP_KEY);
-    }
-    state.csvSource = '';
-    state.search = '';
-    state.page = 0;
-    $('search-input').value = '';
-    $('csv-source-filter').value = '';
-    await loadGroups();
-    await loadStats();
-    await loadSalons();
-    $('active-group-select').value = state.groupId || '';
-    alert(t('bulk.moved_success', { count: res.moved }));
+    updateSelectionUI();
+  });
+}
+
+if ($('clear-selection-btn')) {
+  $('clear-selection-btn').addEventListener('click', clearSelection);
+}
+
+// Action: Generer captures sur la selection
+async function runCaptureSelection() {
+  const slugs = Array.from(state.selectedSlugs);
+  if (slugs.length === 0) return;
+  if (!confirm(t('confirm.capture_selection', { count: slugs.length }))) return;
+  try {
+    const res = await api('/admin/screenshot-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slugs, only_missing: false })
+    });
+    showProgressBar(res.total);
+    pollJob(res.jobId, res.total);
   } catch (e) {
     alert(t('err.generic') + ': ' + e.message);
   }
 }
 
-async function bulkDeleteSalons() {
-  const filter = currentBulkFilter();
-  const count = state.total;
-  // Double confirmation pour la suppression
-  if (!confirm(t('bulk.confirm_delete_1', { count }))) return;
-  if (!confirm(t('bulk.confirm_delete_2'))) return;
+// Action: Corriger la presentation (GPT) sur la selection
+async function runCorrectPresentation() {
+  const slugs = Array.from(state.selectedSlugs);
+  if (slugs.length === 0) return;
+  if (!confirm(t('confirm.correct_presentation', { count: slugs.length }))) return;
+  try {
+    const res = await api('/admin/correct-presentation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slugs })
+    });
+    if (res.total === 0) {
+      alert(t('msg.no_presentation_to_correct'));
+      return;
+    }
+    showProgressBar(res.total);
+    pollJob(res.jobId, res.total);
+  } catch (e) {
+    alert(t('err.generic') + ': ' + e.message);
+  }
+}
+
+// Action: Supprimer la selection
+async function runDeleteSelection() {
+  const slugs = Array.from(state.selectedSlugs);
+  if (slugs.length === 0) return;
+  if (!confirm(t('confirm.delete_selection_1', { count: slugs.length }))) return;
+  if (!confirm(t('confirm.delete_selection_2'))) return;
   try {
     const res = await api('/admin/salons/bulk', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ confirm: true, ...filter })
+      body: JSON.stringify({ confirm: true, slugs })
     });
-    state.csvSource = '';
-    state.search = '';
-    state.page = 0;
-    $('search-input').value = '';
-    $('csv-source-filter').value = '';
+    clearSelection();
     await loadGroups();
     await loadStats();
     await loadSalons();
@@ -808,8 +798,9 @@ async function bulkDeleteSalons() {
   }
 }
 
-if ($('btn-bulk-move')) $('btn-bulk-move').addEventListener('click', bulkMoveToGroup);
-if ($('btn-bulk-delete')) $('btn-bulk-delete').addEventListener('click', bulkDeleteSalons);
+if ($('batch-screenshots-btn')) $('batch-screenshots-btn').onclick = runCaptureSelection;
+if ($('correct-presentation-btn')) $('correct-presentation-btn').addEventListener('click', runCorrectPresentation);
+if ($('bulk-delete-selection-btn')) $('bulk-delete-selection-btn').addEventListener('click', runDeleteSelection);
 
 // Language switcher
 applyTranslations();

@@ -80,33 +80,46 @@
                 <h1>Présentation principale</h1>
                 <p>C'est la première chose que voient vos clients. Donnez-leur envie d'entrer chez vous.</p>
             </div>
-            <div class="edit-card">
-                <label class="edit-field">
-                    <span class="edit-label">Petite phrase d'accroche</span>
-                    <input type="text" id="hero-tagline" placeholder="Ex : Bienvenue chez" maxlength="40">
-                    <span class="edit-help">Très courte, en majuscules sur le site (ex : « Bienvenue chez »)</span>
-                </label>
-                <label class="edit-field">
-                    <span class="edit-label">Nom du salon (titre principal) *</span>
-                    <input type="text" id="hero-title" placeholder="Ex : Salon Sophie" maxlength="80" required>
-                </label>
-                <label class="edit-field">
-                    <span class="edit-label">Sous-titre</span>
-                    <input type="text" id="hero-subtitle" placeholder="Ex : Salon de coiffure à Bourg-en-Bresse" maxlength="120">
-                </label>
 
-                <div class="edit-field">
-                    <span class="edit-label">Image de fond du salon</span>
+            <details class="accordion" open>
+                <summary class="accordion-summary">
+                    <span class="accordion-chevron"></span>
+                    <span class="accordion-title">Accueil</span>
+                </summary>
+                <div class="accordion-body">
+                    <label class="edit-field">
+                        <span class="edit-label">Petite phrase d'accroche</span>
+                        <input type="text" id="hero-tagline" placeholder="Ex : Bienvenue chez" maxlength="40">
+                        <span class="edit-help">Très courte, en majuscules sur le site (ex : « Bienvenue chez »)</span>
+                    </label>
+                    <label class="edit-field">
+                        <span class="edit-label">Nom du salon (titre principal) *</span>
+                        <input type="text" id="hero-title" placeholder="Ex : Salon Sophie" maxlength="80" required>
+                    </label>
+                    <label class="edit-field">
+                        <span class="edit-label">Sous-titre</span>
+                        <input type="text" id="hero-subtitle" placeholder="Ex : Salon de coiffure à Bourg-en-Bresse" maxlength="120">
+                    </label>
+                </div>
+            </details>
+
+            <details class="accordion">
+                <summary class="accordion-summary">
+                    <span class="accordion-chevron"></span>
+                    <span class="accordion-title">Image de fond du salon</span>
+                </summary>
+                <div class="accordion-body">
                     <span class="edit-help">Choisissez une belle photo qui représente votre salon. Format recommandé : paysage. Elle sera automatiquement compressée pour un affichage rapide.</span>
                     <div class="hero-image-current" id="hero-image-current">
                         <img id="hero-image-preview" src="" alt="">
                         <div class="hero-image-overlay">
-                            <button class="btn-change-image" id="btn-hero-image">Changer l'image</button>
+                            <button class="btn-change-image" id="btn-hero-image" type="button">Changer l'image</button>
                         </div>
                     </div>
                     <input type="file" id="hero-file-input" accept="image/*" hidden>
                 </div>
-            </div>
+            </details>
+
             <div class="edit-actions">
                 <button class="btn-save" data-section="hero">Enregistrer la présentation</button>
             </div>
@@ -118,33 +131,71 @@
                 <h1>Texte d'introduction</h1>
                 <p>Présentez votre salon en quelques lignes — votre savoir-faire, votre ambiance.</p>
             </div>
-            <div class="edit-card">
-                <label class="edit-field">
-                    <span class="edit-label">Titre de section</span>
-                    <input type="text" id="intro-title" placeholder="Ex : Bienvenue à Bourg-en-Bresse" maxlength="80">
-                </label>
-                <label class="edit-field">
-                    <span class="edit-label">Texte de présentation</span>
-                    <textarea id="intro-description" rows="5" placeholder="Décrivez votre salon, votre équipe, votre approche…"></textarea>
-                    <span class="edit-help">3 à 5 lignes suffisent. Soyez authentique et chaleureux.</span>
-                </label>
 
-                <div class="edit-field" id="intro-rating-block">
-                    <span class="edit-label">Affichage de la note Google</span>
-                    <span class="edit-help" id="intro-rating-status"></span>
-                    <label class="edit-toggle">
-                        <input type="checkbox" id="intro-show-rating">
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-label">Afficher ma note Google sur le site</span>
+            <details class="accordion" open>
+                <summary class="accordion-summary">
+                    <span class="accordion-chevron"></span>
+                    <span class="accordion-title">Texte</span>
+                </summary>
+                <div class="accordion-body">
+                    <label class="edit-field">
+                        <span class="edit-label">Titre de section</span>
+                        <input type="text" id="intro-title" placeholder="Ex : Bienvenue à Bourg-en-Bresse" maxlength="80">
+                    </label>
+                    <label class="edit-field">
+                        <span class="edit-label">Texte de présentation</span>
+                        <textarea id="intro-description" rows="5" placeholder="Décrivez votre salon, votre équipe, votre approche…"></textarea>
+                        <span class="edit-help">3 à 5 lignes suffisent. Soyez authentique et chaleureux.</span>
                     </label>
                 </div>
+            </details>
 
-                <label class="edit-field" id="intro-fallback-block">
-                    <span class="edit-label">Phrase qui apparaît à la place de la note</span>
-                    <input type="text" id="intro-fallback" maxlength="120" placeholder="Ex : Une qualité de service reconnue par nos clients fidèles.">
-                    <span class="edit-help">S'affiche uniquement si la note Google est masquée.</span>
-                </label>
-            </div>
+            <details class="accordion">
+                <summary class="accordion-summary">
+                    <span class="accordion-chevron"></span>
+                    <span class="accordion-title">Blocs (note Google &amp; Satisfaction)</span>
+                </summary>
+                <div class="accordion-body">
+                    <div class="edit-field" id="intro-rating-block">
+                        <span class="edit-label">Bloc « Note Google »</span>
+                        <span class="edit-help" id="intro-rating-status"></span>
+                        <label class="edit-toggle">
+                            <input type="checkbox" id="intro-show-rating">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Afficher ma note Google sur le site</span>
+                        </label>
+                    </div>
+
+                    <label class="edit-field" id="intro-fallback-block">
+                        <span class="edit-label">Phrase qui apparaît à la place de la note</span>
+                        <input type="text" id="intro-fallback" maxlength="120" placeholder="Ex : Une qualité de service reconnue par nos clients fidèles.">
+                        <span class="edit-help">S'affiche uniquement si la note Google est masquée.</span>
+                    </label>
+
+                    <hr class="accordion-sep">
+
+                    <div class="edit-field">
+                        <span class="edit-label">Bloc « 100% Satisfaction »</span>
+                        <label class="edit-toggle">
+                            <input type="checkbox" id="intro-show-satisfaction" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Afficher ce bloc sur le site</span>
+                        </label>
+                    </div>
+
+                    <div class="satisfaction-fields">
+                        <label class="edit-field">
+                            <span class="edit-label">Valeur (chiffre ou texte)</span>
+                            <input type="text" id="intro-satisfaction-value" placeholder="100%" maxlength="20">
+                        </label>
+                        <label class="edit-field">
+                            <span class="edit-label">Légende sous la valeur</span>
+                            <input type="text" id="intro-satisfaction-label" placeholder="Satisfaction" maxlength="40">
+                        </label>
+                    </div>
+                </div>
+            </details>
+
             <div class="edit-actions">
                 <button class="btn-save" data-section="intro">Enregistrer le texte</button>
             </div>
@@ -154,11 +205,11 @@
         <section class="edit-section" data-section="services">
             <div class="edit-section-head">
                 <h1>Services &amp; tarifs</h1>
-                <p>Listez vos prestations avec leurs prix. Vous pouvez ajouter, modifier ou supprimer chaque service.</p>
+                <p>Listez vos prestations avec leurs prix. Cliquez sur une ligne pour éditer ses détails.</p>
             </div>
-            <div class="edit-card services-list" id="services-list"></div>
+            <div class="services-accordion-list" id="services-list"></div>
             <div class="services-add-row">
-                <button class="btn-add" id="btn-add-service">+ Ajouter un service</button>
+                <button class="btn-add" id="btn-add-service" type="button">+ Ajouter un service</button>
                 <span class="services-count" id="services-count"></span>
             </div>
             <div class="edit-actions">
@@ -173,44 +224,54 @@
                 <p>Ajoutez des photos de votre salon, vos réalisations, vos coiffures. C'est ce qui donne envie de prendre rendez-vous.</p>
             </div>
 
-            <div class="edit-card">
-                <span class="edit-label">Style d'affichage</span>
-                <div class="layout-choice">
-                    <label class="layout-option">
-                        <input type="radio" name="gallery-layout" value="grid" checked>
-                        <div class="layout-card">
-                            <div class="layout-mock layout-mock-grid">
-                                <span></span><span></span><span></span>
-                                <span></span><span></span><span></span>
+            <details class="accordion" open>
+                <summary class="accordion-summary">
+                    <span class="accordion-chevron"></span>
+                    <span class="accordion-title">Style d'affichage</span>
+                </summary>
+                <div class="accordion-body">
+                    <div class="layout-choice">
+                        <label class="layout-option">
+                            <input type="radio" name="gallery-layout" value="grid" checked>
+                            <div class="layout-card">
+                                <div class="layout-mock layout-mock-grid">
+                                    <span></span><span></span><span></span>
+                                    <span></span><span></span><span></span>
+                                </div>
+                                <strong>Grille classique</strong>
+                                <small>Vignettes carrées, identiques</small>
                             </div>
-                            <strong>Grille classique</strong>
-                            <small>Vignettes carrées, identiques</small>
-                        </div>
-                    </label>
-                    <label class="layout-option">
-                        <input type="radio" name="gallery-layout" value="masonry">
-                        <div class="layout-card">
-                            <div class="layout-mock layout-mock-masonry">
-                                <span style="height:30px"></span><span style="height:50px"></span>
-                                <span style="height:42px"></span><span style="height:28px"></span>
-                                <span style="height:36px"></span><span style="height:48px"></span>
+                        </label>
+                        <label class="layout-option">
+                            <input type="radio" name="gallery-layout" value="masonry">
+                            <div class="layout-card">
+                                <div class="layout-mock layout-mock-masonry">
+                                    <span style="height:30px"></span><span style="height:50px"></span>
+                                    <span style="height:42px"></span><span style="height:28px"></span>
+                                    <span style="height:36px"></span><span style="height:48px"></span>
+                                </div>
+                                <strong>Style Pinterest</strong>
+                                <small>Photos aux ratios d'origine, comme Pinterest</small>
                             </div>
-                            <strong>Style Pinterest</strong>
-                            <small>Photos aux ratios d'origine, comme Pinterest</small>
-                        </div>
-                    </label>
+                        </label>
+                    </div>
                 </div>
-            </div>
+            </details>
 
-            <div class="edit-card">
-                <span class="edit-label">Photos</span>
-                <span class="edit-help">Cliquez sur le + pour ajouter. Vous pouvez réorganiser en glissant les photos.</span>
-                <div class="gallery-images-list" id="gallery-images-list"></div>
-                <input type="file" id="gallery-file-input" accept="image/*" multiple hidden>
-                <div class="gallery-limit-warning" id="gallery-limit-warning" hidden>
-                    Vous avez atteint la limite de 12 photos. Supprimez-en une pour en ajouter d'autres.
+            <details class="accordion" open>
+                <summary class="accordion-summary">
+                    <span class="accordion-chevron"></span>
+                    <span class="accordion-title">Photos</span>
+                </summary>
+                <div class="accordion-body">
+                    <span class="edit-help">Cliquez sur le + pour ajouter. Vous pouvez supprimer chaque photo individuellement.</span>
+                    <div class="gallery-images-list" id="gallery-images-list"></div>
+                    <input type="file" id="gallery-file-input" accept="image/*" multiple hidden>
+                    <div class="gallery-limit-warning" id="gallery-limit-warning" hidden>
+                        Vous avez atteint la limite de 12 photos. Supprimez-en une pour en ajouter d'autres.
+                    </div>
                 </div>
-            </div>
+            </details>
 
             <div class="edit-actions">
                 <button class="btn-save" data-section="gallery">Enregistrer mes photos</button>
@@ -223,7 +284,7 @@
                 <h1>Avis clients</h1>
                 <p>Inventez 3 avis sympas ou copiez-collez de vrais avis Google de vos clients satisfaits.</p>
             </div>
-            <div class="edit-card testimonials-list" id="testimonials-list"></div>
+            <div class="testimonials-accordion-list" id="testimonials-list"></div>
             <div class="edit-actions">
                 <button class="btn-save" data-section="testimonials">Enregistrer les avis</button>
             </div>
@@ -235,73 +296,90 @@
                 <h1>Contact &amp; Réseaux sociaux</h1>
                 <p>Vos informations de contact et vos liens sociaux.</p>
             </div>
-            <div class="edit-card">
-                <label class="edit-field">
-                    <span class="edit-label">Adresse *</span>
-                    <input type="text" id="contact-address" placeholder="Ex : 12 rue des Lilas">
-                </label>
-                <label class="edit-field">
-                    <span class="edit-label">Code postal &amp; Ville</span>
-                    <input type="text" id="contact-address2" placeholder="Ex : 01000 Bourg-en-Bresse">
-                    <span class="edit-help">L'adresse est toujours visible sur le site (avec la carte Google Maps).</span>
-                </label>
-                <label class="edit-field">
-                    <span class="edit-label">Téléphone</span>
-                    <input type="tel" id="contact-phone" placeholder="Ex : 04 74 12 34 56">
-                </label>
-                <label class="edit-field">
-                    <span class="edit-label">Email</span>
-                    <input type="email" id="contact-email" placeholder="Ex : contact@monsalon.fr">
-                </label>
-                <label class="edit-field">
-                    <span class="edit-label">Réservation en ligne (optionnel)</span>
-                    <input type="url" id="contact-booking-url" placeholder="Ex : https://www.planity.com/votre-salon">
-                    <span class="edit-help">Si vous avez Planity, Booksy, Treatwell, etc. : collez votre lien de réservation. Le bouton "Réserver" du site dirigera directement vos clients vers votre planning.</span>
-                </label>
-            </div>
 
-            <div class="edit-card">
-                <span class="edit-label">Horaires d'ouverture</span>
-                <span class="edit-help">Format texte simple, ex : « 9h - 18h » ou « Fermé »</span>
-                <div class="hours-grid" id="hours-grid"></div>
-            </div>
+            <details class="accordion" open>
+                <summary class="accordion-summary">
+                    <span class="accordion-chevron"></span>
+                    <span class="accordion-title">Contact</span>
+                </summary>
+                <div class="accordion-body">
+                    <label class="edit-field">
+                        <span class="edit-label">Adresse *</span>
+                        <input type="text" id="contact-address" placeholder="Ex : 12 rue des Lilas">
+                    </label>
+                    <label class="edit-field">
+                        <span class="edit-label">Code postal &amp; Ville</span>
+                        <input type="text" id="contact-address2" placeholder="Ex : 01000 Bourg-en-Bresse">
+                        <span class="edit-help">L'adresse est toujours visible sur le site (avec la carte Google Maps).</span>
+                    </label>
+                    <label class="edit-field">
+                        <span class="edit-label">Téléphone</span>
+                        <input type="tel" id="contact-phone" placeholder="Ex : 04 74 12 34 56">
+                    </label>
+                    <label class="edit-field">
+                        <span class="edit-label">Email</span>
+                        <input type="email" id="contact-email" placeholder="Ex : contact@monsalon.fr">
+                    </label>
+                    <label class="edit-field">
+                        <span class="edit-label">Réservation en ligne (optionnel)</span>
+                        <input type="url" id="contact-booking-url" placeholder="Ex : https://www.planity.com/votre-salon">
+                        <span class="edit-help">Si vous avez Planity, Booksy, Treatwell, etc. : collez votre lien de réservation. Le bouton « Réserver » du site dirigera directement vos clients vers votre planning.</span>
+                    </label>
+                </div>
+            </details>
 
-            <div class="edit-card">
-                <span class="edit-label">Réseaux sociaux</span>
-                <span class="edit-help">Activez/désactivez l'affichage de chaque réseau. Laissez vide pour masquer.</span>
-                <div class="social-row" data-social="facebook">
-                    <span class="social-name">Facebook</span>
-                    <input type="url" placeholder="https://facebook.com/votresalon">
-                    <label class="edit-toggle compact">
-                        <input type="checkbox">
-                        <span class="toggle-slider"></span>
-                    </label>
+            <details class="accordion">
+                <summary class="accordion-summary">
+                    <span class="accordion-chevron"></span>
+                    <span class="accordion-title">Horaires</span>
+                </summary>
+                <div class="accordion-body">
+                    <span class="edit-help">Format texte simple, ex : « 9h - 18h » ou « Fermé »</span>
+                    <div class="hours-grid" id="hours-grid"></div>
                 </div>
-                <div class="social-row" data-social="instagram">
-                    <span class="social-name">Instagram</span>
-                    <input type="url" placeholder="https://instagram.com/votresalon">
-                    <label class="edit-toggle compact">
-                        <input type="checkbox">
-                        <span class="toggle-slider"></span>
-                    </label>
+            </details>
+
+            <details class="accordion">
+                <summary class="accordion-summary">
+                    <span class="accordion-chevron"></span>
+                    <span class="accordion-title">Réseaux sociaux</span>
+                </summary>
+                <div class="accordion-body">
+                    <span class="edit-help">Activez/désactivez l'affichage de chaque réseau. Laissez vide pour masquer.</span>
+                    <div class="social-row" data-social="facebook">
+                        <span class="social-name">Facebook</span>
+                        <input type="url" placeholder="https://facebook.com/votresalon">
+                        <label class="edit-toggle compact">
+                            <input type="checkbox">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="social-row" data-social="instagram">
+                        <span class="social-name">Instagram</span>
+                        <input type="url" placeholder="https://instagram.com/votresalon">
+                        <label class="edit-toggle compact">
+                            <input type="checkbox">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="social-row" data-social="tiktok">
+                        <span class="social-name">TikTok</span>
+                        <input type="url" placeholder="https://tiktok.com/@votresalon">
+                        <label class="edit-toggle compact">
+                            <input type="checkbox">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="social-row" data-social="youtube">
+                        <span class="social-name">YouTube</span>
+                        <input type="url" placeholder="https://youtube.com/@votresalon">
+                        <label class="edit-toggle compact">
+                            <input type="checkbox">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
-                <div class="social-row" data-social="tiktok">
-                    <span class="social-name">TikTok</span>
-                    <input type="url" placeholder="https://tiktok.com/@votresalon">
-                    <label class="edit-toggle compact">
-                        <input type="checkbox">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div class="social-row" data-social="youtube">
-                    <span class="social-name">YouTube</span>
-                    <input type="url" placeholder="https://youtube.com/@votresalon">
-                    <label class="edit-toggle compact">
-                        <input type="checkbox">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-            </div>
+            </details>
 
             <div class="edit-actions">
                 <button class="btn-save" data-section="contact">Enregistrer mes informations</button>

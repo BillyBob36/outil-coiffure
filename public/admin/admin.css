@@ -299,6 +299,51 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     font-size: 0.9rem;
 }
 
+/* Colonne de cases a cocher (selection) */
+.col-checkbox {
+    width: 36px;
+    text-align: center;
+}
+.col-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent-dark);
+}
+.salons-table tr.row-selected {
+    background: rgba(201, 169, 110, 0.08);
+}
+.salons-table tr.row-selected:hover {
+    background: rgba(201, 169, 110, 0.12);
+}
+
+/* Selection info bar */
+.selection-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    background: rgba(201, 169, 110, 0.10);
+    border: 1px solid rgba(201, 169, 110, 0.3);
+    border-radius: 6px;
+    font-size: 0.92rem;
+    color: var(--accent-dark);
+}
+.selection-info[hidden] { display: none; }
+.selection-info strong { font-weight: 700; }
+.btn-link-light {
+    background: transparent;
+    color: var(--accent-dark);
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.btn-link-light:hover { color: var(--primary); }
+
 /* Bulk actions : barre contextuelle qui apparait quand un filtre est actif */
 .bulk-actions-row {
     display: flex;

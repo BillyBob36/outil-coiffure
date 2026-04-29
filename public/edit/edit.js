@@ -255,6 +255,17 @@ function renderIntro(intro) {
   $('intro-show-rating').checked = intro.showRating !== false;
   $('intro-fallback').value = intro.ratingFallback || '';
 
+  // Bloc Satisfaction (nouveaux champs)
+  if ($('intro-show-satisfaction')) {
+    $('intro-show-satisfaction').checked = intro.showSatisfaction !== false; // par defaut affiche
+  }
+  if ($('intro-satisfaction-value')) {
+    $('intro-satisfaction-value').value = intro.satisfactionValue || '100%';
+  }
+  if ($('intro-satisfaction-label')) {
+    $('intro-satisfaction-label').value = intro.satisfactionLabel || 'Satisfaction';
+  }
+
   const note = state.noteAvis;
   const hasNote = note != null && Number.isFinite(note);
   state.hasGoogleNote = hasNote;
@@ -287,38 +298,89 @@ function collectIntro() {
     title: $('intro-title').value.trim(),
     description: $('intro-description').value.trim(),
     showRating: $('intro-show-rating').checked && state.hasGoogleNote && state.noteAvis >= 4,
-    ratingFallback: $('intro-fallback').value.trim()
+    ratingFallback: $('intro-fallback').value.trim(),
+    showSatisfaction: $('intro-show-satisfaction')?.checked !== false,
+    satisfactionValue: ($('intro-satisfaction-value')?.value || '').trim() || '100%',
+    satisfactionLabel: ($('intro-satisfaction-label')?.value || '').trim() || 'Satisfaction'
   };
 }
 
-// ----- SERVICES -----
+// ----- SERVICES (accordeon par service) -----
 function renderServices(services) {
   const list = $('services-list');
   list.innerHTML = '';
   state.servicesArr = (services.items || []).slice();
-  state.servicesArr.forEach((s, i) => list.appendChild(buildServiceRow(s, i)));
+  state.servicesArr.forEach((s, i) => list.appendChild(buildServiceItem(s, i)));
   updateServicesCount();
 }
 
-function buildServiceRow(s, idx) {
-  const row = document.createElement('div');
-  row.className = 'service-row';
-  row.dataset.idx = idx;
-  row.innerHTML = `
-    <input type="text" placeholder="Nom du service" value="${escapeAttr(s.name || '')}" data-field="name">
-    <input type="text" placeholder="Description (optionnelle)" value="${escapeAttr(s.description || '')}" data-field="description">
-    <input type="text" placeholder="Tarif" value="${escapeAttr(s.price || '')}" data-field="price">
-    <div class="service-actions">
-      <button class="btn-icon btn-icon-danger" title="Supprimer ce service" type="button">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+function buildServiceItem(s, idx) {
+  const item = document.createElement('details');
+  item.className = 'service-item';
+  item.dataset.idx = idx;
+  // Auto-open les nouveaux services (sans nom) pour qu'on voit qu'on peut editer
+  if (!s.name) item.open = true;
+
+  const placeholderName = s.name ? escapeAttr(s.name) : 'Service sans nom';
+  const nameEmpty = s.name ? '' : 'empty';
+  const priceDisplay = s.price ? escapeAttr(s.price) : '';
+
+  item.innerHTML = `
+    <summary class="service-item-summary">
+      <span class="accordion-chevron"></span>
+      <span class="service-name-display ${nameEmpty}">${placeholderName}</span>
+      ${priceDisplay ? `<span class="service-price-display">${priceDisplay}</span>` : ''}
+      <button class="btn-remove-service" title="Supprimer ce service" type="button" aria-label="Supprimer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
+    </summary>
+    <div class="service-item-body">
+      <input type="text" placeholder="Nom du service (ex : Coupe Femme)" value="${escapeAttr(s.name || '')}" data-field="name">
+      <input type="text" placeholder="Description (optionnelle)" value="${escapeAttr(s.description || '')}" data-field="description">
+      <input type="text" placeholder="Tarif (ex : 35€ ou À partir de 35€)" value="${escapeAttr(s.price || '')}" data-field="price">
     </div>
   `;
-  row.querySelector('.btn-icon-danger').onclick = () => {
+
+  // Bouton suppression (eviter que clic ne ferme/ouvre le details)
+  const removeBtn = item.querySelector('.btn-remove-service');
+  removeBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     state.servicesArr.splice(idx, 1);
     renderServices({ items: state.servicesArr });
-  };
-  return row;
+  });
+
+  // Mise a jour live du resume quand on tape dans les champs
+  const nameInput = item.querySelector('[data-field="name"]');
+  const priceInput = item.querySelector('[data-field="price"]');
+  const nameDisplay = item.querySelector('.service-name-display');
+  const priceDisplayEl = item.querySelector('.service-price-display');
+
+  nameInput.addEventListener('input', () => {
+    const v = nameInput.value.trim();
+    if (v) {
+      nameDisplay.textContent = v;
+      nameDisplay.classList.remove('empty');
+    } else {
+      nameDisplay.textContent = 'Service sans nom';
+      nameDisplay.classList.add('empty');
+    }
+  });
+  priceInput.addEventListener('input', () => {
+    const v = priceInput.value.trim();
+    if (priceDisplayEl) {
+      priceDisplayEl.textContent = v;
+    } else if (v) {
+      // Creer le span s'il n'existait pas
+      const sum = item.querySelector('.service-item-summary');
+      const newSpan = document.createElement('span');
+      newSpan.className = 'service-price-display';
+      newSpan.textContent = v;
+      sum.insertBefore(newSpan, removeBtn);
+    }
+  });
+
+  return item;
 }
 
 function escapeAttr(s) { return String(s || '').replace(/"/g, '&quot;'); }
@@ -341,11 +403,10 @@ $('btn-add-service').onclick = () => {
 };
 
 function collectServices() {
-  const rows = $$('#services-list .service-row');
-  const items = rows.map((row, i) => {
-    const name = row.querySelector('[data-field="name"]').value.trim();
-    const description = row.querySelector('[data-field="description"]').value.trim();
-    const price = row.querySelector('[data-field="price"]').value.trim();
+  const items = $$('#services-list .service-item').map((item, i) => {
+    const name = item.querySelector('[data-field="name"]').value.trim();
+    const description = item.querySelector('[data-field="description"]').value.trim();
+    const price = item.querySelector('[data-field="price"]').value.trim();
     return { id: state.servicesArr[i]?.id || ('s' + Date.now() + i), name, description, price };
   }).filter(s => s.name);
   return { title: 'Nos Services', items };
@@ -424,7 +485,7 @@ function collectGallery() {
   return { layout, images: state.galleryImages.slice(), title: 'Galerie' };
 }
 
-// ----- TESTIMONIALS -----
+// ----- TESTIMONIALS (accordeon par avis) -----
 function renderTestimonials(testimonials) {
   const list = $('testimonials-list');
   const items = (testimonials.items || []).slice(0, 3);
@@ -432,28 +493,46 @@ function renderTestimonials(testimonials) {
 
   list.innerHTML = '';
   items.forEach((t, i) => {
-    const row = document.createElement('div');
-    row.className = 'testimonial-row';
-    row.innerHTML = `
-      <span class="ti-num">${i+1}</span>
-      <strong>Avis n°${i+1}</strong>
-      <textarea placeholder="Ex : Une expérience top, équipe adorable, je recommande !" data-field="text">${escapeAttr(t.text || '')}</textarea>
-      <div class="testimonial-meta">
-        <input type="text" placeholder="Prénom + initiale (ex : Marie L.)" data-field="author" value="${escapeAttr(t.author || '')}">
-        <input type="text" placeholder="Date (ex : Il y a 2 semaines)" data-field="date" value="${escapeAttr(t.date || '')}">
+    const item = document.createElement('details');
+    item.className = 'testimonial-item';
+    if (!t.text) item.open = true; // ouvert pour les avis vides
+
+    const preview = t.text ? `« ${t.text.slice(0, 60)}${t.text.length > 60 ? '…' : ''} »` : '';
+
+    item.innerHTML = `
+      <summary class="testimonial-item-summary">
+        <span class="accordion-chevron"></span>
+        <span class="testimonial-item-num">${i+1}</span>
+        <span class="testimonial-item-title">Avis n°${i+1}</span>
+        <span class="testimonial-item-preview">${escapeAttr(preview)}</span>
+      </summary>
+      <div class="testimonial-item-body">
+        <textarea placeholder="Ex : Une expérience top, équipe adorable, je recommande !" data-field="text">${escapeAttr(t.text || '')}</textarea>
+        <div class="testimonial-meta">
+          <input type="text" placeholder="Prénom + initiale (ex : Marie L.)" data-field="author" value="${escapeAttr(t.author || '')}">
+          <input type="text" placeholder="Date (ex : Il y a 2 semaines)" data-field="date" value="${escapeAttr(t.date || '')}">
+        </div>
       </div>
     `;
-    list.appendChild(row);
+
+    // Mise a jour live du preview du sommaire
+    const textArea = item.querySelector('[data-field="text"]');
+    const previewEl = item.querySelector('.testimonial-item-preview');
+    textArea.addEventListener('input', () => {
+      const v = textArea.value.trim();
+      previewEl.textContent = v ? `« ${v.slice(0, 60)}${v.length > 60 ? '…' : ''} »` : '';
+    });
+
+    list.appendChild(item);
   });
 }
 
 function collectTestimonials() {
-  const rows = $$('#testimonials-list .testimonial-row');
-  const items = rows.map((row, i) => ({
+  const items = $$('#testimonials-list .testimonial-item').map((item, i) => ({
     id: 't' + (i+1),
-    text: row.querySelector('[data-field="text"]').value.trim(),
-    author: row.querySelector('[data-field="author"]').value.trim(),
-    date: row.querySelector('[data-field="date"]').value.trim()
+    text: item.querySelector('[data-field="text"]').value.trim(),
+    author: item.querySelector('[data-field="author"]').value.trim(),
+    date: item.querySelector('[data-field="date"]').value.trim()
   })).filter(t => t.text);
   return { title: 'Avis Clients', items };
 }

@@ -89,29 +89,27 @@
             </div>
 
             <div class="batch-actions">
-                <button id="batch-screenshots-btn" class="btn-primary" data-i18n="table.batch_screenshots">Générer toutes les captures manquantes</button>
+                <button id="batch-screenshots-btn" class="btn-primary" data-i18n="table.batch_screenshots" disabled>Générer les captures</button>
                 <button id="clean-names-btn" class="btn-primary" data-i18n="table.clean_names" data-i18n-title="table.clean_names_tooltip">Nettoyer les noms (IA)</button>
+                <button id="correct-presentation-btn" class="btn-primary" data-i18n="table.correct_presentation" data-i18n-title="table.correct_presentation_tooltip" disabled>Corriger présentation</button>
                 <button id="export-csv-btn" class="btn-secondary" data-i18n="table.export_csv">Exporter CSV enrichi</button>
+                <button id="bulk-delete-selection-btn" class="btn-danger-soft" data-i18n="table.delete_selection" disabled>Supprimer la sélection</button>
                 <span id="job-status"></span>
             </div>
 
-            <!-- Bulk actions : actif uniquement quand un filtre est applique -->
-            <div class="bulk-actions-row" id="bulk-actions" hidden>
-                <div class="bulk-info">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-                    <span class="bulk-count" id="bulk-count">—</span>
-                </div>
-                <div class="bulk-buttons">
-                    <select id="bulk-target-group" class="bulk-target" aria-label="Groupe cible"></select>
-                    <button id="btn-bulk-move" class="btn-secondary" type="button" disabled data-i18n="bulk.move">Déplacer</button>
-                    <button id="btn-bulk-delete" class="btn-danger-soft" type="button" data-i18n="bulk.delete">Supprimer</button>
-                </div>
+            <!-- Compteur sélection (visible quand >=1 ligne cochée) -->
+            <div class="selection-info" id="selection-info" hidden>
+                <span data-i18n-html="table.selection_count" data-i18n-args-count="0">0 ligne(s) sélectionnée(s)</span>
+                <button class="btn-link-light" id="clear-selection-btn" type="button" data-i18n="table.clear_selection">Tout désélectionner</button>
             </div>
 
             <div class="table-wrap">
                 <table class="salons-table">
                     <thead>
                         <tr>
+                            <th class="col-checkbox">
+                                <input type="checkbox" id="select-all-checkbox" aria-label="Tout sélectionner">
+                            </th>
                             <th data-i18n="col.nom_scrappe">Nom scrappé</th>
                             <th><span data-i18n="col.nom_final">Nom final</span> <span class="th-hint" data-i18n="col.editable_hint">(éditable)</span></th>
                             <th data-i18n="col.ville">Ville</th>
@@ -119,7 +117,6 @@
                             <th data-i18n="col.url_landing">URL Landing</th>
                             <th data-i18n="col.url_edition">URL Édition</th>
                             <th data-i18n="col.capture">Capture</th>
-                            <th data-i18n="col.actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="salons-tbody"></tbody>
