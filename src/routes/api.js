@@ -1,44 +1,13 @@
 import express from 'express';
 import db from '../db.js';
+import { buildSalonView } from '../defaults.js';
 
 const router = express.Router();
-
-function rowToPublicSalon(row) {
-  if (!row) return null;
-  let data = {};
-  try { data = JSON.parse(row.data_json || '{}'); } catch {}
-  let hours = null;
-  try { hours = row.heures_ouverture ? JSON.parse(row.heures_ouverture) : null; } catch {}
-  return {
-    slug: row.slug,
-    nom: row.nom,
-    ville: row.ville,
-    code_postal: row.code_postal,
-    adresse: row.adresse,
-    telephone: row.telephone,
-    email: row.email,
-    latitude: row.latitude,
-    longitude: row.longitude,
-    types: row.types,
-    note_avis: row.note_avis,
-    nb_avis: row.nb_avis,
-    heures_ouverture: hours,
-    lien_facebook: row.lien_facebook,
-    lien_instagram: row.lien_instagram,
-    lien_tiktok: row.lien_tiktok,
-    lien_youtube: row.lien_youtube,
-    lien_google_maps: row.lien_google_maps,
-    meta_image: row.meta_image,
-    titre_site: row.titre_site,
-    meta_description: row.meta_description,
-    has_real_website: data.has_real_website
-  };
-}
 
 router.get('/salon/:slug', (req, res) => {
   const row = db.prepare('SELECT * FROM salons WHERE slug = ?').get(req.params.slug);
   if (!row) return res.status(404).json({ error: 'Salon introuvable' });
-  res.json(rowToPublicSalon(row));
+  res.json(buildSalonView(row));
 });
 
 router.get('/salons', (req, res) => {
@@ -61,7 +30,8 @@ router.get('/salons', (req, res) => {
   const total = db.prepare(`SELECT COUNT(*) as n FROM salons WHERE ${where}`).get(params).n;
   const rows = db.prepare(`
     SELECT id, slug, nom, ville, code_postal, telephone, email, note_avis, nb_avis,
-           screenshot_path, screenshot_generated_at, csv_source, created_at
+           screenshot_path, screenshot_generated_at, csv_source, edit_token,
+           overrides_json IS NOT NULL AS has_overrides, overrides_updated_at, created_at
     FROM salons
     WHERE ${where}
     ORDER BY id DESC

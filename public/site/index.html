@@ -7,23 +7,6 @@
     <meta name="description" content="Salon de coiffure">
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/_assets/styles.css">
-    <style>
-        .loading-overlay { position: fixed; inset: 0; background: #f8f5f0; display: flex; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.3s; }
-        .loading-overlay.fade { opacity: 0; pointer-events: none; }
-        .loading-overlay::after { content: ''; width: 40px; height: 40px; border: 3px solid #c9a96e; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .google-rating { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-top: 20px; }
-        .google-rating .stars { color: #fbbc04; font-size: 1.2rem; letter-spacing: 2px; }
-        .google-rating .score { font-weight: 600; color: #1a1a1a; }
-        .google-rating .count { color: #6b6b6b; font-size: 0.9rem; }
-        .opening-hours-table { display: grid; grid-template-columns: auto 1fr; gap: 8px 20px; font-size: 0.95rem; }
-        .opening-hours-table .day { font-weight: 500; }
-        .opening-hours-table .hours.closed { color: #999; }
-        .social-icons { display: flex; gap: 16px; margin-top: 16px; }
-        .social-icons a { width: 40px; height: 40px; border-radius: 50%; background: #c9a96e; color: white; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.2s; }
-        .social-icons a:hover { transform: translateY(-2px); }
-        .social-icons svg { width: 20px; height: 20px; }
-    </style>
 </head>
 <body>
     <div class="loading-overlay" id="loading-overlay"></div>
@@ -43,9 +26,7 @@
             </ul>
             <a href="#" class="nav-cta" id="nav-cta">Réserver</a>
             <button class="mobile-menu-btn" aria-label="Menu">
-                <span></span>
-                <span></span>
-                <span></span>
+                <span></span><span></span><span></span>
             </button>
         </div>
     </nav>
@@ -60,7 +41,6 @@
                 <a href="#contact" class="btn btn-primary">Prendre Rendez-vous</a>
                 <a href="#services" class="btn btn-secondary">Nos Services</a>
             </div>
-            <div id="google-rating-container"></div>
         </div>
         <div class="hero-scroll">
             <span>Découvrir</span>
@@ -75,17 +55,13 @@
             <div class="intro-content">
                 <div class="intro-text">
                     <span class="section-label">Notre Histoire</span>
-                    <h2 class="section-title" id="intro-title">Un savoir-faire d'exception</h2>
-                    <p id="intro-description">Notre équipe vous accueille pour vous offrir des prestations de coiffure soignées dans une ambiance chaleureuse. Nous mettons notre savoir-faire au service de votre style.</p>
+                    <h2 class="section-title" id="intro-title">Bienvenue</h2>
+                    <p id="intro-description"></p>
                 </div>
                 <div class="intro-stats" id="intro-stats">
-                    <div class="stat-item">
+                    <div class="stat-item" id="stat-rating-block">
                         <span class="stat-number" id="stat-rating">—</span>
                         <span class="stat-label">Note Google</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number" id="stat-reviews">—</span>
-                        <span class="stat-label">Avis clients</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-number">100%</span>
@@ -102,40 +78,12 @@
                 <span class="section-label">Ce que nous proposons</span>
                 <h2 class="section-title">Nos Services</h2>
             </div>
-            <div class="services-grid">
-                <div class="service-card">
-                    <div class="service-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M3 21v-2a7 7 0 0 1 7-7h4a7 7 0 0 1 7 7v2"/></svg>
-                    </div>
-                    <h3>Coupe Femme & Homme</h3>
-                    <p>Des coupes personnalisées qui subliment votre style et votre personnalité.</p>
-                    <span class="service-price">Sur demande</span>
-                </div>
-                <div class="service-card">
-                    <div class="service-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z"/></svg>
-                    </div>
-                    <h3>Coloration</h3>
-                    <p>Des couleurs vibrantes et naturelles réalisées avec des produits de haute qualité.</p>
-                    <span class="service-price">Sur demande</span>
-                </div>
-                <div class="service-card">
-                    <div class="service-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z"/></svg>
-                    </div>
-                    <h3>Soin & Lissage</h3>
-                    <p>Soins capillaires, lissages et traitements pour des cheveux brillants et en bonne santé.</p>
-                    <span class="service-price">Sur demande</span>
-                </div>
-                <div class="service-card">
-                    <div class="service-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                    </div>
-                    <h3>Mariage & Événement</h3>
-                    <p>Coiffures pour vos occasions spéciales : mariage, soirée, cérémonies.</p>
-                    <span class="service-price">Sur demande</span>
-                </div>
+            <div class="services-wrapper" id="services-wrapper">
+                <button class="carousel-arrow carousel-prev" id="services-prev" aria-label="Précédent" hidden>‹</button>
+                <div class="services-grid" id="services-grid"></div>
+                <button class="carousel-arrow carousel-next" id="services-next" aria-label="Suivant" hidden>›</button>
             </div>
+            <div class="carousel-dots" id="services-dots"></div>
         </div>
     </section>
 
@@ -146,6 +94,9 @@
                 <h2 class="section-title">Galerie</h2>
             </div>
             <div class="gallery-grid" id="gallery-grid"></div>
+            <div class="gallery-load-more" id="gallery-load-more" hidden>
+                <button class="btn-load-more" id="btn-load-more">Afficher plus</button>
+            </div>
         </div>
     </section>
 
@@ -155,10 +106,7 @@
                 <span class="section-label">Ils nous font confiance</span>
                 <h2 class="section-title">Avis Clients</h2>
             </div>
-            <div class="testimonials-slider" id="testimonials-slider"></div>
-            <div style="text-align: center; margin-top: 30px;">
-                <a href="#" id="google-reviews-link" target="_blank" rel="noopener" class="btn btn-secondary">Voir tous les avis Google</a>
-            </div>
+            <div class="testimonials-row" id="testimonials-row"></div>
         </div>
     </section>
 
@@ -167,10 +115,10 @@
             <div class="contact-wrapper">
                 <div class="contact-info">
                     <span class="section-label">Nous contacter</span>
-                    <h2 class="section-title">Venez nous rendre visite</h2>
-                    <p class="contact-description" id="contact-description">Notre équipe vous accueille pour tous vos besoins en coiffure.</p>
+                    <h2 class="section-title" id="contact-title">Venez nous rendre visite</h2>
+                    <p class="contact-description" id="contact-description"></p>
                     <div class="contact-details">
-                        <div class="contact-item">
+                        <div class="contact-item" id="contact-address-block">
                             <div class="contact-icon">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                             </div>
@@ -197,7 +145,7 @@
                                 <p><a href="#" id="contact-email">—</a></p>
                             </div>
                         </div>
-                        <div class="contact-item">
+                        <div class="contact-item" id="contact-hours-block">
                             <div class="contact-icon">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                             </div>

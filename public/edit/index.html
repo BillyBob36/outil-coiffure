@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <title>Modifier mon site</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+    <link rel="stylesheet" href="/edit-app/edit.css">
+</head>
+<body>
+
+<div class="edit-loader" id="edit-loader"><div class="spinner"></div></div>
+
+<header class="edit-topbar">
+    <div class="edit-topbar-inner">
+        <div class="edit-brand">
+            <span class="edit-brand-name" id="edit-brand-name">Mon salon</span>
+            <span class="edit-brand-sub">Espace de modification</span>
+        </div>
+        <div class="edit-topbar-actions">
+            <a href="#" id="preview-link" target="_blank" class="btn-ghost">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Voir mon site
+            </a>
+        </div>
+    </div>
+</header>
+
+<div class="edit-layout">
+
+    <nav class="edit-sidebar" id="edit-sidebar">
+        <button class="edit-tab active" data-tab="hero">
+            <span class="edit-tab-icon">🏠</span>
+            <span>Présentation</span>
+        </button>
+        <button class="edit-tab" data-tab="intro">
+            <span class="edit-tab-icon">✏️</span>
+            <span>Texte d'intro</span>
+        </button>
+        <button class="edit-tab" data-tab="services">
+            <span class="edit-tab-icon">✂️</span>
+            <span>Services &amp; tarifs</span>
+        </button>
+        <button class="edit-tab" data-tab="gallery">
+            <span class="edit-tab-icon">🖼️</span>
+            <span>Photos</span>
+        </button>
+        <button class="edit-tab" data-tab="testimonials">
+            <span class="edit-tab-icon">💬</span>
+            <span>Avis clients</span>
+        </button>
+        <button class="edit-tab" data-tab="contact">
+            <span class="edit-tab-icon">📞</span>
+            <span>Contact &amp; Réseaux</span>
+        </button>
+
+        <div class="edit-sidebar-footer">
+            <button class="btn-reset" id="btn-reset">Réinitialiser tout</button>
+        </div>
+    </nav>
+
+    <main class="edit-main">
+
+        <!-- TAB HERO -->
+        <section class="edit-section active" data-section="hero">
+            <div class="edit-section-head">
+                <h1>Présentation principale</h1>
+                <p>C'est la première chose que voient vos clients. Donnez-leur envie d'entrer chez vous.</p>
+            </div>
+            <div class="edit-card">
+                <label class="edit-field">
+                    <span class="edit-label">Petite phrase d'accroche</span>
+                    <input type="text" id="hero-tagline" placeholder="Ex : Bienvenue chez" maxlength="40">
+                    <span class="edit-help">Très courte, en majuscules sur le site (ex : « Bienvenue chez »)</span>
+                </label>
+                <label class="edit-field">
+                    <span class="edit-label">Nom du salon (titre principal) *</span>
+                    <input type="text" id="hero-title" placeholder="Ex : Salon Sophie" maxlength="80" required>
+                </label>
+                <label class="edit-field">
+                    <span class="edit-label">Sous-titre</span>
+                    <input type="text" id="hero-subtitle" placeholder="Ex : Salon de coiffure à Bourg-en-Bresse" maxlength="120">
+                </label>
+
+                <div class="edit-field">
+                    <span class="edit-label">Image de fond du salon</span>
+                    <span class="edit-help">Choisissez une belle photo qui représente votre salon. Format recommandé : paysage. Elle sera automatiquement compressée pour un affichage rapide.</span>
+                    <div class="hero-image-current" id="hero-image-current">
+                        <img id="hero-image-preview" src="" alt="">
+                        <div class="hero-image-overlay">
+                            <button class="btn-change-image" id="btn-hero-image">Changer l'image</button>
+                        </div>
+                    </div>
+                    <input type="file" id="hero-file-input" accept="image/*" hidden>
+                </div>
+            </div>
+            <div class="edit-actions">
+                <button class="btn-save" data-section="hero">Enregistrer la présentation</button>
+            </div>
+        </section>
+
+        <!-- TAB INTRO -->
+        <section class="edit-section" data-section="intro">
+            <div class="edit-section-head">
+                <h1>Texte d'introduction</h1>
+                <p>Présentez votre salon en quelques lignes — votre savoir-faire, votre ambiance.</p>
+            </div>
+            <div class="edit-card">
+                <label class="edit-field">
+                    <span class="edit-label">Titre de section</span>
+                    <input type="text" id="intro-title" placeholder="Ex : Bienvenue à Bourg-en-Bresse" maxlength="80">
+                </label>
+                <label class="edit-field">
+                    <span class="edit-label">Texte de présentation</span>
+                    <textarea id="intro-description" rows="5" placeholder="Décrivez votre salon, votre équipe, votre approche…"></textarea>
+                    <span class="edit-help">3 à 5 lignes suffisent. Soyez authentique et chaleureux.</span>
+                </label>
+
+                <div class="edit-field" id="intro-rating-block">
+                    <span class="edit-label">Affichage de la note Google</span>
+                    <span class="edit-help" id="intro-rating-status"></span>
+                    <label class="edit-toggle">
+                        <input type="checkbox" id="intro-show-rating">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Afficher ma note Google sur le site</span>
+                    </label>
+                </div>
+
+                <label class="edit-field" id="intro-fallback-block">
+                    <span class="edit-label">Phrase qui apparaît à la place de la note</span>
+                    <input type="text" id="intro-fallback" maxlength="120" placeholder="Ex : Une qualité de service reconnue par nos clients fidèles.">
+                    <span class="edit-help">S'affiche uniquement si la note Google est masquée.</span>
+                </label>
+            </div>
+            <div class="edit-actions">
+                <button class="btn-save" data-section="intro">Enregistrer le texte</button>
+            </div>
+        </section>
+
+        <!-- TAB SERVICES -->
+        <section class="edit-section" data-section="services">
+            <div class="edit-section-head">
+                <h1>Services &amp; tarifs</h1>
+                <p>Listez vos prestations avec leurs prix. Vous pouvez ajouter, modifier ou supprimer chaque service.</p>
+            </div>
+            <div class="edit-card services-list" id="services-list"></div>
+            <div class="services-add-row">
+                <button class="btn-add" id="btn-add-service">+ Ajouter un service</button>
+                <span class="services-count" id="services-count"></span>
+            </div>
+            <div class="edit-actions">
+                <button class="btn-save" data-section="services">Enregistrer mes services</button>
+            </div>
+        </section>
+
+        <!-- TAB GALLERY -->
+        <section class="edit-section" data-section="gallery">
+            <div class="edit-section-head">
+                <h1>Photos du salon</h1>
+                <p>Ajoutez des photos de votre salon, vos réalisations, vos coiffures. C'est ce qui donne envie de prendre rendez-vous.</p>
+            </div>
+
+            <div class="edit-card">
+                <span class="edit-label">Style d'affichage</span>
+                <div class="layout-choice">
+                    <label class="layout-option">
+                        <input type="radio" name="gallery-layout" value="grid" checked>
+                        <div class="layout-card">
+                            <div class="layout-mock layout-mock-grid">
+                                <span></span><span></span><span></span>
+                                <span></span><span></span><span></span>
+                            </div>
+                            <strong>Grille classique</strong>
+                            <small>Vignettes carrées, identiques</small>
+                        </div>
+                    </label>
+                    <label class="layout-option">
+                        <input type="radio" name="gallery-layout" value="masonry">
+                        <div class="layout-card">
+                            <div class="layout-mock layout-mock-masonry">
+                                <span style="height:30px"></span><span style="height:50px"></span>
+                                <span style="height:42px"></span><span style="height:28px"></span>
+                                <span style="height:36px"></span><span style="height:48px"></span>
+                            </div>
+                            <strong>Style Pinterest</strong>
+                            <small>Photos aux ratios d'origine, comme Pinterest</small>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="edit-card">
+                <span class="edit-label">Photos</span>
+                <span class="edit-help">Cliquez sur le + pour ajouter. Vous pouvez réorganiser en glissant les photos.</span>
+                <div class="gallery-images-list" id="gallery-images-list"></div>
+                <input type="file" id="gallery-file-input" accept="image/*" multiple hidden>
+                <div class="gallery-limit-warning" id="gallery-limit-warning" hidden>
+                    Vous avez atteint la limite de 12 photos. Supprimez-en une pour en ajouter d'autres.
+                </div>
+            </div>
+
+            <div class="edit-actions">
+                <button class="btn-save" data-section="gallery">Enregistrer mes photos</button>
+            </div>
+        </section>
+
+        <!-- TAB TESTIMONIALS -->
+        <section class="edit-section" data-section="testimonials">
+            <div class="edit-section-head">
+                <h1>Avis clients</h1>
+                <p>Inventez 3 avis sympas ou copiez-collez de vrais avis Google de vos clients satisfaits.</p>
+            </div>
+            <div class="edit-card testimonials-list" id="testimonials-list"></div>
+            <div class="edit-actions">
+                <button class="btn-save" data-section="testimonials">Enregistrer les avis</button>
+            </div>
+        </section>
+
+        <!-- TAB CONTACT -->
+        <section class="edit-section" data-section="contact">
+            <div class="edit-section-head">
+                <h1>Contact &amp; Réseaux sociaux</h1>
+                <p>Vos informations de contact et vos liens sociaux.</p>
+            </div>
+            <div class="edit-card">
+                <label class="edit-field">
+                    <span class="edit-label">Adresse *</span>
+                    <input type="text" id="contact-address" placeholder="Ex : 12 rue des Lilas">
+                </label>
+                <label class="edit-field">
+                    <span class="edit-label">Code postal &amp; Ville</span>
+                    <input type="text" id="contact-address2" placeholder="Ex : 01000 Bourg-en-Bresse">
+                    <span class="edit-help">L'adresse est toujours visible sur le site (avec la carte Google Maps).</span>
+                </label>
+                <label class="edit-field">
+                    <span class="edit-label">Téléphone</span>
+                    <input type="tel" id="contact-phone" placeholder="Ex : 04 74 12 34 56">
+                </label>
+                <label class="edit-field">
+                    <span class="edit-label">Email</span>
+                    <input type="email" id="contact-email" placeholder="Ex : contact@monsalon.fr">
+                </label>
+            </div>
+
+            <div class="edit-card">
+                <span class="edit-label">Horaires d'ouverture</span>
+                <span class="edit-help">Format texte simple, ex : « 9h - 18h » ou « Fermé »</span>
+                <div class="hours-grid" id="hours-grid"></div>
+            </div>
+
+            <div class="edit-card">
+                <span class="edit-label">Réseaux sociaux</span>
+                <span class="edit-help">Activez/désactivez l'affichage de chaque réseau. Laissez vide pour masquer.</span>
+                <div class="social-row" data-social="facebook">
+                    <span class="social-name">Facebook</span>
+                    <input type="url" placeholder="https://facebook.com/votresalon">
+                    <label class="edit-toggle compact">
+                        <input type="checkbox">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="social-row" data-social="instagram">
+                    <span class="social-name">Instagram</span>
+                    <input type="url" placeholder="https://instagram.com/votresalon">
+                    <label class="edit-toggle compact">
+                        <input type="checkbox">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="social-row" data-social="tiktok">
+                    <span class="social-name">TikTok</span>
+                    <input type="url" placeholder="https://tiktok.com/@votresalon">
+                    <label class="edit-toggle compact">
+                        <input type="checkbox">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="social-row" data-social="youtube">
+                    <span class="social-name">YouTube</span>
+                    <input type="url" placeholder="https://youtube.com/@votresalon">
+                    <label class="edit-toggle compact">
+                        <input type="checkbox">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="edit-actions">
+                <button class="btn-save" data-section="contact">Enregistrer mes informations</button>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- Toast notifications -->
+<div class="toast" id="toast"></div>
+
+<!-- Modal de crop image -->
+<div class="modal" id="crop-modal" hidden>
+    <div class="modal-content">
+        <h3>Cadrer votre image</h3>
+        <p class="modal-subtitle">Glissez et zoomez pour ajuster. L'image sera automatiquement compressée.</p>
+        <div class="cropper-container">
+            <img id="cropper-image" src="">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-ghost" id="btn-crop-cancel">Annuler</button>
+            <button class="btn-primary" id="btn-crop-confirm">Valider l'image</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation -->
+<div class="modal" id="confirm-modal" hidden>
+    <div class="modal-content modal-confirm">
+        <h3 id="confirm-title">Confirmer ?</h3>
+        <p id="confirm-message"></p>
+        <div class="modal-actions">
+            <button class="btn-ghost" id="btn-confirm-cancel">Annuler</button>
+            <button class="btn-danger" id="btn-confirm-ok">Confirmer</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script src="/edit-app/edit.js"></script>
+
+</body>
+</html>

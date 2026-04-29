@@ -40,6 +40,9 @@ export function initSchema() {
       screenshot_path TEXT,
       screenshot_generated_at TEXT,
       csv_source TEXT,
+      edit_token TEXT UNIQUE,
+      overrides_json TEXT,
+      overrides_updated_at TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
@@ -47,6 +50,7 @@ export function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_salons_slug ON salons(slug);
     CREATE INDEX IF NOT EXISTS idx_salons_csv_source ON salons(csv_source);
     CREATE INDEX IF NOT EXISTS idx_salons_screenshot ON salons(screenshot_path);
+    CREATE INDEX IF NOT EXISTS idx_salons_edit_token ON salons(edit_token);
 
     CREATE TABLE IF NOT EXISTS csv_imports (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,6 +69,15 @@ export function initSchema() {
       created_at TEXT DEFAULT (datetime('now'))
     );
   `);
+
+  // Migrations idempotentes : ajouter les colonnes si elles n'existent pas (BDD existante)
+  const cols = db.prepare("PRAGMA table_info(salons)").all().map(c => c.name);
+  if (!cols.includes('edit_token')) {
+    db.exec("ALTER TABLE salons ADD COLUMN edit_token TEXT");
+    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_salons_edit_token_unique ON salons(edit_token) WHERE edit_token IS NOT NULL");
+  }
+  if (!cols.includes('overrides_json')) db.exec("ALTER TABLE salons ADD COLUMN overrides_json TEXT");
+  if (!cols.includes('overrides_updated_at')) db.exec("ALTER TABLE salons ADD COLUMN overrides_updated_at TEXT");
 }
 
 initSchema();

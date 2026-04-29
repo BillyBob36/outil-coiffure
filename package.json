@@ -10,15 +10,16 @@
     "init-db": "node src/db.js init"
   },
   "dependencies": {
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.5.0",
+    "csv-parse": "^5.5.6",
+    "csv-stringify": "^6.5.2",
+    "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "express-session": "^1.18.1",
-    "better-sqlite3": "^11.5.0",
-    "bcrypt": "^5.1.1",
     "multer": "^1.4.5-lts.1",
     "puppeteer": "^23.8.0",
-    "dotenv": "^16.4.5",
-    "csv-parse": "^5.5.6",
-    "csv-stringify": "^6.5.2"
+    "sharp": "^0.33.5"
   },
   "engines": {
     "node": ">=20"

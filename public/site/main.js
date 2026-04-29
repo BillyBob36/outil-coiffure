@@ -1,12 +1,3 @@
-const DEFAULT_GALLERY = [
-  'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&q=80',
-  'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600&q=80',
-  'https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=600&q=80',
-  'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=600&q=80',
-  'https://images.unsplash.com/photo-1634449571010-02389ed0f9b0?w=600&q=80',
-  'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=600&q=80'
-];
-
 const DAY_LABELS = {
   monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi',
   thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche'
@@ -24,15 +15,10 @@ async function fetchSalon(slug) {
   return res.json();
 }
 
-function setText(id, text) {
-  const el = document.getElementById(id);
-  if (el && text != null) el.textContent = text;
-}
-
-function setHtml(id, html) {
-  const el = document.getElementById(id);
-  if (el && html != null) el.innerHTML = html;
-}
+const $ = id => document.getElementById(id);
+const setText = (id, t) => { const el = $(id); if (el && t != null) el.textContent = t; };
+const setHtml = (id, h) => { const el = $(id); if (el && h != null) el.innerHTML = h; };
+const escapeHtml = s => s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function buildShortName(nom) {
   if (!nom) return { main: 'Salon', sub: 'Coiffure' };
@@ -66,134 +52,277 @@ function formatHours(json) {
   return `<div class="opening-hours-table">${rows.join('')}</div>`;
 }
 
-function buildSocialIcons(salon) {
-  const links = [];
-  if (salon.lien_facebook) links.push({ url: salon.lien_facebook, name: 'Facebook', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>' });
-  if (salon.lien_instagram) links.push({ url: salon.lien_instagram, name: 'Instagram', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.51"/></svg>' });
-  if (salon.lien_tiktok) links.push({ url: salon.lien_tiktok, name: 'TikTok', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43V8.16a8.16 8.16 0 0 0 4.77 1.52V6.23a4.85 4.85 0 0 1-1.84-.54z"/></svg>' });
-  if (salon.lien_youtube) links.push({ url: salon.lien_youtube, name: 'YouTube', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 12s0-3.6-.46-5.32a2.78 2.78 0 0 0-2-2C18.84 4.27 12 4.27 12 4.27s-6.84 0-8.54.46a2.78 2.78 0 0 0-2 2A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 2 1.95c1.7.47 8.54.47 8.54.47s6.84 0 8.54-.47a2.78 2.78 0 0 0 2-1.95C23 15.6 23 12 23 12z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#fff"/></svg>' });
-  return links.map(l => `<a href="${l.url}" target="_blank" rel="noopener" aria-label="${l.name}">${l.svg}</a>`).join('');
-}
+const SOCIAL_SVG = {
+  facebook: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>',
+  instagram: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.51"/></svg>',
+  tiktok: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43V8.16a8.16 8.16 0 0 0 4.77 1.52V6.23a4.85 4.85 0 0 1-1.84-.54z"/></svg>',
+  youtube: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 12s0-3.6-.46-5.32a2.78 2.78 0 0 0-2-2C18.84 4.27 12 4.27 12 4.27s-6.84 0-8.54.46a2.78 2.78 0 0 0-2 2A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 2 1.95c1.7.47 8.54.47 8.54.47s6.84 0 8.54-.47a2.78 2.78 0 0 0 2-1.95C23 15.6 23 12 23 12z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#fff"/></svg>'
+};
 
-function googleRatingHtml(salon) {
-  if (!salon.note_avis) return '';
-  const stars = '★'.repeat(Math.round(salon.note_avis)) + '☆'.repeat(5 - Math.round(salon.note_avis));
-  const count = salon.nb_avis || '';
-  return `<div class="google-rating"><span class="stars">${stars}</span><span class="score">${salon.note_avis}/5</span>${count ? `<span class="count">sur ${count} avis Google</span>` : ''}</div>`;
-}
-
-function buildTestimonialsFromGoogle(salon) {
-  const slider = document.getElementById('testimonials-slider');
-  if (!slider) return;
-  if (salon.note_avis) {
-    const stars = Math.round(salon.note_avis);
-    slider.innerHTML = `
-      <div class="testimonial-card">
-        <div class="testimonial-stars">
-          ${'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>'.repeat(stars)}
-        </div>
-        <p class="testimonial-text">"${salon.note_avis}/5 sur Google${salon.nb_avis ? ` — ${salon.nb_avis} avis` : ''}. Découvrez l'avis de nos clients sur notre fiche Google."</p>
-        <div class="testimonial-author">
-          <span class="author-name">Note Google</span>
-          <span class="author-date">Aujourd'hui</span>
-        </div>
-      </div>`;
-  } else {
-    slider.innerHTML = `
-      <div class="testimonial-card">
-        <p class="testimonial-text">"Notre équipe est à votre écoute pour vous offrir le meilleur service. N'hésitez pas à nous contacter."</p>
-        <div class="testimonial-author"><span class="author-name">L'équipe</span></div>
-      </div>`;
+function buildSocialIcons(socials) {
+  if (!socials) return '';
+  const out = [];
+  for (const k of ['facebook', 'instagram', 'tiktok', 'youtube']) {
+    const s = socials[k];
+    if (s && s.enabled !== false && s.url) {
+      out.push(`<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener" aria-label="${k}">${SOCIAL_SVG[k]}</a>`);
+    }
   }
+  return out.join('');
 }
 
-function buildGallery(salon) {
-  const grid = document.getElementById('gallery-grid');
-  if (!grid) return;
-  const images = [...DEFAULT_GALLERY];
-  if (salon.meta_image) images.unshift(salon.meta_image);
-  grid.innerHTML = images.slice(0, 6).map((img, i) => `
-    <div class="gallery-item" data-index="${i}">
-      <img src="${img}" alt="Réalisation ${i+1}" loading="lazy">
-      <div class="gallery-overlay"><span style="color: white; font-size: 0.8rem; letter-spacing: 1px;">AGRANDIR</span></div>
+function buildTestimonials(testimonials) {
+  const row = $('testimonials-row');
+  if (!row) return;
+  const items = (testimonials.items || []).slice(0, 3);
+  const stars = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>'.repeat(5);
+  row.innerHTML = items.map(t => `
+    <div class="testimonial-card">
+      <div class="testimonial-stars">${stars}</div>
+      <p class="testimonial-text">"${escapeHtml(t.text)}"</p>
+      <div class="testimonial-author">
+        <span class="author-name">${escapeHtml(t.author || 'Client satisfait')}</span>
+        ${t.date ? `<span class="author-date">${escapeHtml(t.date)}</span>` : ''}
+      </div>
     </div>
   `).join('');
 }
 
-function renderSalon(salon) {
-  const shortName = buildShortName(salon.nom);
-  const ville = salon.ville || '';
+let galleryShownCount = 6;
+let galleryAllImages = [];
 
-  document.title = `${salon.nom}${ville ? ` — ${ville}` : ''}`;
-  const metaDesc = document.querySelector('meta[name="description"]');
-  if (metaDesc) {
-    metaDesc.content = salon.meta_description || `${salon.nom}${ville ? ` à ${ville}` : ''}. Salon de coiffure, prenez rendez-vous facilement.`;
+function buildGallery(gallery) {
+  const grid = $('gallery-grid');
+  const loadMore = $('gallery-load-more');
+  if (!grid) return;
+
+  galleryAllImages = (gallery.images || []).slice();
+  galleryShownCount = Math.min(6, galleryAllImages.length);
+
+  const isMasonry = gallery.layout === 'masonry';
+  grid.classList.toggle('layout-masonry', isMasonry);
+
+  renderGalleryItems();
+
+  if (galleryAllImages.length > 6) {
+    loadMore.hidden = false;
+    $('btn-load-more').onclick = () => {
+      galleryShownCount = Math.min(galleryShownCount + 6, galleryAllImages.length);
+      renderGalleryItems();
+      if (galleryShownCount >= galleryAllImages.length) loadMore.hidden = true;
+    };
+  } else {
+    loadMore.hidden = true;
   }
+}
+
+function renderGalleryItems() {
+  const grid = $('gallery-grid');
+  const visible = galleryAllImages.slice(0, galleryShownCount);
+  grid.innerHTML = visible.map((img, i) => `
+    <div class="gallery-item" data-index="${i}">
+      <img src="${escapeHtml(img)}" alt="Réalisation ${i+1}" loading="lazy">
+      <div class="gallery-overlay"><span>AGRANDIR</span></div>
+    </div>
+  `).join('');
+  grid.querySelectorAll('.gallery-item').forEach(item => {
+    item.addEventListener('click', () => openLightbox(galleryAllImages, parseInt(item.dataset.index)));
+  });
+}
+
+function openLightbox(images, index) {
+  let lb = document.querySelector('.lightbox');
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.className = 'lightbox';
+    lb.innerHTML = '<button class="lightbox-close">&times;</button><img alt="">';
+    document.body.appendChild(lb);
+    lb.querySelector('.lightbox-close').onclick = () => lb.classList.remove('active');
+    lb.addEventListener('click', e => { if (e.target === lb) lb.classList.remove('active'); });
+  }
+  lb.querySelector('img').src = images[index];
+  lb.classList.add('active');
+}
+
+let servicesIndex = 0;
+function buildServices(services) {
+  const grid = $('services-grid');
+  if (!grid) return;
+  const items = (services.items || []).slice(0, 20);
+  const isCarousel = items.length > 4;
+  const wrapper = $('services-wrapper');
+  wrapper.classList.toggle('is-carousel', isCarousel);
+
+  grid.innerHTML = items.map((s, i) => `
+    <div class="service-card" data-index="${i}">
+      <h3>${escapeHtml(s.name)}</h3>
+      <p>${escapeHtml(s.description || '')}</p>
+      <span class="service-price">${escapeHtml(s.price || '')}</span>
+    </div>
+  `).join('');
+
+  if (isCarousel) {
+    setupServicesCarousel(items.length);
+  } else {
+    $('services-prev').hidden = true;
+    $('services-next').hidden = true;
+    $('services-dots').innerHTML = '';
+  }
+}
+
+function setupServicesCarousel(total) {
+  const grid = $('services-grid');
+  const prev = $('services-prev');
+  const next = $('services-next');
+  const dots = $('services-dots');
+
+  prev.hidden = false;
+  next.hidden = false;
+
+  function getPerView() {
+    const w = window.innerWidth;
+    if (w < 640) return 1;
+    if (w < 960) return 2;
+    return 4;
+  }
+
+  function getMaxIndex() {
+    const perView = getPerView();
+    return Math.max(0, total - perView);
+  }
+
+  function updateView() {
+    const perView = getPerView();
+    const maxIndex = getMaxIndex();
+    if (servicesIndex > maxIndex) servicesIndex = maxIndex;
+    const cardWidth = grid.querySelector('.service-card')?.offsetWidth || 0;
+    const gap = 24;
+    grid.style.transform = `translateX(-${servicesIndex * (cardWidth + gap)}px)`;
+    prev.disabled = servicesIndex === 0;
+    next.disabled = servicesIndex >= maxIndex;
+
+    const dotCount = maxIndex + 1;
+    dots.innerHTML = Array.from({ length: dotCount }, (_, i) =>
+      `<button class="carousel-dot ${i === servicesIndex ? 'active' : ''}" data-i="${i}" aria-label="Page ${i+1}"></button>`
+    ).join('');
+    dots.querySelectorAll('button').forEach(b => {
+      b.onclick = () => { servicesIndex = parseInt(b.dataset.i); updateView(); };
+    });
+  }
+
+  prev.onclick = () => { servicesIndex = Math.max(0, servicesIndex - 1); updateView(); };
+  next.onclick = () => { servicesIndex = Math.min(getMaxIndex(), servicesIndex + 1); updateView(); };
+
+  // Swipe touch
+  let startX = 0;
+  grid.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+  grid.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) < 40) return;
+    if (dx < 0) next.onclick();
+    else prev.onclick();
+  }, { passive: true });
+
+  window.addEventListener('resize', updateView);
+  setTimeout(updateView, 50);
+}
+
+function applyHeroImage(src) {
+  if (!src) return;
+  const hero = document.querySelector('.hero');
+  if (hero) hero.style.backgroundImage = `url('${src}')`;
+}
+
+function renderSalon(view) {
+  const c = view.content;
+  const shortName = buildShortName(c.hero.title || view.nom);
+  const ville = view.ville || '';
+
+  document.title = `${c.hero.title || view.nom}${ville ? ` — ${ville}` : ''}`;
+  const metaDesc = document.querySelector('meta[name="description"]');
+  if (metaDesc && c.intro?.description) metaDesc.content = c.intro.description.slice(0, 160);
 
   setText('logo-text', shortName.main);
   setText('logo-sub', shortName.sub);
   setText('footer-logo-text', shortName.main);
   setText('footer-logo-sub', shortName.sub);
-  setText('footer-name', salon.nom);
+  setText('footer-name', c.hero.title || view.nom);
   setText('footer-tagline', `Votre salon de coiffure${ville ? ` à ${ville}` : ''}`);
   setText('footer-year', new Date().getFullYear());
 
-  setText('hero-tagline', `Bienvenue chez`);
-  setText('hero-title', salon.nom);
-  setText('hero-subtitle', ville ? `Salon de coiffure à ${ville}` : 'Votre coiffeur de proximité');
+  // HERO (note Google retiree)
+  setText('hero-tagline', c.hero.tagline);
+  setText('hero-title', c.hero.title);
+  setText('hero-subtitle', c.hero.subtitle);
+  applyHeroImage(c.hero.backgroundImage);
 
-  setHtml('google-rating-container', googleRatingHtml(salon));
-
-  setText('intro-title', `Bienvenue ${ville ? `à ${ville}` : ''}`);
-  setText('intro-description', salon.meta_description || `Notre équipe vous accueille ${ville ? `à ${ville} ` : ''}pour vous offrir des prestations de coiffure soignées dans une ambiance chaleureuse. Nous mettons notre savoir-faire au service de votre style.`);
-  setText('stat-rating', salon.note_avis ? `${salon.note_avis}/5` : '—');
-  setText('stat-reviews', salon.nb_avis || '—');
-
-  buildGallery(salon);
-  buildTestimonialsFromGoogle(salon);
-
-  const reviewsLink = document.getElementById('google-reviews-link');
-  if (reviewsLink && salon.lien_google_maps) reviewsLink.href = salon.lien_google_maps;
-
-  const addressParts = [salon.adresse, salon.code_postal && salon.ville ? `${salon.code_postal} ${salon.ville}` : (salon.code_postal || salon.ville)].filter(Boolean);
-  setHtml('contact-address', addressParts.join('<br>') || 'Adresse non renseignée');
-
-  if (salon.telephone) {
-    const phoneEl = document.getElementById('contact-phone');
-    phoneEl.textContent = salon.telephone;
-    phoneEl.href = `tel:${salon.telephone.replace(/\s/g, '')}`;
-    const navCta = document.getElementById('nav-cta');
-    if (navCta) navCta.href = `tel:${salon.telephone.replace(/\s/g, '')}`;
+  // INTRO (note Google si >=4, sinon fallback commercial)
+  setText('intro-title', c.intro.title);
+  setText('intro-description', c.intro.description);
+  const ratingBlock = $('stat-rating-block');
+  if (c.intro.showRating && view.note_avis >= 4) {
+    setText('stat-rating', `${view.note_avis}/5`);
+    ratingBlock.querySelector('.stat-label').textContent = 'Note Google';
   } else {
-    document.getElementById('contact-phone-block').style.display = 'none';
+    // Fallback commercial : on remplace le bloc note par un bloc texte vendeur
+    ratingBlock.classList.add('stat-fallback');
+    ratingBlock.innerHTML = `<span class="stat-fallback-text">${escapeHtml(c.intro.ratingFallback || '')}</span>`;
   }
 
-  if (salon.email) {
-    const emailEl = document.getElementById('contact-email');
-    emailEl.textContent = salon.email;
-    emailEl.href = `mailto:${salon.email}`;
+  // SERVICES
+  buildServices(c.services);
+
+  // GALERIE (avec bouton "Afficher plus")
+  buildGallery(c.gallery);
+
+  // TESTIMONIALS (3 fixes editables)
+  buildTestimonials(c.testimonials);
+
+  // CONTACT
+  setText('contact-title', c.contact.title);
+  setText('contact-description', c.contact.description);
+  const addr = c.contact.address;
+  const addr2 = c.contact.addressLine2;
+  setHtml('contact-address', [addr, addr2].filter(Boolean).map(escapeHtml).join('<br>') || 'Adresse non renseignée');
+
+  if (c.contact.phone) {
+    const phoneEl = $('contact-phone');
+    phoneEl.textContent = c.contact.phone;
+    phoneEl.href = `tel:${c.contact.phone.replace(/\s/g, '')}`;
+    const navCta = $('nav-cta');
+    if (navCta) navCta.href = `tel:${c.contact.phone.replace(/\s/g, '')}`;
   } else {
-    document.getElementById('contact-email-block').style.display = 'none';
+    $('contact-phone-block').style.display = 'none';
   }
 
-  setHtml('contact-hours', formatHours(salon.heures_ouverture));
+  if (c.contact.email) {
+    const emailEl = $('contact-email');
+    emailEl.textContent = c.contact.email;
+    emailEl.href = `mailto:${c.contact.email}`;
+  } else {
+    $('contact-email-block').style.display = 'none';
+  }
 
-  const socials = buildSocialIcons(salon);
+  setHtml('contact-hours', formatHours(c.contact.hours));
+
+  // RESEAUX SOCIAUX
+  const socials = buildSocialIcons(c.socials);
   setHtml('social-icons', socials);
   setHtml('footer-social', socials);
 
-  const mapIframe = document.getElementById('map-iframe');
+  // MAP
+  const mapIframe = $('map-iframe');
   if (mapIframe) {
-    if (salon.latitude && salon.longitude) {
-      mapIframe.src = `https://maps.google.com/maps?q=${salon.latitude},${salon.longitude}&z=15&output=embed`;
-    } else if (addressParts.length) {
-      mapIframe.src = `https://maps.google.com/maps?q=${encodeURIComponent(addressParts.join(', '))}&z=15&output=embed`;
+    if (c.contact.latitude && c.contact.longitude) {
+      mapIframe.src = `https://maps.google.com/maps?q=${c.contact.latitude},${c.contact.longitude}&z=15&output=embed`;
+    } else if (addr || addr2) {
+      mapIframe.src = `https://maps.google.com/maps?q=${encodeURIComponent([addr, addr2].filter(Boolean).join(', '))}&z=15&output=embed`;
     }
   }
 }
 
 function setupNavbar() {
-  const navbar = document.getElementById('navbar');
+  const navbar = $('navbar');
   if (!navbar) return;
   window.addEventListener('scroll', () => {
     if (window.pageYOffset > 50) navbar.classList.add('scrolled');
@@ -208,6 +337,23 @@ function setupNavbar() {
       }
     });
   });
+
+  const mobileBtn = document.querySelector('.mobile-menu-btn');
+  if (mobileBtn) {
+    mobileBtn.addEventListener('click', () => {
+      let menu = document.querySelector('.mobile-menu');
+      if (!menu) {
+        menu = document.createElement('div');
+        menu.className = 'mobile-menu active';
+        menu.innerHTML = '<button class="mobile-menu-close">&times;</button><a href="#accueil">Accueil</a><a href="#services">Services</a><a href="#galerie">Galerie</a><a href="#avis">Avis</a><a href="#contact">Contact</a>';
+        document.body.appendChild(menu);
+        menu.querySelector('.mobile-menu-close').onclick = () => menu.classList.remove('active');
+        menu.querySelectorAll('a').forEach(a => a.onclick = () => menu.classList.remove('active'));
+      } else {
+        menu.classList.toggle('active');
+      }
+    });
+  }
 }
 
 (async () => {
@@ -215,12 +361,12 @@ function setupNavbar() {
   const slug = getSlugFromUrl();
   if (!slug) return;
   try {
-    const salon = await fetchSalon(slug);
-    renderSalon(salon);
+    const view = await fetchSalon(slug);
+    renderSalon(view);
   } catch (e) {
     console.error('Erreur chargement salon:', e);
   } finally {
-    const overlay = document.getElementById('loading-overlay');
+    const overlay = $('loading-overlay');
     if (overlay) {
       setTimeout(() => overlay.classList.add('fade'), 100);
       setTimeout(() => overlay.remove(), 500);

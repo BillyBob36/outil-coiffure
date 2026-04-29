@@ -9,10 +9,12 @@ import { existsSync, readFileSync } from 'fs';
 import db from './src/db.js';
 import apiRouter from './src/routes/api.js';
 import adminRouter from './src/routes/admin.js';
+import editRouter from './src/routes/edit.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR || join(__dirname, 'public/screenshots');
+const UPLOADS_DIR = process.env.UPLOADS_DIR || join(__dirname, 'data/uploads');
 
 const ADMIN_BASE_URL = process.env.ADMIN_BASE_URL || '';
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';
@@ -58,6 +60,7 @@ app.use(session({
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
 app.use('/screenshots', express.static(SCREENSHOTS_DIR, { maxAge: '1h' }));
+app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '1h' }));
 
 app.use((req, res, next) => {
   const host = req.hostname;
@@ -75,9 +78,16 @@ app.use((req, res, next) => {
 });
 
 app.use('/api', apiRouter);
+app.use('/api', editRouter); // expose /api/edit/:slug
 app.use('/admin', adminRouter);
 
 app.use('/admin', express.static(join(__dirname, 'public/admin')));
+app.use('/edit-app', express.static(join(__dirname, 'public/edit')));
+
+// Page d'edition coiffeur : /edit/{slug}?token=xxx
+app.get('/edit/:slug', (req, res) => {
+  res.sendFile(join(__dirname, 'public/edit/index.html'));
+});
 
 app.get('/admin', (req, res) => {
   if (req.session && req.session.userId) {
@@ -104,6 +114,7 @@ app.get('/:slug', (req, res, next) => {
   const slug = req.params.slug;
   if (RESERVED_PATHS.has(slug)) return next();
   if (slug.startsWith('admin')) return next();
+  if (slug === 'edit' || slug === 'edit-app') return next();
 
   const row = db.prepare('SELECT slug FROM salons WHERE slug = ?').get(slug);
   if (!row) {

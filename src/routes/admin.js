@@ -113,11 +113,12 @@ router.get('/job/:jobId', (req, res) => {
 
 router.get('/export-csv', (req, res) => {
   const csvSource = req.query.csv_source || '';
-  const baseUrl = process.env.PUBLIC_BASE_URL || 'https://coiffure.lamidetlm.com';
+  const publicBase = process.env.PUBLIC_BASE_URL || 'https://coiffure.lamidetlm.com';
+  const adminBase = process.env.ADMIN_BASE_URL || 'https://outil-coiffure.lamidetlm.com';
 
   let query = `SELECT slug, nom, ville, code_postal, adresse, telephone, email,
                       note_avis, nb_avis, lien_facebook, lien_instagram, lien_google_maps,
-                      screenshot_path, csv_source, data_json
+                      screenshot_path, csv_source, edit_token, data_json
                FROM salons`;
   const params = [];
   if (csvSource) { query += ' WHERE csv_source = ?'; params.push(csvSource); }
@@ -139,8 +140,9 @@ router.get('/export-csv', (req, res) => {
     lien_instagram: r.lien_instagram,
     lien_google_maps: r.lien_google_maps,
     csv_source: r.csv_source,
-    URL_landing: `${baseUrl}/${r.slug}`,
-    Capture_ecran: r.screenshot_path ? `${baseUrl}${r.screenshot_path}` : ''
+    URL_landing: `${publicBase}/${r.slug}`,
+    URL_edition: r.edit_token ? `${adminBase}/edit/${r.slug}?token=${r.edit_token}` : '',
+    Capture_ecran: r.screenshot_path ? `${publicBase}${r.screenshot_path}` : ''
   }));
 
   const csv = stringify(enriched, { header: true, delimiter: ';' });
