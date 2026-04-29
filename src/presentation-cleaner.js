@@ -11,48 +11,57 @@ const AZURE_KEY = process.env.AZURE_OPENAI_KEY || '';
 
 const BATCH_SIZE = 8; // descriptions par appel API (plus longues que des noms, donc plus petits batches)
 
-const SYSTEM_PROMPT = `Tu reformules le texte de presentation d'un salon de coiffure pour qu'il apparaisse sur sa landing page (section "Notre Histoire" / introduction).
+const SYSTEM_PROMPT = `Tu corriges le texte de presentation d'un salon de coiffure pour sa landing page.
 
-Ta mission : pour chaque salon, transformer la description brute (souvent une meta-description SEO bourree de mots-cles) en un texte naturel, chaleureux et bref qui donne envie d'entrer dans le salon.
+Tu dois distinguer 2 cas selon que la description d'origine ("raw") existe ou non.
 
-Regles strictes :
-1. Style editorial : phrases naturelles, ton chaleureux et professionnel. Pas de listes de services ni de mots-cles SEO.
-2. Longueur : entre 1 et 3 phrases courtes (35 a 80 mots maximum).
-3. Centrer sur l'experience client (accueil, expertise, ambiance) et non sur les specialites techniques.
-4. Si la description originale est deja bonne (naturelle, breve), reecris-la legerement pour la rendre encore plus chaleureuse.
-5. Si la description originale est vide ou inexistante, genere un texte generique mais personnalise avec le nom et la ville du salon.
-6. Ne mentionne PAS les coordonnees, telephone, adresse — ces infos sont ailleurs sur la page.
-7. Ne mentionne pas explicitement "site web", "Google", "SEO".
-8. Francais correct, ponctuation soignee, pas de tout-majuscules.
+==========================================================
+CAS 1 — Le champ "raw" CONTIENT deja un texte (non vide)
+==========================================================
+Tu te contentes d'une CORRECTION LEGERE, sans reformuler ni reecrire :
+- Corrige UNIQUEMENT les fautes d'orthographe, de grammaire et de ponctuation.
+- Conserve le SENS, le CONTENU et les INFORMATIONS d'origine intacts.
+- Conserve le TON et le STYLE de l'auteur.
+- Garde la MEME longueur (ne resume pas, n'ajoute pas).
+- NE supprime PAS de mention de services, de villes, de specialites.
+- Tu peux retoucher la formulation UNIQUEMENT si elle est cassee ou n'a aucun sens grammatical.
+- Si le texte est deja correct, retourne-le quasi-identique (sauf accents/typo).
 
+EXEMPLES CAS 1 :
+
+Entree : {"i":0,"nom":"Viva la Vie","ville":"Aurillac","raw":"Coupes, colorations et coiffures femme, découvrez les salons de coiffure Viva la Vie. Plus de 110 salons et experts près de vous, proposant une large palette de prestations : couleurs, balayage, soins et conseils pour vos cheveux."}
+Sortie : {"i":0,"description":"Coupes, colorations et coiffures femme : découvrez les salons de coiffure Viva la Vie. Plus de 110 salons et experts près de vous proposent une large palette de prestations : couleurs, balayage, soins et conseils pour vos cheveux."}
+
+Entree : {"i":0,"nom":"Karactere","ville":"Bourg-en-Bresse","raw":"Des soins capillaires et des prestations coiffure de qualité à Bourg-en-Bresse et aux alentours dans une ambiance qui allie simplicité et convivialité ! Soin des cheveux, coupe classique ou tendance, reflets couleur, mèches, boucles..."}
+Sortie : {"i":0,"description":"Des soins capillaires et des prestations de coiffure de qualité à Bourg-en-Bresse et aux alentours, dans une ambiance qui allie simplicité et convivialité. Soin des cheveux, coupe classique ou tendance, reflets, couleur, mèches, boucles…"}
+
+Entree : {"i":0,"nom":"Salon X","ville":"Paris","raw":"salon coiffure paris coupe femme homme pas cher tarif petit prix"}
+(formulation cassee, juste une enumeration de mots-cles SEO)
+Sortie : {"i":0,"description":"Salon de coiffure à Paris : coupes femme et homme à des tarifs accessibles."}
+
+==========================================================
+CAS 2 — Le champ "raw" est VIDE ou null
+==========================================================
+Tu CREES un texte naturel a partir du nom et de la ville :
+- 1 a 3 phrases courtes, 35 a 80 mots
+- Style editorial chaleureux et professionnel
+- Centre sur l'experience client (accueil, ambiance, expertise)
+- Utilise le nom du salon et la ville pour le rendre personnel
+- Pas de mention de coordonnees, telephone, adresse
+- Pas de mots-cles SEO
+
+EXEMPLE CAS 2 :
+
+Entree : {"i":0,"nom":"Salon Sophie","ville":"Lyon","raw":""}
+Sortie : {"i":0,"description":"À Lyon, Salon Sophie vous accueille avec attention pour des prestations soignées dans une ambiance chaleureuse. Notre équipe met son savoir-faire au service de votre style."}
+
+==========================================================
+FORMAT DE REPONSE
+==========================================================
 REPONDS UNIQUEMENT au format JSON suivant, rien d'autre, pas de texte avant ou apres :
-{"results":[{"i":0,"description":"Texte reformule"},{"i":1,"description":"Autre texte"},...]}
+{"results":[{"i":0,"description":"..."},{"i":1,"description":"..."}]}
 
-Le champ "i" doit reprendre exactement l'index de l'entree d'origine.
-
-Exemples de transformation :
-
-Entree :
-{"i":0,"nom":"32 Le Salon","ville":"Bourg-en-Bresse","raw":"Salon de coiffure dans l'Ain et la Saône-et-Loire : coupes, colorations, balayages et soins sur-mesure, pour révéler votre style unique."}
-
-Sortie :
-{"i":0,"description":"Au cœur de Bourg-en-Bresse, notre équipe vous accueille pour révéler votre style à travers des prestations sur mesure. Coupes, couleurs, soins : chaque visite est pensée pour vous, dans une ambiance chaleureuse et professionnelle."}
-
----
-
-Entree :
-{"i":0,"nom":"Karactère","ville":"Bourg-en-Bresse","raw":"Des soins capillaires et des prestations coiffure de qualité à Bourg-en-Bresse et aux alentours dans une ambiance qui allie simplicité et convivialité ! Soin des cheveux, coupe classique ou tendance, reflets couleur, mèches, boucles..."}
-
-Sortie :
-{"i":0,"description":"Chez Karactère, simplicité et convivialité sont nos maîtres-mots. Notre équipe vous reçoit à Bourg-en-Bresse pour des prestations soignées, dans une atmosphère où vous vous sentez à l'aise dès votre arrivée."}
-
----
-
-Entree (description vide) :
-{"i":0,"nom":"Salon Sophie","ville":"Lyon","raw":""}
-
-Sortie :
-{"i":0,"description":"À Lyon, Salon Sophie vous accueille avec attention pour des prestations soignées dans une ambiance chaleureuse. Notre équipe met son savoir-faire au service de votre style."}`;
+Le champ "i" doit reprendre exactement l'index de l'entree d'origine.`;
 
 async function callAzure(items) {
   if (!AZURE_KEY) throw new Error('AZURE_OPENAI_KEY non configuree');

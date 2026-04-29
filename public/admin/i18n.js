@@ -25,6 +25,10 @@ const TRANSLATIONS = {
     'stats.clean_names': 'Noms nettoyés',
 
     // CSV import
+    'csv.section_title': 'CSV',
+    'csv.export_title': 'Exporter CSV enrichi',
+    'csv.export_help': 'Choisissez précisément les groupes et sources à inclure dans votre export. Vous pouvez composer un export partiel (quelques sources d\'un groupe) ou complet.',
+    'csv.open_export': 'Composer mon export',
     'csv.title': 'Importer un CSV',
     'csv.choose_file': 'Choisir un ou plusieurs fichiers',
     'csv.no_file': 'Aucun fichier choisi',
@@ -78,6 +82,21 @@ const TRANSLATIONS = {
     'run.actions_label': 'Actions à lancer :',
     'run.button': 'Run',
     'run.confirm': 'Lancer {actions} sur {count} salon(s) sélectionné(s) ?',
+
+    // Composer d'export
+    'export.title': 'Composer mon export CSV',
+    'export.help': 'Cochez les groupes et sources à inclure. Décocher un groupe désélectionne tous ses sources ; décocher des sources individuels permet un export partiel.',
+    'export.format': 'Format :',
+    'export.format_smartlead': 'Smartlead',
+    'export.format_smartlead_hint': '(7 colonnes pour mailing)',
+    'export.format_full': 'Complet',
+    'export.format_full_hint': '(toutes les colonnes utiles)',
+    'export.select_all': 'Tout cocher',
+    'export.deselect_all': 'Tout décocher',
+    'export.count_label': '<strong>{count}</strong> salons sélectionnés',
+    'export.empty': 'Aucun groupe ni source à exporter. Importez d\'abord un CSV.',
+    'export.cancel': 'Annuler',
+    'export.confirm': 'Télécharger le CSV',
 
     // Row actions
     'action.capture': 'Capture',
@@ -161,6 +180,10 @@ const TRANSLATIONS = {
     'stats.csv_sources': 'CSV imports',
     'stats.clean_names': 'Cleaned names',
 
+    'csv.section_title': 'CSV',
+    'csv.export_title': 'Export enriched CSV',
+    'csv.export_help': 'Pick precisely which groups and sources to include in your export. Compose partial exports (some sources within a group) or full ones.',
+    'csv.open_export': 'Compose my export',
     'csv.title': 'Import a CSV',
     'csv.choose_file': 'Choose one or more files',
     'csv.no_file': 'No file chosen',
@@ -213,6 +236,21 @@ const TRANSLATIONS = {
     'run.actions_label': 'Actions to run:',
     'run.button': 'Run',
     'run.confirm': 'Run {actions} on {count} selected salon(s)?',
+
+    // Export composer
+    'export.title': 'Compose my CSV export',
+    'export.help': 'Check the groups and sources to include. Unchecking a group deselects all its sources; unchecking individual sources allows partial exports.',
+    'export.format': 'Format:',
+    'export.format_smartlead': 'Smartlead',
+    'export.format_smartlead_hint': '(7 columns for mailing)',
+    'export.format_full': 'Full',
+    'export.format_full_hint': '(all useful columns)',
+    'export.select_all': 'Select all',
+    'export.deselect_all': 'Deselect all',
+    'export.count_label': '<strong>{count}</strong> salons selected',
+    'export.empty': 'No groups or sources to export. Import a CSV first.',
+    'export.cancel': 'Cancel',
+    'export.confirm': 'Download CSV',
 
     'action.capture': 'Capture',
     'action.delete': 'Delete',
@@ -292,6 +330,10 @@ const TRANSLATIONS = {
     'stats.csv_sources': 'CSV 导入',
     'stats.clean_names': '已清理名称',
 
+    'csv.section_title': 'CSV',
+    'csv.export_title': '导出增强的 CSV',
+    'csv.export_help': '精确选择要包含在导出中的分组和来源。您可以组合部分导出（分组中的某些来源）或完整导出。',
+    'csv.open_export': '组合我的导出',
     'csv.title': '导入 CSV',
     'csv.choose_file': '选择一个或多个文件',
     'csv.no_file': '未选择文件',
@@ -344,6 +386,21 @@ const TRANSLATIONS = {
     'run.actions_label': '要运行的操作：',
     'run.button': 'Run',
     'run.confirm': '对 {count} 个所选沙龙运行 {actions}？',
+
+    // 导出组合器
+    'export.title': '组合我的 CSV 导出',
+    'export.help': '勾选要包含的分组和来源。取消勾选分组会取消其所有来源；取消勾选单个来源可实现部分导出。',
+    'export.format': '格式：',
+    'export.format_smartlead': 'Smartlead',
+    'export.format_smartlead_hint': '（7 列用于邮件营销）',
+    'export.format_full': '完整',
+    'export.format_full_hint': '（所有有用的列）',
+    'export.select_all': '全选',
+    'export.deselect_all': '取消全选',
+    'export.count_label': '已选 <strong>{count}</strong> 个沙龙',
+    'export.empty': '没有可导出的分组或来源。请先导入 CSV。',
+    'export.cancel': '取消',
+    'export.confirm': '下载 CSV',
 
     'action.capture': '截图',
     'action.delete': '删除',

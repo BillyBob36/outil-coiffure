@@ -500,12 +500,54 @@ router.put('/salon/:slug/presentation', express.json(), (req, res) => {
   res.json({ ok: true, presentation: value });
 });
 
+// Tree des groupes + sources pour le composer d'export
+router.get('/export-tree', (req, res) => {
+  const groups = db.prepare(`
+    SELECT g.id, g.name,
+           COALESCE((SELECT COUNT(*) FROM salons WHERE group_id = g.id), 0) AS salons_count
+    FROM salon_groups g
+    ORDER BY g.name COLLATE NOCASE
+  `).all();
+  const sourcesByGroup = db.prepare(`
+    SELECT group_id, csv_source, COUNT(*) AS n
+    FROM salons
+    WHERE csv_source IS NOT NULL AND csv_source != ''
+    GROUP BY group_id, csv_source
+    ORDER BY csv_source COLLATE NOCASE
+  `).all();
+  const orphanCount = db.prepare("SELECT COUNT(*) AS n FROM salons WHERE group_id IS NULL").get().n;
+
+  const groupedSources = new Map();
+  for (const g of groups) groupedSources.set(g.id, []);
+  groupedSources.set(null, []);
+  for (const r of sourcesByGroup) {
+    const arr = groupedSources.get(r.group_id) || [];
+    arr.push({ name: r.csv_source, count: r.n });
+    groupedSources.set(r.group_id, arr);
+  }
+
+  const groupsWithSources = groups.map(g => ({
+    id: g.id,
+    name: g.name,
+    salons_count: g.salons_count,
+    sources: groupedSources.get(g.id) || []
+  }));
+  const orphanSources = groupedSources.get(null) || [];
+
+  res.json({
+    groups: groupsWithSources,
+    orphan: { count: orphanCount, sources: orphanSources }
+  });
+});
+
 router.get('/export-csv', (req, res) => {
-  const csvSource = req.query.csv_source || '';
+  // csv_sources peut etre une liste (CSV separes par virgule) ou une valeur unique
+  const csvSourcesRaw = req.query.csv_sources || req.query.csv_source || '';
+  const csvSources = String(csvSourcesRaw).split(',').map(s => s.trim()).filter(Boolean);
   const groupId = req.query.group_id || '';
   const format = req.query.format || 'smartlead'; // 'smartlead' | 'full'
-  const publicBase = process.env.PUBLIC_BASE_URL || 'https://coiffure.lamidetlm.com';
-  const adminBase = process.env.ADMIN_BASE_URL || 'https://outil-coiffure.lamidetlm.com';
+  const publicBase = process.env.PUBLIC_BASE_URL || 'https://monsitehq.com';
+  const adminBase = process.env.ADMIN_BASE_URL || 'https://outil.monsitehq.com';
 
   let query = `SELECT slug, nom, nom_clean, ville, code_postal, adresse, telephone, email,
                       note_avis, nb_avis, lien_facebook, lien_instagram, lien_google_maps,
@@ -513,7 +555,13 @@ router.get('/export-csv', (req, res) => {
                FROM salons`;
   const params = [];
   const conds = [];
-  if (csvSource) { conds.push('csv_source = ?'); params.push(csvSource); }
+  if (csvSources.length === 1) {
+    conds.push('csv_source = ?'); params.push(csvSources[0]);
+  } else if (csvSources.length > 1) {
+    const placeholders = csvSources.map(() => '?').join(',');
+    conds.push(`csv_source IN (${placeholders})`);
+    params.push(...csvSources);
+  }
   if (groupId === 'none') conds.push('group_id IS NULL');
   else if (groupId) { conds.push('group_id = ?'); params.push(parseInt(groupId, 10)); }
   if (conds.length) query += ' WHERE ' + conds.join(' AND ');

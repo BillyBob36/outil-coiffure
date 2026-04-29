@@ -463,13 +463,8 @@ async function pollJob(jobId, expectedTotal) {
   }, 1200);
 }
 
-$('export-csv-btn').addEventListener('click', () => {
-  const params = new URLSearchParams();
-  if (state.csvSource) params.set('csv_source', state.csvSource);
-  if (state.groupId) params.set('group_id', state.groupId);
-  params.set('format', 'smartlead');
-  location.href = '/admin/export-csv?' + params;
-});
+// Le bouton "Exporter CSV enrichi" du bloc Salons a ete supprime — l'export se fait
+// maintenant via le composer dans le bloc CSV (modale dediee).
 
 // Le bouton clean-names-btn a ete remplace par la checkbox + bouton Run.
 // La fonction runCleanNames legacy reste utilisable manuellement mais n'est plus liee
@@ -850,6 +845,170 @@ async function runDeleteSelection() {
 
 if ($('run-actions-btn')) $('run-actions-btn').addEventListener('click', runActions);
 if ($('bulk-delete-selection-btn')) $('bulk-delete-selection-btn').addEventListener('click', runDeleteSelection);
+
+// =====================================================================
+// COMPOSER D'EXPORT CSV : modale avec tree groupes + sources cochables
+// =====================================================================
+let exportTreeData = null;
+const exportSelection = new Set(); // set de csv_source noms coches
+
+async function openExportModal() {
+  const modal = $('export-modal');
+  modal.hidden = false;
+  // Charger les donnees fraiches a chaque ouverture
+  try {
+    exportTreeData = await api('/admin/export-tree');
+    // Par defaut : tout cocher
+    exportSelection.clear();
+    for (const g of exportTreeData.groups) {
+      for (const s of g.sources) exportSelection.add(s.name);
+    }
+    for (const s of exportTreeData.orphan.sources) exportSelection.add(s.name);
+    renderExportTree();
+    updateExportSummary();
+  } catch (e) {
+    alert(t('err.generic') + ': ' + e.message);
+    modal.hidden = true;
+  }
+}
+
+function renderExportTree() {
+  const container = $('export-tree');
+  if (!container || !exportTreeData) return;
+
+  const html = [];
+
+  for (const g of exportTreeData.groups) {
+    if (g.sources.length === 0 && g.salons_count === 0) continue;
+    html.push(buildGroupNode(g.name, g.sources, `g-${g.id}`));
+  }
+
+  if (exportTreeData.orphan.count > 0 && exportTreeData.orphan.sources.length > 0) {
+    html.push(buildGroupNode(t('groups.without_group'), exportTreeData.orphan.sources, 'g-orphan'));
+  }
+
+  container.innerHTML = html.length ? html.join('') : `<div class="export-empty">${escapeHtml(t('export.empty'))}</div>`;
+
+  // Bind events
+  container.querySelectorAll('.export-group-checkbox').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const node = cb.closest('.export-group-node');
+      const sources = node.querySelectorAll('.export-source-checkbox');
+      sources.forEach(s => {
+        s.checked = cb.checked;
+        toggleSource(s.value, cb.checked);
+      });
+      updateExportSummary();
+    });
+  });
+  container.querySelectorAll('.export-source-checkbox').forEach(cb => {
+    cb.addEventListener('change', () => {
+      toggleSource(cb.value, cb.checked);
+      updateGroupCheckboxState(cb.closest('.export-group-node'));
+      updateExportSummary();
+    });
+  });
+
+  // Initialiser l'etat des checkboxes
+  container.querySelectorAll('.export-source-checkbox').forEach(cb => {
+    cb.checked = exportSelection.has(cb.value);
+  });
+  container.querySelectorAll('.export-group-node').forEach(n => updateGroupCheckboxState(n));
+}
+
+function buildGroupNode(groupName, sources, idPrefix) {
+  const total = sources.reduce((s, x) => s + x.count, 0);
+  return `
+    <div class="export-group-node" data-id="${escapeAttr(idPrefix)}">
+      <label class="export-group-row">
+        <input type="checkbox" class="export-group-checkbox" id="${idPrefix}">
+        <span class="export-group-name">${escapeHtml(groupName)}</span>
+        <span class="export-group-count">${total} ${escapeHtml(t('groups.salons_label'))}</span>
+      </label>
+      <div class="export-source-list">
+        ${sources.map(s => `
+          <label class="export-source-row">
+            <input type="checkbox" class="export-source-checkbox" value="${escapeAttr(s.name)}">
+            <span class="export-source-name">${escapeHtml(s.name)}</span>
+            <span class="export-source-count">${s.count}</span>
+          </label>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function toggleSource(name, checked) {
+  if (checked) exportSelection.add(name);
+  else exportSelection.delete(name);
+}
+
+function updateGroupCheckboxState(node) {
+  const cb = node.querySelector('.export-group-checkbox');
+  const sources = node.querySelectorAll('.export-source-checkbox');
+  if (sources.length === 0) return;
+  const checked = Array.from(sources).filter(s => s.checked).length;
+  if (checked === 0) { cb.checked = false; cb.indeterminate = false; }
+  else if (checked === sources.length) { cb.checked = true; cb.indeterminate = false; }
+  else { cb.checked = false; cb.indeterminate = true; }
+}
+
+function updateExportSummary() {
+  const count = computeSelectionCount();
+  const el = $('export-count');
+  if (el) el.innerHTML = t('export.count_label', { count });
+  $('export-confirm').disabled = count === 0;
+}
+
+function computeSelectionCount() {
+  if (!exportTreeData) return 0;
+  let total = 0;
+  for (const g of exportTreeData.groups) {
+    for (const s of g.sources) {
+      if (exportSelection.has(s.name)) total += s.count;
+    }
+  }
+  for (const s of exportTreeData.orphan.sources) {
+    if (exportSelection.has(s.name)) total += s.count;
+  }
+  return total;
+}
+
+function selectAllSources(checked) {
+  if (!exportTreeData) return;
+  exportSelection.clear();
+  if (checked) {
+    for (const g of exportTreeData.groups) for (const s of g.sources) exportSelection.add(s.name);
+    for (const s of exportTreeData.orphan.sources) exportSelection.add(s.name);
+  }
+  // Update DOM
+  document.querySelectorAll('.export-source-checkbox').forEach(cb => { cb.checked = checked; });
+  document.querySelectorAll('.export-group-node').forEach(n => updateGroupCheckboxState(n));
+  updateExportSummary();
+}
+
+function doExport() {
+  if (exportSelection.size === 0) return;
+  const format = (document.querySelector('input[name="export-format"]:checked') || {}).value || 'smartlead';
+  const sources = Array.from(exportSelection).sort();
+  const params = new URLSearchParams();
+  params.set('format', format);
+  params.set('csv_sources', sources.join(','));
+  // Naviguer pour declencher le download (l'endpoint est sur /admin avec session cookie)
+  location.href = '/admin/export-csv?' + params.toString();
+}
+
+if ($('open-export-composer-btn')) $('open-export-composer-btn').addEventListener('click', openExportModal);
+if ($('export-modal-close')) $('export-modal-close').addEventListener('click', () => { $('export-modal').hidden = true; });
+if ($('export-cancel')) $('export-cancel').addEventListener('click', () => { $('export-modal').hidden = true; });
+if ($('export-modal')) {
+  $('export-modal').addEventListener('click', (e) => {
+    if (e.target === $('export-modal')) $('export-modal').hidden = true;
+  });
+}
+if ($('export-select-all')) $('export-select-all').addEventListener('click', () => selectAllSources(true));
+if ($('export-deselect-all')) $('export-deselect-all').addEventListener('click', () => selectAllSources(false));
+if ($('export-confirm')) $('export-confirm').addEventListener('click', doExport);
 
 // =================================================================
 // MODALE PRESENTATION : afficher + editer la presentation corrigee
