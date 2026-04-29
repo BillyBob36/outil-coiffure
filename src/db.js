@@ -80,6 +80,10 @@ export function initSchema() {
 
   // 3. Index sur edit_token : seulement maintenant que la colonne existe
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_salons_edit_token ON salons(edit_token) WHERE edit_token IS NOT NULL");
+
+  // 4. Backfill : nom_clean doit TOUJOURS etre rempli (initialement = nom).
+  //    Cela rend la colonne "Nom final" editable de facon homogene cote admin.
+  db.exec("UPDATE salons SET nom_clean = nom WHERE nom_clean IS NULL OR nom_clean = ''");
 }
 
 initSchema();

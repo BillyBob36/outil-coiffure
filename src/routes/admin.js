@@ -123,8 +123,26 @@ router.post('/clean-names', express.json(), async (req, res) => {
 });
 
 router.post('/reset-clean-name/:slug', (req, res) => {
-  const result = db.prepare('UPDATE salons SET nom_clean = NULL, nom_clean_at = NULL WHERE slug = ?').run(req.params.slug);
+  // Reset = remettre nom_clean = nom (pour rester editable par humain)
+  const result = db.prepare('UPDATE salons SET nom_clean = nom, nom_clean_at = NULL WHERE slug = ?').run(req.params.slug);
   res.json({ ok: true, updated: result.changes });
+});
+
+// Edition manuelle du nom final
+router.put('/salon/:slug/nom-final', express.json(), (req, res) => {
+  const value = String(req.body?.nom_final || '').trim();
+  if (!value) return res.status(400).json({ error: 'nom_final ne peut pas etre vide' });
+  if (value.length > 200) return res.status(400).json({ error: 'nom_final trop long (max 200)' });
+
+  const result = db.prepare(`
+    UPDATE salons
+    SET nom_clean = ?, nom_clean_at = datetime('now'), updated_at = datetime('now'),
+        screenshot_path = NULL, screenshot_generated_at = NULL
+    WHERE slug = ?
+  `).run(value, req.params.slug);
+
+  if (result.changes === 0) return res.status(404).json({ error: 'Salon introuvable' });
+  res.json({ ok: true, nom_final: value });
 });
 
 router.get('/export-csv', (req, res) => {
@@ -144,8 +162,8 @@ router.get('/export-csv', (req, res) => {
 
   const enriched = rows.map(r => ({
     slug: r.slug,
-    nom: (r.nom_clean && r.nom_clean.trim()) || r.nom,
-    nom_original: r.nom,
+    nom_scrappe: r.nom,
+    nom_final: (r.nom_clean && r.nom_clean.trim()) || r.nom,
     ville: r.ville,
     code_postal: r.code_postal,
     adresse: r.adresse,

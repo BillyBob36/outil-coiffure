@@ -121,13 +121,13 @@ export function importCsvFile(filePath, csvSourceName) {
 
   const insertSalon = db.prepare(`
     INSERT INTO salons (
-      slug, nom, ville, code_postal, adresse, telephone, email,
+      slug, nom, nom_clean, ville, code_postal, adresse, telephone, email,
       latitude, longitude, types, note_avis, nb_avis, heures_ouverture,
       lien_facebook, lien_instagram, lien_tiktok, lien_youtube, lien_google_maps,
       meta_image, titre_site, meta_description, site_internet_original,
       data_json, csv_source, edit_token
     ) VALUES (
-      @slug, @nom, @ville, @code_postal, @adresse, @telephone, @email,
+      @slug, @nom, @nom, @ville, @code_postal, @adresse, @telephone, @email,
       @latitude, @longitude, @types, @note_avis, @nb_avis, @heures_ouverture,
       @lien_facebook, @lien_instagram, @lien_tiktok, @lien_youtube, @lien_google_maps,
       @meta_image, @titre_site, @meta_description, @site_internet_original,

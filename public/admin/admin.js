@@ -69,19 +69,28 @@ function salonRow(r) {
   const screenshotCell = r.screenshot_path
     ? `<img class="screenshot-thumb" src="${r.screenshot_path}" alt="capture" data-full="${r.screenshot_path}">`
     : `<span class="no-screenshot">non</span>`;
-  const displayName = r.nom_clean && r.nom_clean.trim() ? r.nom_clean : r.nom;
-  const wasCleaned = !!(r.nom_clean && r.nom_clean.trim() && r.nom_clean !== r.nom);
-  const nameCell = wasCleaned
-    ? `<strong title="Original : ${escapeHtml(r.nom)}">${escapeHtml(displayName)} <span class="cleaned-tag">✨</span></strong>`
-    : `<strong>${escapeHtml(displayName)}</strong>`;
+
+  // Nom scrappé (read-only) + Nom final (éditable inline)
+  const nomScrappe = r.nom || '';
+  const nomFinal = (r.nom_clean && r.nom_clean.trim()) || r.nom || '';
+  const wasModified = nomFinal !== nomScrappe;
+
+  const nomScrappeCell = `<span class="nom-scrappe" title="${escapeHtml(nomScrappe)}">${escapeHtml(nomScrappe)}</span>`;
+  const nomFinalCell = `
+    <div class="nom-final-wrap ${wasModified ? 'modified' : ''}">
+      <input type="text" class="nom-final-input" value="${escapeHtml(nomFinal)}" data-slug="${escapeHtml(r.slug)}" data-original="${escapeHtml(nomFinal)}" maxlength="200">
+      <span class="nom-final-status"></span>
+    </div>
+  `;
+
   const editCell = editUrl
     ? `<a href="${editUrl}" target="_blank" class="edit-link" title="Lien d'édition à envoyer au coiffeur"><span class="edit-icon">✏️</span> Modifier</a> <button class="btn-icon copy-btn" data-copy="${escapeHtml(window.location.origin + editUrl)}" title="Copier le lien">📋</button>`
     : `<span class="no-screenshot">—</span>`;
   return `<tr data-slug="${escapeHtml(r.slug)}">
-    <td>${nameCell}</td>
+    <td>${nomScrappeCell}</td>
+    <td>${nomFinalCell}</td>
     <td>${escapeHtml(r.ville || '')}</td>
     <td>${r.note_avis ? `<span class="badge-rating">${r.note_avis}/5${r.nb_avis ? ` · ${r.nb_avis}` : ''}</span>` : '—'}</td>
-    <td><code>${escapeHtml(r.slug)}</code></td>
     <td class="url-cell"><a href="${landingUrl}" target="_blank">${landingUrl}</a></td>
     <td class="url-cell">${editCell}</td>
     <td>${screenshotCell}</td>
@@ -145,6 +154,65 @@ function bindRowActions() {
       }).catch(() => {
         prompt('Copier ce lien :', text);
       });
+    });
+  });
+
+  // Edition inline du Nom final
+  document.querySelectorAll('.nom-final-input').forEach(input => {
+    let saving = false;
+    const wrap = input.closest('.nom-final-wrap');
+    const status = wrap.querySelector('.nom-final-status');
+
+    const save = async () => {
+      if (saving) return;
+      const slug = input.dataset.slug;
+      const original = input.dataset.original;
+      const current = input.value.trim();
+      if (current === original) { status.textContent = ''; return; }
+      if (!current) {
+        status.textContent = 'vide ✗';
+        status.className = 'nom-final-status error';
+        input.value = original;
+        return;
+      }
+      saving = true;
+      status.textContent = '…';
+      status.className = 'nom-final-status saving';
+      try {
+        const res = await fetch(`/admin/salon/${encodeURIComponent(slug)}/nom-final`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ nom_final: current })
+        });
+        if (!res.ok) {
+          const e = await res.json().catch(() => ({}));
+          throw new Error(e.error || 'Erreur');
+        }
+        input.dataset.original = current;
+        // Vérifier si différent du nom scrappé pour la classe modified
+        const tr = input.closest('tr');
+        const scrappe = tr.querySelector('.nom-scrappe').textContent;
+        wrap.classList.toggle('modified', current !== scrappe);
+        status.textContent = '✓';
+        status.className = 'nom-final-status saved';
+        setTimeout(() => { status.textContent = ''; }, 1500);
+      } catch (e) {
+        status.textContent = '✗ ' + e.message;
+        status.className = 'nom-final-status error';
+      } finally {
+        saving = false;
+      }
+    };
+
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') {
+        input.value = input.dataset.original;
+        input.blur();
+        status.textContent = '';
+      }
     });
   });
 }
