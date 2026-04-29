@@ -99,15 +99,6 @@ app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '1h' }));
 app.use('/api', apiRouter);
 app.use('/api', editRouter); // expose /api/edit/:slug
 
-// Agency admin assets (CSS, JS, login.html, etc.) — public, no auth required
-app.use('/admin', express.static(join(__dirname, 'public/admin')));
-
-// Edit page assets (cropper.js etc.)
-app.use('/edit-app', express.static(join(__dirname, 'public/edit')));
-
-// IMPORTANT: routes specifiques AVANT le adminRouter (qui intercepte tout via requireAuth)
-// Sinon, GET /admin/{slug} se fait rediriger vers /admin/login par requireAuth.
-
 const RESERVED_ADMIN_PATHS = new Set([
   'login', 'logout', 'me', 'index.html', 'login.html',
   'admin.css', 'admin.js', 'i18n.js',
@@ -116,27 +107,53 @@ const RESERVED_ADMIN_PATHS = new Set([
   'groups', 'reset-clean-name'
 ]);
 
+const RESERVED_PATHS = new Set(['favicon.ico', 'robots.txt', 'sitemap.xml']);
+const SITE_DIR = join(__dirname, 'public/site');
+
+// Edit page assets (cropper.js etc.)
+app.use('/edit-app', express.static(join(__dirname, 'public/edit')));
+
+// ====================================================================
+// PUBLIC HOST GATE on /admin/*
+// Sur monsitehq.com (host public), on bloque TOUT sous /admin/* sauf le
+// pattern /admin/{slug} (page d'edition coiffeur). Sinon le static middleware
+// servirait public/admin/index.html sur monsitehq.com/admin/ — bug de leak.
+// ====================================================================
+app.use('/admin', (req, res, next) => {
+  if (req.routingMode !== 'public') return next();
+
+  // Sur public host, seul /admin/{slug-non-reserve} est servi.
+  const rel = req.path; // path relative to /admin (e.g. '/', '/login', '/some-slug')
+  if (rel === '/' || rel === '') {
+    return res.status(404).sendFile(join(SITE_DIR, '404.html'));
+  }
+  const firstSeg = rel.split('/').filter(Boolean)[0] || '';
+  if (RESERVED_ADMIN_PATHS.has(firstSeg)) {
+    return res.status(404).sendFile(join(SITE_DIR, '404.html'));
+  }
+  // Toute autre URL (suppose etre /admin/{slug}) : laisse passer pour /admin/:slug handler
+  next();
+});
+
 // Salon edit page : /admin/:slug (auth par token URL, pas par session)
+// Defini AVANT le static admin et le adminRouter pour gerer en priorite les slugs.
 app.get('/admin/:slug', (req, res, next) => {
   const slug = req.params.slug;
   if (RESERVED_ADMIN_PATHS.has(slug)) return next();
-  // On agency host, /admin/<unknown> is just unknown — fall through to 404
   if (req.routingMode === 'admin') return next();
-  // Public or mixed mode : serve the salon edit page (JS handles auth via token)
   res.sendFile(join(__dirname, 'public/edit/index.html'));
 });
 
-// Agency admin login page (must be BEFORE adminRouter to bypass requireAuth)
-app.get('/admin/login', (req, res, next) => {
-  // Sur le host public (monsitehq.com), l'agency admin n'existe pas → 404
-  if (req.routingMode === 'public') return next();
+// Agency admin assets (CSS, JS, login.html, etc.) — uniquement utilises sur outil.monsitehq.com
+app.use('/admin', express.static(join(__dirname, 'public/admin')));
+
+// Agency admin login page
+app.get('/admin/login', (req, res) => {
   res.sendFile(join(__dirname, 'public/admin/login.html'));
 });
 
 // Agency admin dashboard root /admin
-app.get('/admin', (req, res, next) => {
-  // Sur le host public, /admin tout seul n'a pas de sens → 404
-  if (req.routingMode === 'public') return next();
+app.get('/admin', (req, res) => {
   if (req.session && req.session.userId) {
     res.sendFile(join(__dirname, 'public/admin/index.html'));
   } else {
@@ -144,20 +161,8 @@ app.get('/admin', (req, res, next) => {
   }
 });
 
-// Sur le host public, on bloque tout le reste de /admin/* (les API agency, etc.)
-// pour eviter qu'on serve l'agency admin sur monsitehq.com par erreur.
-app.use('/admin', (req, res, next) => {
-  if (req.routingMode === 'public') {
-    return res.status(404).sendFile(join(SITE_DIR, '404.html'));
-  }
-  next();
-});
-
 // Agency admin auth-protected API routes (login, upload-csv, screenshot, groups, etc.)
 app.use('/admin', adminRouter);
-
-const RESERVED_PATHS = new Set(['favicon.ico', 'robots.txt', 'sitemap.xml']);
-const SITE_DIR = join(__dirname, 'public/site');
 
 // Site assets (CSS, JS for the public landing)
 app.use('/_assets', express.static(SITE_DIR, { maxAge: '1d' }));
