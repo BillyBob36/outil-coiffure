@@ -99,32 +99,15 @@ app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '1h' }));
 app.use('/api', apiRouter);
 app.use('/api', editRouter); // expose /api/edit/:slug
 
-// Agency admin assets (CSS, JS, login.html, etc.) — must come BEFORE the auth-protected adminRouter
+// Agency admin assets (CSS, JS, login.html, etc.) — public, no auth required
 app.use('/admin', express.static(join(__dirname, 'public/admin')));
 
 // Edit page assets (cropper.js etc.)
 app.use('/edit-app', express.static(join(__dirname, 'public/edit')));
 
-// Agency admin auth-protected API routes (login, upload-csv, screenshot, groups, etc.)
-app.use('/admin', adminRouter);
+// IMPORTANT: routes specifiques AVANT le adminRouter (qui intercepte tout via requireAuth)
+// Sinon, GET /admin/{slug} se fait rediriger vers /admin/login par requireAuth.
 
-// Specific agency admin routes (after adminRouter to give precedence to its routes)
-app.get('/admin/login', (req, res) => {
-  res.sendFile(join(__dirname, 'public/admin/login.html'));
-});
-
-app.get('/admin', (req, res, next) => {
-  // On public host, /admin alone has no meaning — fall through to 404
-  if (req.routingMode === 'public') return next();
-  if (req.session && req.session.userId) {
-    res.sendFile(join(__dirname, 'public/admin/index.html'));
-  } else {
-    res.redirect('/admin/login');
-  }
-});
-
-// Salon edit page : /admin/:slug (only on public host or in mixed/local mode)
-// Note: must be AFTER agency admin routes so /admin/login etc. take precedence
 const RESERVED_ADMIN_PATHS = new Set([
   'login', 'logout', 'me', 'index.html', 'login.html',
   'admin.css', 'admin.js', 'i18n.js',
@@ -132,6 +115,8 @@ const RESERVED_ADMIN_PATHS = new Set([
   'salon', 'csv-source', 'screenshot', 'job',
   'groups', 'reset-clean-name'
 ]);
+
+// Salon edit page : /admin/:slug (auth par token URL, pas par session)
 app.get('/admin/:slug', (req, res, next) => {
   const slug = req.params.slug;
   if (RESERVED_ADMIN_PATHS.has(slug)) return next();
@@ -140,6 +125,24 @@ app.get('/admin/:slug', (req, res, next) => {
   // Public or mixed mode : serve the salon edit page (JS handles auth via token)
   res.sendFile(join(__dirname, 'public/edit/index.html'));
 });
+
+// Agency admin login page (must be BEFORE adminRouter to bypass requireAuth)
+app.get('/admin/login', (req, res) => {
+  res.sendFile(join(__dirname, 'public/admin/login.html'));
+});
+
+// Agency admin dashboard root /admin
+app.get('/admin', (req, res, next) => {
+  if (req.routingMode === 'public') return next();
+  if (req.session && req.session.userId) {
+    res.sendFile(join(__dirname, 'public/admin/index.html'));
+  } else {
+    res.redirect('/admin/login');
+  }
+});
+
+// Agency admin auth-protected API routes (login, upload-csv, screenshot, groups, etc.)
+app.use('/admin', adminRouter);
 
 const RESERVED_PATHS = new Set(['favicon.ico', 'robots.txt', 'sitemap.xml']);
 const SITE_DIR = join(__dirname, 'public/site');
