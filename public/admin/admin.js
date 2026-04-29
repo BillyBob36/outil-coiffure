@@ -470,7 +470,7 @@ function debounce(fn, ms) {
 // GROUPES
 // ==============================
 async function loadGroups() {
-  const data = await api('/api/groups');
+  const data = await api('/admin/groups');
   state.groups = data.groups || [];
   state.orphanCount = data.orphan_count || 0;
   renderGroupsSelect();
