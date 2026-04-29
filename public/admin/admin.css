@@ -748,6 +748,32 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     line-height: 1.5;
 }
 
+/* Card-style modales (export + presentation) : fond, padding, ombre */
+.modal-export,
+.modal-presentation {
+    background: var(--panel);
+    padding: 28px 30px;
+    border-radius: 8px;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.4);
+    color: var(--text);
+    overflow-y: auto;
+}
+.modal-export .modal-close,
+.modal-presentation .modal-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 1.8rem;
+    line-height: 1;
+    padding: 0 8px;
+    cursor: pointer;
+    border: none;
+}
+.modal-export .modal-close:hover,
+.modal-presentation .modal-close:hover { color: var(--primary); }
+
 /* Composer d'export : modale */
 .modal-export {
     max-width: 640px;
