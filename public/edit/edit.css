@@ -114,7 +114,23 @@ a { color: var(--gold-dark); }
     background: var(--primary);
     color: white;
 }
-.edit-tab-icon { font-size: 1.1rem; }
+.edit-tab-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    color: var(--gold-dark);
+    transition: color 0.15s;
+}
+.edit-tab-icon svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+.edit-tab.active .edit-tab-icon { color: var(--gold); }
+.edit-tab:hover .edit-tab-icon { color: var(--gold-dark); }
 .edit-sidebar-footer {
     margin-top: 12px;
     padding-top: 12px;
@@ -600,7 +616,9 @@ button {
         border-radius: 0;
     }
     .edit-tab.active { background: var(--gold-dark); color: white; }
-    .edit-tab-icon { font-size: 1.4rem; }
+    .edit-tab.active .edit-tab-icon { color: white; }
+    .edit-tab-icon { width: 24px; height: 24px; flex: 0 0 24px; }
+    .edit-tab-icon svg { width: 22px; height: 22px; }
     .edit-main { padding: 16px; }
     .edit-section-head h1 { font-size: 1.5rem; }
     .edit-card { padding: 16px; }
