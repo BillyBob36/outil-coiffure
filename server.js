@@ -127,18 +127,30 @@ app.get('/admin/:slug', (req, res, next) => {
 });
 
 // Agency admin login page (must be BEFORE adminRouter to bypass requireAuth)
-app.get('/admin/login', (req, res) => {
+app.get('/admin/login', (req, res, next) => {
+  // Sur le host public (monsitehq.com), l'agency admin n'existe pas → 404
+  if (req.routingMode === 'public') return next();
   res.sendFile(join(__dirname, 'public/admin/login.html'));
 });
 
 // Agency admin dashboard root /admin
 app.get('/admin', (req, res, next) => {
+  // Sur le host public, /admin tout seul n'a pas de sens → 404
   if (req.routingMode === 'public') return next();
   if (req.session && req.session.userId) {
     res.sendFile(join(__dirname, 'public/admin/index.html'));
   } else {
     res.redirect('/admin/login');
   }
+});
+
+// Sur le host public, on bloque tout le reste de /admin/* (les API agency, etc.)
+// pour eviter qu'on serve l'agency admin sur monsitehq.com par erreur.
+app.use('/admin', (req, res, next) => {
+  if (req.routingMode === 'public') {
+    return res.status(404).sendFile(join(SITE_DIR, '404.html'));
+  }
+  next();
 });
 
 // Agency admin auth-protected API routes (login, upload-csv, screenshot, groups, etc.)
