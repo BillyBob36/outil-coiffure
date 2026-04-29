@@ -38,7 +38,7 @@ async function loadStats() {
 
   const select = $('csv-source-filter');
   const current = select.value;
-  select.innerHTML = '<option value="">Toutes les sources</option>' +
+  select.innerHTML = `<option value="">${escapeHtml(t('table.all_sources'))}</option>` +
     stats.csvSources.map(c => `<option value="${escapeHtml(c.csv_source)}">${escapeHtml(c.csv_source)} (${c.n})</option>`).join('');
   select.value = current;
 }
@@ -349,8 +349,9 @@ applyTranslations();
 document.querySelectorAll('.lang-btn').forEach(b => {
   b.addEventListener('click', () => setLang(b.dataset.lang));
 });
-// Re-render dynamic content (table) when language changes
+// Re-render dynamic content (table + select) when language changes
 window.onLangChange = () => {
+  loadStats();
   loadSalons();
 };
 
