@@ -79,10 +79,13 @@ app.use((req, res, next) => {
 
 app.use('/api', apiRouter);
 app.use('/api', editRouter); // expose /api/edit/:slug
-app.use('/admin', adminRouter);
 
+// IMPORTANT: les assets statiques (CSS, JS, i18n.js, login.html) doivent etre servis
+// AVANT le router /admin protege par requireAuth, sinon ils se font rediriger.
 app.use('/admin', express.static(join(__dirname, 'public/admin')));
 app.use('/edit-app', express.static(join(__dirname, 'public/edit')));
+
+app.use('/admin', adminRouter);
 
 // Page d'edition coiffeur : /edit/{slug}?token=xxx
 app.get('/edit/:slug', (req, res) => {
