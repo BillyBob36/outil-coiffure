@@ -257,9 +257,9 @@ router.get('/export-csv', (req, res) => {
         first_name: firstName,
         salon_name: (r.nom_clean && r.nom_clean.trim()) || r.nom || '',
         city: r.ville || '',
-        preview_url: `${publicBase}/${r.slug}`,
+        preview_url: `${publicBase}/preview/${r.slug}`,
         preview_image_url: r.screenshot_path ? `${publicBase}${r.screenshot_path}` : '',
-        admin_url: r.edit_token ? `${adminBase}/edit/${r.slug}?token=${r.edit_token}` : ''
+        admin_url: r.edit_token ? `${publicBase}/admin/${r.slug}?token=${r.edit_token}` : ''
       };
     });
     stringifyOpts = { header: true, delimiter: ',' };
@@ -282,8 +282,8 @@ router.get('/export-csv', (req, res) => {
       lien_instagram: r.lien_instagram,
       lien_google_maps: r.lien_google_maps,
       csv_source: r.csv_source,
-      URL_landing: `${publicBase}/${r.slug}`,
-      URL_edition: r.edit_token ? `${adminBase}/edit/${r.slug}?token=${r.edit_token}` : '',
+      URL_landing: `${publicBase}/preview/${r.slug}`,
+      URL_edition: r.edit_token ? `${publicBase}/admin/${r.slug}?token=${r.edit_token}` : '',
       Capture_ecran: r.screenshot_path ? `${publicBase}${r.screenshot_path}` : ''
     }));
     stringifyOpts = { header: true, delimiter: ';' };

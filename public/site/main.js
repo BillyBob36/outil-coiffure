@@ -4,9 +4,12 @@ const DAY_LABELS = {
 };
 
 function getSlugFromUrl() {
+  // Pattern : /preview/{slug}
   const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
-  if (!path || path === 'index.html') return null;
-  return path.split('/')[0];
+  if (!path) return null;
+  const parts = path.split('/');
+  if (parts[0] === 'preview' && parts[1]) return parts[1];
+  return null;
 }
 
 async function fetchSalon(slug) {

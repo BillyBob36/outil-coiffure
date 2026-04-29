@@ -22,8 +22,10 @@ const state = {
 
 // --- Routing : extraire slug + token de l'URL ---
 function parseUrl() {
+  // Pattern : /admin/{slug}?token=xxx (nouveau, monsitehq.com)
+  // ou      : /edit/{slug}?token=xxx (ancien, conserve pour les liens deja envoyes)
   const path = window.location.pathname;
-  const m = path.match(/^\/edit\/([^/]+)/);
+  const m = path.match(/^\/(?:admin|edit)\/([^/]+)/);
   if (!m) return null;
   const params = new URLSearchParams(window.location.search);
   return { slug: m[1], token: params.get('token') || '' };
@@ -187,7 +189,7 @@ async function compressImageFile(file, maxDim = 1600, quality = 0.82) {
 function renderAll() {
   const c = state.draft;
   $('edit-brand-name').textContent = state.view.nom || c.hero.title || 'Mon salon';
-  $('preview-link').href = `${getPublicBaseUrl()}/${state.slug}`;
+  $('preview-link').href = `${getPublicBaseUrl()}/preview/${state.slug}`;
 
   renderHero(c.hero);
   renderIntro(c.intro);
@@ -198,11 +200,11 @@ function renderAll() {
 }
 
 function getPublicBaseUrl() {
-  // En prod, le site public est sur coiffure.lamidetlm.com, l'edition sur outil-coiffure
-  // En local, c'est le meme host
+  // En prod, public et admin coiffeur sont sur le meme host (monsitehq.com)
+  // L'agency admin est sur outil.monsitehq.com — dans ce cas, on revient sur monsitehq.com
   const host = window.location.host;
-  if (host.includes('outil-coiffure')) {
-    return 'https://coiffure.lamidetlm.com';
+  if (host.startsWith('outil.')) {
+    return window.location.protocol + '//' + host.slice('outil.'.length);
   }
   return window.location.origin;
 }

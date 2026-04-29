@@ -90,19 +90,31 @@ function escapeHtml(s) {
 // SVG copy icon (cleaner than emoji)
 const COPY_ICON_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 
-function urlCell(displayUrl, fullUrl) {
-  if (!displayUrl) return '<span class="no-screenshot">—</span>';
+function urlCell(displayText, fullUrl, hrefUrl) {
+  if (!displayText) return '<span class="no-screenshot">—</span>';
+  // hrefUrl par defaut = fullUrl (pour clic), displayText = text affiche
+  const href = hrefUrl || fullUrl;
   return `<div class="url-with-copy">
-    <a href="${displayUrl}" target="_blank" rel="noopener" class="url-link" title="${escapeHtml(fullUrl)}">${escapeHtml(displayUrl)}</a>
+    <a href="${escapeHtml(href)}" target="_blank" rel="noopener" class="url-link" title="${escapeHtml(fullUrl)}">${escapeHtml(displayText)}</a>
     <button class="btn-icon copy-btn" data-copy="${escapeHtml(fullUrl)}" title="${escapeHtml(t('cell.copy_tooltip'))}" aria-label="${escapeHtml(t('cell.copy_tooltip'))}">${COPY_ICON_SVG}</button>
   </div>`;
 }
 
+function publicBaseFromHost() {
+  // Sur outil.monsitehq.com (agency admin), le public est sur monsitehq.com
+  const host = window.location.host;
+  if (host.startsWith('outil.')) {
+    return window.location.protocol + '//' + host.slice('outil.'.length);
+  }
+  return window.location.origin;
+}
+
 function salonRow(r) {
-  const landingUrl = `/${r.slug}`;
-  const editUrl = r.edit_token ? `/edit/${r.slug}?token=${r.edit_token}` : null;
-  const fullLanding = window.location.origin + landingUrl;
-  const fullEdit = editUrl ? window.location.origin + editUrl : null;
+  const publicBase = publicBaseFromHost();
+  const landingUrl = `${publicBase}/preview/${r.slug}`;
+  const editUrl = r.edit_token ? `${publicBase}/admin/${r.slug}?token=${r.edit_token}` : null;
+  const fullLanding = landingUrl;
+  const fullEdit = editUrl;
 
   const screenshotCell = r.screenshot_path
     ? `<img class="screenshot-thumb" src="${r.screenshot_path}" alt="capture" data-full="${r.screenshot_path}">`
@@ -120,13 +132,17 @@ function salonRow(r) {
     </div>
   `;
 
+  // Pour l'affichage compact, on montre juste le path (sans le https://host)
+  const landingDisplay = `/preview/${r.slug}`;
+  const editDisplay = editUrl ? `/admin/${r.slug}?token=...` : null;
+
   return `<tr data-slug="${escapeHtml(r.slug)}">
     <td>${nomScrappeCell}</td>
     <td>${nomFinalCell}</td>
     <td>${escapeHtml(r.ville || '')}</td>
     <td>${r.note_avis ? `<span class="badge-rating">${r.note_avis}/5${r.nb_avis ? ` · ${r.nb_avis}` : ''}</span>` : '—'}</td>
-    <td class="url-cell">${urlCell(landingUrl, fullLanding)}</td>
-    <td class="url-cell">${editUrl ? urlCell(editUrl, fullEdit) : '<span class="no-screenshot">—</span>'}</td>
+    <td class="url-cell">${urlCell(landingDisplay, fullLanding, landingUrl)}</td>
+    <td class="url-cell">${editDisplay ? urlCell(editDisplay, fullEdit, editUrl) : '<span class="no-screenshot">—</span>'}</td>
     <td>${screenshotCell}</td>
     <td class="actions">
       <button class="btn-small btn-primary action-screenshot">${escapeHtml(t('action.capture'))}</button>

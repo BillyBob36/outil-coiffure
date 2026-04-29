@@ -59,8 +59,24 @@ app.use(session({
 
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
-app.use('/screenshots', express.static(SCREENSHOTS_DIR, { maxAge: '1h' }));
-app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '1h' }));
+// ====================================================================
+// HOSTNAME-AWARE ROUTING (monsitehq.com architecture)
+// ====================================================================
+// Agency admin tool       : outil.monsitehq.com (ADMIN_BASE_URL)
+//   /                     -> redirect to /admin
+//   /admin                -> agency dashboard
+//   /admin/login          -> login page
+//   /admin/<api-route>    -> agency admin API (POST/PUT/DELETE/GET)
+//   /api/*                -> public API
+//
+// Public landing + salon admin : monsitehq.com (PUBLIC_BASE_URL)
+//   /                     -> homepage
+//   /preview/:slug        -> public landing of a salon
+//   /admin/:slug          -> salon's edit page (auth via ?token=xxx)
+//   /api/*                -> public API + edit API
+//   /screenshots/*        -> static screenshots
+//   /uploads/*            -> uploaded photos (hero, gallery)
+// ====================================================================
 
 app.use((req, res, next) => {
   const host = req.hostname;
@@ -72,63 +88,82 @@ app.use((req, res, next) => {
   } else if (isPublicHost) {
     req.routingMode = 'public';
   } else {
-    req.routingMode = 'mixed';
+    req.routingMode = 'mixed'; // local dev or unknown host
   }
   next();
 });
 
+// Routes always available regardless of host
+app.use('/screenshots', express.static(SCREENSHOTS_DIR, { maxAge: '1h' }));
+app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '1h' }));
 app.use('/api', apiRouter);
 app.use('/api', editRouter); // expose /api/edit/:slug
 
-// IMPORTANT: les assets statiques (CSS, JS, i18n.js, login.html) doivent etre servis
-// AVANT le router /admin protege par requireAuth, sinon ils se font rediriger.
+// Agency admin assets (CSS, JS, login.html, etc.) — must come BEFORE the auth-protected adminRouter
 app.use('/admin', express.static(join(__dirname, 'public/admin')));
+
+// Edit page assets (cropper.js etc.)
 app.use('/edit-app', express.static(join(__dirname, 'public/edit')));
 
+// Agency admin auth-protected API routes (login, upload-csv, screenshot, groups, etc.)
 app.use('/admin', adminRouter);
 
-// Page d'edition coiffeur : /edit/{slug}?token=xxx
-app.get('/edit/:slug', (req, res) => {
-  res.sendFile(join(__dirname, 'public/edit/index.html'));
+// Specific agency admin routes (after adminRouter to give precedence to its routes)
+app.get('/admin/login', (req, res) => {
+  res.sendFile(join(__dirname, 'public/admin/login.html'));
 });
 
-app.get('/admin', (req, res) => {
+app.get('/admin', (req, res, next) => {
+  // On public host, /admin alone has no meaning — fall through to 404
+  if (req.routingMode === 'public') return next();
   if (req.session && req.session.userId) {
     res.sendFile(join(__dirname, 'public/admin/index.html'));
   } else {
     res.redirect('/admin/login');
   }
 });
-app.get('/admin/login', (req, res) => {
-  res.sendFile(join(__dirname, 'public/admin/login.html'));
+
+// Salon edit page : /admin/:slug (only on public host or in mixed/local mode)
+// Note: must be AFTER agency admin routes so /admin/login etc. take precedence
+const RESERVED_ADMIN_PATHS = new Set([
+  'login', 'logout', 'me', 'index.html', 'login.html',
+  'admin.css', 'admin.js', 'i18n.js',
+  'upload-csv', 'export-csv', 'screenshot-batch', 'clean-names',
+  'salon', 'csv-source', 'screenshot', 'job',
+  'groups', 'reset-clean-name'
+]);
+app.get('/admin/:slug', (req, res, next) => {
+  const slug = req.params.slug;
+  if (RESERVED_ADMIN_PATHS.has(slug)) return next();
+  // On agency host, /admin/<unknown> is just unknown — fall through to 404
+  if (req.routingMode === 'admin') return next();
+  // Public or mixed mode : serve the salon edit page (JS handles auth via token)
+  res.sendFile(join(__dirname, 'public/edit/index.html'));
 });
 
 const RESERVED_PATHS = new Set(['favicon.ico', 'robots.txt', 'sitemap.xml']);
 const SITE_DIR = join(__dirname, 'public/site');
 
+// Site assets (CSS, JS for the public landing)
+app.use('/_assets', express.static(SITE_DIR, { maxAge: '1d' }));
+
+// Public preview : /preview/:slug
+app.get('/preview/:slug', (req, res) => {
+  const slug = req.params.slug;
+  if (RESERVED_PATHS.has(slug)) return res.status(404).sendFile(join(SITE_DIR, '404.html'));
+  // We don't validate the slug here — the JS will fetch /api/salon/:slug and handle 404
+  res.sendFile(join(SITE_DIR, 'index.html'));
+});
+
+// Root
 app.get('/', (req, res) => {
   if (req.routingMode === 'admin') return res.redirect('/admin');
   res.sendFile(join(SITE_DIR, 'home.html'));
 });
 
-app.use('/_assets', express.static(SITE_DIR, { maxAge: '1d' }));
-
-app.get('/:slug', (req, res, next) => {
-  const slug = req.params.slug;
-  if (RESERVED_PATHS.has(slug)) return next();
-  if (slug.startsWith('admin')) return next();
-  if (slug === 'edit' || slug === 'edit-app') return next();
-
-  const row = db.prepare('SELECT slug FROM salons WHERE slug = ?').get(slug);
-  if (!row) {
-    res.status(404).sendFile(join(SITE_DIR, '404.html'));
-    return;
-  }
-  res.sendFile(join(SITE_DIR, 'index.html'));
-});
-
+// 404 fallback
 app.use((req, res) => {
-  if (req.path.startsWith('/admin')) {
+  if (req.path.startsWith('/admin') || req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'Not found' });
   }
   res.status(404).sendFile(join(SITE_DIR, '404.html'));
@@ -136,6 +171,7 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   console.log(`outil-coiffure listening on http://localhost:${PORT}`);
-  console.log(`  Public site: http://localhost:${PORT}/{slug}`);
-  console.log(`  Admin:       http://localhost:${PORT}/admin`);
+  console.log(`  Public preview : http://localhost:${PORT}/preview/{slug}`);
+  console.log(`  Salon admin    : http://localhost:${PORT}/admin/{slug}?token=...`);
+  console.log(`  Agency admin   : http://localhost:${PORT}/admin (login)`);
 });
