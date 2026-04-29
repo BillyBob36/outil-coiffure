@@ -45,7 +45,8 @@ export async function captureSalon(slug) {
   const page = await browser.newPage();
   try {
     await page.setViewport(VIEWPORT);
-    const url = `${INTERNAL_BASE}/${slug}?nocapture=1`;
+    // URL publique du salon : /preview/{slug} (depuis la migration monsitehq.com)
+    const url = `${INTERNAL_BASE}/preview/${slug}?nocapture=1`;
     await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
     await new Promise(r => setTimeout(r, 800));
 

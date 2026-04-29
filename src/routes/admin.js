@@ -61,14 +61,25 @@ router.get('/me', (req, res) => {
 
 router.use(requireAuth);
 
+// Derive un nom de source court a partir du nom de fichier
+// "coiffeur-france-auvergne-rhone-alpes-cantal.csv" -> "cantal"
+// "salons.csv" -> "salons"
+function deriveSourceFromFilename(filename) {
+  if (!filename) return 'import';
+  const noExt = String(filename).replace(/\.(csv|tsv|txt)$/i, '');
+  const parts = noExt.split(/[-_./\\\s]+/).filter(Boolean);
+  return parts[parts.length - 1] || noExt || 'import';
+}
+
 router.post('/upload-csv', upload.single('csv'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Aucun fichier' });
 
-  const sourceName = req.body.source_name || req.file.originalname || basename(req.file.path);
+  const manualName = (req.body.source_name || '').trim();
+  const sourceName = manualName || deriveSourceFromFilename(req.file.originalname);
   const groupId = req.body.group_id ? parseInt(req.body.group_id, 10) || null : null;
   try {
     const result = importCsvFile(req.file.path, sourceName, groupId);
-    res.json({ ok: true, ...result });
+    res.json({ ok: true, source_name: sourceName, ...result });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

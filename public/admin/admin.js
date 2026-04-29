@@ -268,53 +268,130 @@ function bindRowActions() {
   });
 }
 
-// File picker custom (translatable)
+// File picker custom (translatable) — supporte multi-fichiers
 const csvFileInput = $('csv-file-input');
 const csvFilePickerBtn = $('csv-file-picker-btn');
 const csvFilePickerName = $('csv-file-picker-name');
-if (csvFilePickerBtn && csvFileInput) {
-  csvFilePickerBtn.addEventListener('click', () => csvFileInput.click());
-  csvFileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      csvFilePickerName.textContent = file.name;
-      csvFilePickerName.removeAttribute('data-i18n');
-      csvFilePickerName.parentElement.classList.add('has-file');
-    } else {
-      csvFilePickerName.dataset.i18n = 'csv.no_file';
-      csvFilePickerName.textContent = t('csv.no_file');
-      csvFilePickerName.parentElement.classList.remove('has-file');
-    }
-  });
+const sourceNameInput = $('source-name-input');
+const csvImportHint = $('csv-import-hint');
+
+// Derivation cote client (miroir du backend) : "coiffeur-france-...-cantal.csv" -> "cantal"
+function deriveSourceFromFilename(filename) {
+  if (!filename) return '';
+  const noExt = String(filename).replace(/\.(csv|tsv|txt)$/i, '');
+  const parts = noExt.split(/[-_./\\\s]+/).filter(Boolean);
+  return parts[parts.length - 1] || noExt || '';
 }
 
-$('upload-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const fd = new FormData(e.target);
-  const result = $('upload-result');
-  result.classList.add('visible');
-  result.textContent = t('csv.importing');
-  try {
-    const res = await fetch('/admin/upload-csv', {
-      method: 'POST',
-      body: fd,
-      credentials: 'same-origin',
-      headers: { 'Accept': 'application/json' }
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || t('err.generic'));
-    result.textContent = JSON.stringify(data, null, 2);
-    e.target.reset();
+function updateFilePickerUI() {
+  const files = csvFileInput?.files;
+  if (!files || files.length === 0) {
     if (csvFilePickerName) {
       csvFilePickerName.dataset.i18n = 'csv.no_file';
       csvFilePickerName.textContent = t('csv.no_file');
       csvFilePickerName.parentElement.classList.remove('has-file');
     }
+    if (sourceNameInput) {
+      sourceNameInput.disabled = false;
+      sourceNameInput.placeholder = t('csv.source_name_placeholder_optional');
+    }
+    if (csvImportHint) csvImportHint.innerHTML = t('csv.hint_default');
+    return;
+  }
+
+  if (files.length === 1) {
+    const file = files[0];
+    if (csvFilePickerName) {
+      csvFilePickerName.removeAttribute('data-i18n');
+      csvFilePickerName.textContent = file.name;
+      csvFilePickerName.parentElement.classList.add('has-file');
+    }
+    if (sourceNameInput) {
+      sourceNameInput.disabled = false;
+      const auto = deriveSourceFromFilename(file.name);
+      sourceNameInput.placeholder = t('csv.source_auto_placeholder', { name: auto });
+    }
+    if (csvImportHint) {
+      const auto = deriveSourceFromFilename(file.name);
+      csvImportHint.innerHTML = t('csv.hint_single', { name: auto });
+    }
+  } else {
+    // Multi-fichiers : nom auto force, input source desactive
+    const names = Array.from(files).map(f => deriveSourceFromFilename(f.name));
+    if (csvFilePickerName) {
+      csvFilePickerName.removeAttribute('data-i18n');
+      csvFilePickerName.textContent = t('csv.files_selected', { count: files.length });
+      csvFilePickerName.parentElement.classList.add('has-file');
+    }
+    if (sourceNameInput) {
+      sourceNameInput.value = '';
+      sourceNameInput.disabled = true;
+      sourceNameInput.placeholder = t('csv.source_auto_multi');
+    }
+    if (csvImportHint) {
+      csvImportHint.innerHTML = t('csv.hint_multi', { count: files.length, names: names.join(', ') });
+    }
+  }
+}
+
+if (csvFilePickerBtn && csvFileInput) {
+  csvFilePickerBtn.addEventListener('click', () => csvFileInput.click());
+  csvFileInput.addEventListener('change', updateFilePickerUI);
+}
+
+async function uploadOneCsv(file, sourceName, groupId) {
+  const fd = new FormData();
+  fd.append('csv', file);
+  if (sourceName) fd.append('source_name', sourceName);
+  if (groupId) fd.append('group_id', groupId);
+  const res = await fetch('/admin/upload-csv', {
+    method: 'POST',
+    body: fd,
+    credentials: 'same-origin',
+    headers: { 'Accept': 'application/json' }
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || t('err.generic'));
+  return data;
+}
+
+$('upload-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const files = Array.from(csvFileInput?.files || []);
+  if (!files.length) return;
+
+  const result = $('upload-result');
+  result.classList.add('visible');
+  result.textContent = t('csv.importing');
+  const groupId = ($('upload-group-select')?.value || '') || null;
+  const manualSource = (sourceNameInput?.value || '').trim();
+
+  const summary = [];
+  try {
+    if (files.length === 1) {
+      // Source name : manuel si fourni, sinon auto-derive cote backend
+      const data = await uploadOneCsv(files[0], manualSource, groupId);
+      summary.push(`✓ ${data.source_name}: ${data.imported} importes (${data.skipped} ignores)`);
+    } else {
+      // Multi : pas de source manuelle, chacun a son nom auto
+      for (let i = 0; i < files.length; i++) {
+        result.textContent = t('csv.importing_progress', { current: i + 1, total: files.length, name: files[i].name });
+        try {
+          const data = await uploadOneCsv(files[i], '', groupId);
+          summary.push(`✓ ${data.source_name}: ${data.imported} importes (${data.skipped} ignores)`);
+        } catch (err) {
+          summary.push(`✗ ${files[i].name}: ${err.message}`);
+        }
+      }
+    }
+    result.textContent = summary.join('\n');
+    e.target.reset();
+    updateFilePickerUI();
     await loadGroups();
     await loadStats();
     await loadSalons();
-  } catch (e) {
-    result.textContent = t('err.generic') + ': ' + e.message;
+  } catch (err) {
+    result.textContent = t('err.generic') + ': ' + err.message;
   }
 });
 

@@ -64,14 +64,15 @@
             <h2 data-i18n="csv.title">Importer un CSV</h2>
             <form id="upload-form" class="upload-form">
                 <div class="file-picker">
-                    <input type="file" name="csv" id="csv-file-input" accept=".csv,.tsv,.txt" required hidden>
+                    <input type="file" name="csv" id="csv-file-input" accept=".csv,.tsv,.txt" multiple required hidden>
                     <button type="button" class="btn-file-picker" id="csv-file-picker-btn" data-i18n="csv.choose_file">Choisir un fichier</button>
                     <span class="file-picker-name" id="csv-file-picker-name" data-i18n="csv.no_file">Aucun fichier choisi</span>
                 </div>
-                <input type="text" name="source_name" data-i18n-placeholder="csv.source_name_placeholder" placeholder="Nom de la source" required>
+                <input type="text" name="source_name" id="source-name-input" data-i18n-placeholder="csv.source_name_placeholder_optional" placeholder="Nom de la source (optionnel)">
                 <select name="group_id" id="upload-group-select"></select>
                 <button type="submit" data-i18n="csv.import_btn">Importer</button>
             </form>
+            <div class="csv-import-hint" id="csv-import-hint" data-i18n-html="csv.hint_default"></div>
             <pre class="result-box" id="upload-result"></pre>
         </section>
 

@@ -250,6 +250,28 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 .file-picker.has-file .file-picker-name { color: var(--primary); font-weight: 500; }
 
+/* Astuce sous le formulaire d'import CSV */
+.csv-import-hint {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.5;
+}
+.csv-import-hint strong { color: var(--accent-dark); font-weight: 600; }
+.csv-import-hint em { font-style: italic; color: var(--text); }
+
+/* Source name input desactive */
+.upload-form input[type="text"]:disabled {
+    background: var(--bg);
+    color: var(--muted);
+    font-style: italic;
+    cursor: not-allowed;
+}
+
 .result-box {
     margin-top: 12px;
     padding: 12px;
