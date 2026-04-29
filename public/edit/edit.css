@@ -187,9 +187,16 @@ a { color: var(--gold-dark); }
     color: var(--primary);
     user-select: none;
     transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
 }
 .accordion-summary::-webkit-details-marker { display: none; }
-.accordion-summary:hover { background: var(--bg); }
+.accordion-summary:focus { outline: none; background: transparent; }
+.accordion-summary:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+/* Hover uniquement sur les devices avec hover (= pas tactile),
+   pour eviter la couleur sticky apres tap sur mobile */
+@media (hover: hover) {
+    .accordion-summary:hover { background: var(--bg); }
+}
 
 .accordion-chevron {
     width: 16px;
@@ -260,9 +267,14 @@ a { color: var(--gold-dark); }
     font-size: 0.95rem;
     user-select: none;
     transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
 }
 .service-item-summary::-webkit-details-marker { display: none; }
-.service-item-summary:hover { background: var(--bg); }
+.service-item-summary:focus { outline: none; background: transparent; }
+.service-item-summary:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+@media (hover: hover) {
+    .service-item-summary:hover { background: var(--bg); }
+}
 .service-item-summary .accordion-chevron {
     width: 14px; height: 14px; flex: 0 0 14px;
 }
@@ -338,9 +350,14 @@ a { color: var(--gold-dark); }
     font-size: 0.95rem;
     user-select: none;
     transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
 }
 .testimonial-item-summary::-webkit-details-marker { display: none; }
-.testimonial-item-summary:hover { background: var(--bg); }
+.testimonial-item-summary:focus { outline: none; background: transparent; }
+.testimonial-item-summary:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+@media (hover: hover) {
+    .testimonial-item-summary:hover { background: var(--bg); }
+}
 .testimonial-item-summary .accordion-chevron { width: 14px; height: 14px; flex: 0 0 14px; }
 .testimonial-item-num {
     background: var(--gold);

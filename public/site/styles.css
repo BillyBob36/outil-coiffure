@@ -186,22 +186,56 @@ body {
 .mobile-menu-btn {
     display: none;
     flex-direction: column;
-    gap: 5px;
+    justify-content: center;
+    align-items: center;
     background: none;
     border: none;
     cursor: pointer;
     padding: 5px;
+    width: 36px;
+    height: 36px;
+    position: relative;
+    z-index: 1001; /* au-dessus du menu mobile pour rester cliquable */
+    -webkit-tap-highlight-color: transparent;
 }
 
 .mobile-menu-btn span {
+    display: block;
     width: 25px;
     height: 2px;
     background: var(--color-white);
-    transition: var(--transition);
+    border-radius: 1px;
+    margin: 3px 0;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.2s ease,
+                background 0.3s ease;
+    transform-origin: center;
+}
+
+/* Animation hamburger -> X quand le menu est ouvert */
+.mobile-menu-btn.is-open span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+.mobile-menu-btn.is-open span:nth-child(2) {
+    opacity: 0;
+    transform: scaleX(0);
+}
+.mobile-menu-btn.is-open span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+}
+
+/* Quand le menu mobile est ouvert, le bouton doit etre visible
+   sur le fond sombre du menu (forcer la couleur blanche) */
+.mobile-menu-btn.is-open span {
+    background: var(--color-white);
 }
 
 .navbar.scrolled .mobile-menu-btn span {
     background: var(--color-primary);
+}
+/* Mais quand le menu est ouvert, on prend la priorite sur scrolled */
+.navbar.scrolled .mobile-menu-btn.is-open span {
+    background: var(--color-white);
 }
 
 /* ========================================
@@ -1135,16 +1169,74 @@ body {
 }
 .btn-load-more:hover { background: var(--color-gold); color: white; }
 
-/* TESTIMONIALS — 3 en ligne, responsive
-   Override complet des styles legacy : on reste TOUJOURS lisible (texte sombre sur carte claire),
-   l'animation hover se contente d'un lift + reveal fluide de la signature. */
+/* TESTIMONIALS — 3 en ligne sur desktop/tablette, carrousel sur mobile
+   Override complet des styles legacy : on reste TOUJOURS lisible (texte sombre sur carte claire). */
+.testimonials-wrapper {
+    position: relative;
+    padding: 24px 0;
+    overflow: visible;
+}
+.testimonials-clip {
+    overflow: hidden;
+    margin: -24px 0;
+    padding: 24px 0;
+    overflow-x: clip;
+    overflow-y: visible;
+}
+@supports not (overflow-x: clip) {
+    .testimonials-clip { clip-path: inset(-100px 0); overflow-x: hidden; }
+}
+
 .testimonials-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 32px;
 }
 @media (max-width: 960px) { .testimonials-row { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px) { .testimonials-row { grid-template-columns: 1fr; gap: 24px; } }
+
+/* Mobile : on bascule en flex carrousel (1 carte visible a la fois) */
+@media (max-width: 640px) {
+    .testimonials-wrapper.is-carousel .testimonials-row {
+        display: flex;
+        grid-template-columns: none;
+        gap: 24px;
+        transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: transform;
+    }
+    .testimonials-wrapper.is-carousel .testimonial-card {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+/* Fleches testimonials : visibles uniquement sur mobile */
+.testimonials-prev, .testimonials-next { display: none; }
+@media (max-width: 640px) {
+    .testimonials-prev, .testimonials-next {
+        display: flex;
+    }
+    .testimonials-prev[hidden], .testimonials-next[hidden] { display: none; }
+    .testimonials-prev { left: 4px; }
+    .testimonials-next { right: 4px; }
+    /* Sur fond sombre, on inverse les couleurs */
+    .testimonials .carousel-arrow {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(201, 169, 110, 0.4);
+        color: var(--color-gold);
+    }
+    .testimonials .carousel-arrow:hover {
+        background: var(--color-gold);
+        color: var(--color-primary);
+    }
+}
+
+/* Dots testimonials : couleurs adaptees au fond sombre */
+#testimonials-dots .carousel-dot {
+    background: rgba(255, 255, 255, 0.25);
+}
+#testimonials-dots .carousel-dot.active {
+    background: var(--color-gold);
+}
 
 /* Override agressif des styles legacy (qui inversaient les couleurs au hover) */
 .testimonials-row .testimonial-card,

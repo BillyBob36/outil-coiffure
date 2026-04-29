@@ -89,6 +89,94 @@ function buildTestimonials(testimonials) {
       </div>
     </div>
   `).join('');
+
+  setupTestimonialsCarousel(items.length);
+}
+
+let testimonialsIndex = 0;
+let testimonialsCleanup = null;
+
+function setupTestimonialsCarousel(total) {
+  const wrapper = $('testimonials-wrapper');
+  const grid = $('testimonials-row');
+  const prev = $('testimonials-prev');
+  const next = $('testimonials-next');
+  const dots = $('testimonials-dots');
+  if (!wrapper || !grid || total === 0) return;
+
+  // Cleanup previous listeners
+  if (testimonialsCleanup) { testimonialsCleanup(); testimonialsCleanup = null; }
+
+  function isMobile() { return window.innerWidth <= 640; }
+
+  function applyTransform() {
+    if (!isMobile()) {
+      grid.style.transform = '';
+      return;
+    }
+    const card = grid.querySelector('.testimonial-card');
+    if (!card) return;
+    const cardWidth = card.offsetWidth;
+    const gap = 24;
+    grid.style.transform = `translateX(-${testimonialsIndex * (cardWidth + gap)}px)`;
+  }
+
+  function maxIndex() { return Math.max(0, total - 1); }
+
+  function updateView() {
+    const mobile = isMobile();
+    wrapper.classList.toggle('is-carousel', mobile);
+
+    if (!mobile) {
+      prev.hidden = true;
+      next.hidden = true;
+      dots.innerHTML = '';
+      grid.style.transform = '';
+      return;
+    }
+
+    if (testimonialsIndex > maxIndex()) testimonialsIndex = maxIndex();
+
+    prev.hidden = false;
+    next.hidden = false;
+    prev.disabled = testimonialsIndex === 0;
+    next.disabled = testimonialsIndex >= maxIndex();
+
+    applyTransform();
+
+    dots.innerHTML = Array.from({ length: total }, (_, i) =>
+      `<button class="carousel-dot ${i === testimonialsIndex ? 'active' : ''}" data-i="${i}" aria-label="Avis ${i+1}"></button>`
+    ).join('');
+    dots.querySelectorAll('button').forEach(b => {
+      b.onclick = () => { testimonialsIndex = parseInt(b.dataset.i); updateView(); };
+    });
+  }
+
+  prev.onclick = () => { testimonialsIndex = Math.max(0, testimonialsIndex - 1); updateView(); };
+  next.onclick = () => { testimonialsIndex = Math.min(maxIndex(), testimonialsIndex + 1); updateView(); };
+
+  // Swipe touch
+  let startX = 0;
+  const onTouchStart = e => { startX = e.touches[0].clientX; };
+  const onTouchEnd = e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) < 40) return;
+    if (dx < 0) next.onclick();
+    else prev.onclick();
+  };
+  grid.addEventListener('touchstart', onTouchStart, { passive: true });
+  grid.addEventListener('touchend', onTouchEnd, { passive: true });
+
+  const onResize = () => updateView();
+  window.addEventListener('resize', onResize);
+
+  testimonialsCleanup = () => {
+    window.removeEventListener('resize', onResize);
+    grid.removeEventListener('touchstart', onTouchStart);
+    grid.removeEventListener('touchend', onTouchEnd);
+  };
+
+  setTimeout(updateView, 50);
 }
 
 let galleryShownCount = 6;
@@ -370,17 +458,30 @@ function setupNavbar() {
 
   const mobileBtn = document.querySelector('.mobile-menu-btn');
   if (mobileBtn) {
+    function closeMenu(menu) {
+      menu.classList.remove('active');
+      mobileBtn.classList.remove('is-open');
+      mobileBtn.setAttribute('aria-expanded', 'false');
+    }
+    function openMenu(menu) {
+      menu.classList.add('active');
+      mobileBtn.classList.add('is-open');
+      mobileBtn.setAttribute('aria-expanded', 'true');
+    }
+
     mobileBtn.addEventListener('click', () => {
       let menu = document.querySelector('.mobile-menu');
       if (!menu) {
         menu = document.createElement('div');
-        menu.className = 'mobile-menu active';
-        menu.innerHTML = '<button class="mobile-menu-close">&times;</button><a href="#accueil">Accueil</a><a href="#services">Services</a><a href="#galerie">Galerie</a><a href="#avis">Avis</a><a href="#contact">Contact</a>';
+        menu.className = 'mobile-menu';
+        menu.innerHTML = '<a href="#accueil">Accueil</a><a href="#services">Services</a><a href="#galerie">Galerie</a><a href="#avis">Avis</a><a href="#contact">Contact</a>';
         document.body.appendChild(menu);
-        menu.querySelector('.mobile-menu-close').onclick = () => menu.classList.remove('active');
-        menu.querySelectorAll('a').forEach(a => a.onclick = () => menu.classList.remove('active'));
+        menu.querySelectorAll('a').forEach(a => a.onclick = () => closeMenu(menu));
+        openMenu(menu);
+      } else if (menu.classList.contains('active')) {
+        closeMenu(menu);
       } else {
-        menu.classList.toggle('active');
+        openMenu(menu);
       }
     });
   }

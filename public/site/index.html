@@ -112,7 +112,18 @@
                 <span class="section-label">Ils nous font confiance</span>
                 <h2 class="section-title">Avis Clients</h2>
             </div>
-            <div class="testimonials-row" id="testimonials-row"></div>
+            <div class="testimonials-wrapper" id="testimonials-wrapper">
+                <button class="carousel-arrow carousel-prev testimonials-prev" id="testimonials-prev" aria-label="Précédent" hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <div class="testimonials-clip">
+                    <div class="testimonials-row" id="testimonials-row"></div>
+                </div>
+                <button class="carousel-arrow carousel-next testimonials-next" id="testimonials-next" aria-label="Suivant" hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+            </div>
+            <div class="carousel-dots" id="testimonials-dots"></div>
         </div>
     </section>
 
