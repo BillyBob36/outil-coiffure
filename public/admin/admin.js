@@ -11,10 +11,19 @@ const state = {
 const $ = id => document.getElementById(id);
 
 async function api(path, opts = {}) {
-  const res = await fetch(path, { credentials: 'same-origin', ...opts });
+  // Ajoute toujours Accept: application/json pour eviter une redirection HTML
+  // quand la session a expire (cas typique apres redeploy)
+  const headers = { 'Accept': 'application/json', ...(opts.headers || {}) };
+  const res = await fetch(path, { credentials: 'same-origin', ...opts, headers });
   if (res.status === 401) {
     location.href = '/admin/login';
     return;
+  }
+  // Si la reponse n'est pas du JSON (redirect rate, page d'erreur), gerer proprement
+  const ct = res.headers.get('content-type') || '';
+  if (!ct.includes('application/json')) {
+    if (res.status === 0 || res.redirected) location.href = '/admin/login';
+    throw new Error('Reponse inattendue (' + res.status + '). Reconnectez-vous.');
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));

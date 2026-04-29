@@ -462,6 +462,7 @@ function renderContact(contact, socials) {
   $('contact-address2').value = contact.addressLine2 || '';
   $('contact-phone').value = contact.phone || '';
   $('contact-email').value = contact.email || '';
+  if ($('contact-booking-url')) $('contact-booking-url').value = contact.bookingUrl || '';
 
   const hours = contact.hours || {};
   const hg = $('hours-grid');
@@ -495,6 +496,7 @@ function collectContact() {
     addressLine2: $('contact-address2').value.trim(),
     phone: $('contact-phone').value.trim(),
     email: $('contact-email').value.trim(),
+    bookingUrl: ($('contact-booking-url')?.value || '').trim(),
     hours,
     title: 'Venez nous rendre visite',
     description: state.draft.contact.description,

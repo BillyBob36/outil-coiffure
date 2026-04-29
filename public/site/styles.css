@@ -997,11 +997,26 @@ body {
     line-height: 1.45;
 }
 
-/* SERVICES — wrapper carousel */
+/* SERVICES — wrapper carousel
+   Le wrapper laisse deborder verticalement pour ne pas couper les ombres au hover.
+   Le clip interne empeche les cards de deborder horizontalement sans toucher l'axe vertical. */
 .services-wrapper {
     position: relative;
-    overflow: hidden;
+    padding: 24px 0; /* marge verticale pour les ombres + lift au hover */
+    overflow: visible;
 }
+.services-clip {
+    overflow: hidden;
+    margin: -24px 0;     /* compense le padding pour conserver la position naturelle */
+    padding: 24px 0;     /* mais laisse l'espace pour l'ombre verticale */
+    overflow-x: clip;
+    overflow-y: visible; /* shadows visibles en haut/bas */
+}
+/* Fallback pour navigateurs sans support overflow-x: clip */
+@supports not (overflow-x: clip) {
+    .services-clip { clip-path: inset(-100px 0); overflow-x: hidden; }
+}
+
 .services-wrapper.is-carousel .services-grid {
     display: flex;
     gap: 24px;
@@ -1025,32 +1040,43 @@ body {
     }
 }
 
+/* Fleches : design epuree, accent or, sans encadrement lourd */
 .carousel-arrow {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 48px; height: 48px;
+    width: 44px; height: 44px;
     border-radius: 50%;
-    background: var(--color-white);
-    border: 1px solid var(--color-light-gray);
-    color: var(--color-primary);
-    font-size: 28px;
-    line-height: 1;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(201, 169, 110, 0.25);
+    color: var(--color-secondary);
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
     z-index: 5;
-    transition: var(--transition);
+    transition: all 0.25s ease;
+    padding: 0;
 }
-.carousel-arrow:hover { background: var(--color-gold); color: white; border-color: var(--color-gold); }
-.carousel-arrow:disabled { opacity: 0.3; cursor: default; }
+.carousel-arrow svg { width: 18px; height: 18px; }
+.carousel-arrow:hover {
+    background: var(--color-gold);
+    color: var(--color-white);
+    border-color: var(--color-gold);
+    box-shadow: 0 6px 20px rgba(201, 169, 110, 0.35);
+}
+.carousel-arrow:disabled { opacity: 0; pointer-events: none; }
 .carousel-arrow[hidden] { display: none; }
-.carousel-prev { left: -8px; }
-.carousel-next { right: -8px; }
+.carousel-prev { left: -22px; }
+.carousel-next { right: -22px; }
+@media (max-width: 1280px) {
+    .carousel-prev { left: 8px; }
+    .carousel-next { right: 8px; }
+}
 @media (max-width: 768px) {
-    .carousel-prev { left: 4px; }
-    .carousel-next { right: 4px; }
-    .carousel-arrow { width: 40px; height: 40px; font-size: 22px; }
+    .carousel-arrow { width: 38px; height: 38px; }
+    .carousel-arrow svg { width: 16px; height: 16px; }
 }
 
 .carousel-dots {
@@ -1109,7 +1135,9 @@ body {
 }
 .btn-load-more:hover { background: var(--color-gold); color: white; }
 
-/* TESTIMONIALS — 3 en ligne, responsive */
+/* TESTIMONIALS — 3 en ligne, responsive
+   Override complet des styles legacy : on reste TOUJOURS lisible (texte sombre sur carte claire),
+   l'animation hover se contente d'un lift + reveal fluide de la signature. */
 .testimonials-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1118,35 +1146,76 @@ body {
 @media (max-width: 960px) { .testimonials-row { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) { .testimonials-row { grid-template-columns: 1fr; gap: 24px; } }
 
-.testimonial-card {
-    background: white;
-    padding: 32px 28px;
+/* Override agressif des styles legacy (qui inversaient les couleurs au hover) */
+.testimonials-row .testimonial-card,
+.testimonials-row .testimonial-card:hover {
+    background: var(--color-white);
+    border: 1px solid rgba(201, 169, 110, 0.18);
+    color: var(--color-primary);
+}
+
+.testimonials-row .testimonial-card {
+    padding: 36px 30px;
     border-radius: 8px;
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
     display: flex; flex-direction: column;
-    border: 1px solid rgba(201, 169, 110, 0.1);
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+    will-change: transform;
 }
-.testimonial-stars {
+.testimonials-row .testimonial-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
+}
+
+.testimonials-row .testimonial-stars {
     color: var(--color-gold);
-    margin-bottom: 16px;
-    display: flex; gap: 2px;
+    margin-bottom: 18px;
+    display: flex; gap: 3px;
 }
-.testimonial-stars svg { width: 18px; height: 18px; }
-.testimonial-text {
+.testimonials-row .testimonial-stars svg { width: 18px; height: 18px; }
+
+.testimonials-row .testimonial-text {
+    font-family: var(--font-heading);
     font-style: italic;
     color: var(--color-primary);
-    margin-bottom: 20px;
+    margin-bottom: 22px;
     flex: 1;
-    font-size: 0.98rem;
-    line-height: 1.65;
+    font-size: 1.15rem;       /* plus lisible que 0.98 precedemment */
+    line-height: 1.6;
+    font-weight: 500;
 }
-.testimonial-author {
+
+/* Auteur + date : caches au repos, revelent au hover (en NOIR, pas en blanc) */
+.testimonials-row .testimonial-author {
     display: flex; flex-direction: column;
-    border-top: 1px solid var(--color-light-gray);
-    padding-top: 14px;
+    border-top: 1px solid transparent;
+    padding-top: 0;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.35s ease, opacity 0.3s ease, padding 0.3s ease, border-color 0.3s ease;
 }
-.author-name { font-weight: 600; font-size: 0.95rem; }
-.author-date { font-size: 0.8rem; color: var(--color-gray); margin-top: 2px; }
+.testimonials-row .testimonial-card:hover .testimonial-author {
+    max-height: 80px;
+    opacity: 1;
+    padding-top: 16px;
+    border-top-color: rgba(201, 169, 110, 0.4);
+}
+.testimonials-row .author-name {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--color-primary);
+    letter-spacing: 0.5px;
+}
+.testimonials-row .author-date {
+    font-size: 0.82rem;
+    color: var(--color-gray);
+    margin-top: 4px;
+}
+
+/* Section testimonials : on garde le fond sombre, mais les cartes restent claires */
+.testimonials { background: var(--color-primary); }
 
 /* OPENING HOURS table */
 .opening-hours-table {

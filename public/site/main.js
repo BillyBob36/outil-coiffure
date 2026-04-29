@@ -289,10 +289,25 @@ function renderSalon(view) {
     const phoneEl = $('contact-phone');
     phoneEl.textContent = c.contact.phone;
     phoneEl.href = `tel:${c.contact.phone.replace(/\s/g, '')}`;
-    const navCta = $('nav-cta');
-    if (navCta) navCta.href = `tel:${c.contact.phone.replace(/\s/g, '')}`;
   } else {
     $('contact-phone-block').style.display = 'none';
+  }
+
+  // Bouton "Reserver" : URL de reservation en ligne si disponible, sinon scroll vers #contact
+  const navCta = $('nav-cta');
+  if (navCta) {
+    const bookingUrl = c.contact.bookingUrl;
+    if (bookingUrl) {
+      navCta.href = bookingUrl;
+      navCta.target = '_blank';
+      navCta.rel = 'noopener';
+      navCta.removeAttribute('data-scroll-fallback');
+    } else {
+      navCta.href = '#contact';
+      navCta.removeAttribute('target');
+      navCta.removeAttribute('rel');
+      navCta.dataset.scrollFallback = '1';
+    }
   }
 
   if (c.contact.email) {

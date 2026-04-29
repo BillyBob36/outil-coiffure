@@ -23,6 +23,12 @@ const upload = multer({
 function requireAuth(req, res, next) {
   if (req.session && req.session.userId) return next();
   if (req.path === '/login' || req.path === '/login.html') return next();
+  // Si l'appel est XHR/fetch (Accept: application/json OU Sec-Fetch-Mode: cors), retourner 401 JSON
+  const acceptsJson = (req.headers.accept || '').includes('application/json');
+  const isXhr = req.xhr || req.headers['sec-fetch-mode'] === 'cors';
+  if (acceptsJson || isXhr) {
+    return res.status(401).json({ error: 'Non authentifie' });
+  }
   if (req.accepts('html')) return res.redirect('/admin/login');
   return res.status(401).json({ error: 'Non authentifie' });
 }

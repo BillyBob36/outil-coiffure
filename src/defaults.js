@@ -33,6 +33,36 @@ export const DEFAULT_TESTIMONIALS = [
 
 export const DEFAULT_INTRO_FALLBACK = 'Une equipe passionnee a votre ecoute pour des prestations de qualite, dans une ambiance conviviale.';
 
+// Detecte automatiquement une URL de reservation en ligne specifique au salon
+// dans les colonnes du CSV (Planity, Booksy, Reservio, Cituro, Settime, Treatwell)
+export function detectBookingUrl(rawUrl) {
+  if (!rawUrl) return null;
+  let url;
+  try { url = new URL(rawUrl); } catch { return null; }
+  const host = url.hostname.toLowerCase().replace(/^www\./, '');
+  const path = url.pathname || '/';
+
+  // Sous-domaine sur une plateforme (toujours specifique au salon)
+  const subdomainPlatforms = ['booksy.com', 'site-solocal.com'];
+  for (const p of subdomainPlatforms) {
+    if (host.endsWith('.' + p) && host !== p) return rawUrl;
+  }
+
+  // Plateforme racine + path significatif (= page specifique du salon)
+  const rootPlatforms = [
+    'planity.com', 'reservio.com', 'cituro.com',
+    'settime.io', 'book.settime.io', 'app.cituro.com',
+    'treatwell.fr', 'treatwell.com', 'treatwell.de',
+    'rdv360.com', 'merci-yanis.com'
+  ];
+  for (const p of rootPlatforms) {
+    if (host === p && path.length > 1 && !['/login', '/'].includes(path)) {
+      return rawUrl;
+    }
+  }
+  return null;
+}
+
 const ACCENT_MAP = {
   'à':'a','á':'a','â':'a','ä':'a','é':'e','è':'e','ê':'e','ë':'e','î':'i','ï':'i','ô':'o','ö':'o','ù':'u','û':'u','ü':'u','ÿ':'y','ç':'c','ñ':'n'
 };
@@ -84,7 +114,8 @@ export function buildDefaults(csvData) {
       email: csvData.email || '',
       hours: csvData.heures_ouverture || null,
       latitude: csvData.latitude,
-      longitude: csvData.longitude
+      longitude: csvData.longitude,
+      bookingUrl: detectBookingUrl(csvData.site_internet_original) || ''
     },
     socials: {
       facebook: { url: csvData.lien_facebook || '', enabled: !!csvData.lien_facebook },
