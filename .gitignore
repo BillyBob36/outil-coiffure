@@ -14,3 +14,4 @@ public/screenshots/*.png
 .DS_Store
 desktop.ini
 *.log
+*.jpg
