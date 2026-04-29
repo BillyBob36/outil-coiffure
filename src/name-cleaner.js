@@ -15,7 +15,7 @@ const SYSTEM_PROMPT = `Tu nettoies des noms de salons de coiffure issus d'un exp
 Ta mission : extraire LE VRAI NOM du salon, en retirant les suffixes marketing, listes de services et indications de ville superflues.
 
 Regles strictes :
-1. Capitalise correctement (un mot = une majuscule, pas TOUT EN MAJUSCULES sauf si c'est un acronyme reel)
+1. CAPITALISATION FRANCAISE : un nom = majuscule au premier mot et aux noms propres, mais les articles, prepositions et conjonctions (de, du, des, le, la, les, et, a, au, aux, en, par, sur, pour, d', l') restent en minuscules SAUF en debut de nom. Exemples : "Salon de Morgane" (pas "Salon De Morgane"), "Cheveux d'or" (pas "Cheveux D'Or"), "Marion Coiffure a Domicile" (pas "Marion Coiffure A Domicile"), "Le Salon de Cloe" (pas "Le Salon De Cloe"). Si l'entree est en TOUT MAJUSCULES, applique cette regle. Si elle est deja correcte, ne change rien.
 2. Retire " - Coiffeur [ville]" / " - Salon de coiffure [ville]" / " - Hairdresser [...]" / " - Beautician"
 3. Retire les parentheses contenant des listes de services : "(Perruques, Soins Capillaires)", "(ancien nom XYZ)"
 4. Retire les listes de specialites apres tiret : " - Coiffeuse/formatrice extensions de cheveux"
@@ -37,6 +37,12 @@ Exemples de transformations correctes :
 - Entree: "Karactere" -> "Karactere" (deja propre)
 - Entree: "Coiffure a domicile - Sylvie Pommerel - Bourg-en-Bresse / Marboz" -> "Sylvie Pommerel"
 - Entree: "Hair By Mag (ancien nom Mod'Hair)" -> "Hair By Mag"
+- Entree: "Marion Coiffure a Domicile" -> "Marion Coiffure a Domicile" (deja propre, pas de "À" majuscule au milieu)
+- Entree: "Cheveux d'or" -> "Cheveux d'or" (deja propre, "d'" reste en minuscules)
+- Entree: "Salon de Morgane, Coiffeuse et Barbiere" -> "Salon de Morgane"
+- Entree: "BARBER COIFFEUR BEHAR" -> "Barber Coiffeur Behar"
+- Entree: "INDIVIDUO Coiffure" -> "Individuo Coiffure"
+- Entree: "HENAO Divonne" -> "Henao"
 - Entree: "ACCUEIL - 6e Sens Concept Store" -> "6e Sens Concept Store"
 - Entree: "Saint Algue - Coiffeur Segny" -> "Saint Algue"
 - Entree: "Franck Provost - Coiffeur Montlucon" -> "Franck Provost"

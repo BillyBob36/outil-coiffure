@@ -64,7 +64,8 @@ function escapeHtml(s) {
 }
 
 function salonRow(r) {
-  const url = `/${r.slug}`;
+  const landingUrl = `/${r.slug}`;
+  const editUrl = r.edit_token ? `/edit/${r.slug}?token=${r.edit_token}` : null;
   const screenshotCell = r.screenshot_path
     ? `<img class="screenshot-thumb" src="${r.screenshot_path}" alt="capture" data-full="${r.screenshot_path}">`
     : `<span class="no-screenshot">non</span>`;
@@ -73,12 +74,16 @@ function salonRow(r) {
   const nameCell = wasCleaned
     ? `<strong title="Original : ${escapeHtml(r.nom)}">${escapeHtml(displayName)} <span class="cleaned-tag">✨</span></strong>`
     : `<strong>${escapeHtml(displayName)}</strong>`;
+  const editCell = editUrl
+    ? `<a href="${editUrl}" target="_blank" class="edit-link" title="Lien d'édition à envoyer au coiffeur"><span class="edit-icon">✏️</span> Modifier</a> <button class="btn-icon copy-btn" data-copy="${escapeHtml(window.location.origin + editUrl)}" title="Copier le lien">📋</button>`
+    : `<span class="no-screenshot">—</span>`;
   return `<tr data-slug="${escapeHtml(r.slug)}">
     <td>${nameCell}</td>
     <td>${escapeHtml(r.ville || '')}</td>
     <td>${r.note_avis ? `<span class="badge-rating">${r.note_avis}/5${r.nb_avis ? ` · ${r.nb_avis}` : ''}</span>` : '—'}</td>
     <td><code>${escapeHtml(r.slug)}</code></td>
-    <td class="url-cell"><a href="${url}" target="_blank">${url}</a></td>
+    <td class="url-cell"><a href="${landingUrl}" target="_blank">${landingUrl}</a></td>
+    <td class="url-cell">${editCell}</td>
     <td>${screenshotCell}</td>
     <td class="actions">
       <button class="btn-small btn-primary action-screenshot">Capture</button>
@@ -126,6 +131,20 @@ function bindRowActions() {
     img.addEventListener('click', () => {
       $('modal-image').src = img.dataset.full;
       $('screenshot-modal').hidden = false;
+    });
+  });
+
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const text = btn.dataset.copy;
+      navigator.clipboard.writeText(text).then(() => {
+        const original = btn.textContent;
+        btn.textContent = '✓';
+        setTimeout(() => { btn.textContent = original; }, 1200);
+      }).catch(() => {
+        prompt('Copier ce lien :', text);
+      });
     });
   });
 }
