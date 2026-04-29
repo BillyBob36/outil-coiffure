@@ -212,7 +212,9 @@ body {
     transform-origin: center;
 }
 
-/* Animation hamburger -> X quand le menu est ouvert */
+/* Animation hamburger -> X quand le menu est ouvert
+   Les 3 traits se transforment : le 1er descend+pivote, le 2eme disparait,
+   le 3eme monte+pivote inversement. Resultat : un X parfait a partir des 3 traits. */
 .mobile-menu-btn.is-open span:nth-child(1) {
     transform: translateY(8px) rotate(45deg);
 }
@@ -224,18 +226,11 @@ body {
     transform: translateY(-8px) rotate(-45deg);
 }
 
-/* Quand le menu mobile est ouvert, le bouton doit etre visible
-   sur le fond sombre du menu (forcer la couleur blanche) */
-.mobile-menu-btn.is-open span {
-    background: var(--color-white);
-}
-
+/* Couleur des spans : depend de l'etat de la navbar (transparent vs scrolled),
+   PAS de l'etat du menu — car le bouton reste dans la navbar (z-index 1001)
+   et est rendu sur le fond de la navbar, pas sur celui du menu. */
 .navbar.scrolled .mobile-menu-btn span {
     background: var(--color-primary);
-}
-/* Mais quand le menu est ouvert, on prend la priorite sur scrolled */
-.navbar.scrolled .mobile-menu-btn.is-open span {
-    background: var(--color-white);
 }
 
 /* ========================================
