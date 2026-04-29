@@ -94,6 +94,19 @@
                 <span id="job-status"></span>
             </div>
 
+            <!-- Bulk actions : actif uniquement quand un filtre est applique -->
+            <div class="bulk-actions-row" id="bulk-actions" hidden>
+                <div class="bulk-info">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span class="bulk-count" id="bulk-count">—</span>
+                </div>
+                <div class="bulk-buttons">
+                    <select id="bulk-target-group" class="bulk-target" aria-label="Groupe cible"></select>
+                    <button id="btn-bulk-move" class="btn-secondary" type="button" disabled data-i18n="bulk.move">Déplacer</button>
+                    <button id="btn-bulk-delete" class="btn-danger-soft" type="button" data-i18n="bulk.delete">Supprimer</button>
+                </div>
+            </div>
+
             <div class="table-wrap">
                 <table class="salons-table">
                     <thead>

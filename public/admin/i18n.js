@@ -96,6 +96,18 @@ const TRANSLATIONS = {
     'groups.prompt_rename': 'Nouveau nom du groupe :',
     'groups.confirm_delete': 'Supprimer le groupe « {name} » ?\n\nLes {count} salons qu\'il contient ne seront PAS supprimés — ils retourneront simplement dans « Salons sans groupe ».',
 
+    // Bulk actions
+    'bulk.count_label': '{count} salons correspondent au filtre actif',
+    'bulk.move': 'Déplacer',
+    'bulk.delete': 'Supprimer',
+    'bulk.choose_target': '— Choisir un groupe cible —',
+    'bulk.target_no_group': 'Retirer du groupe (devient « sans groupe »)',
+    'bulk.confirm_move': 'Déplacer {count} salons vers « {target} » ?',
+    'bulk.moved_success': '{count} salons déplacés avec succès.',
+    'bulk.confirm_delete_1': 'Supprimer définitivement {count} salons ?\n\nCette action est irréversible — toutes les données, captures et personnalisations seront perdues.',
+    'bulk.confirm_delete_2': 'Vraiment ? Tape sur OK pour confirmer définitivement.',
+    'bulk.deleted_success': '{count} salons supprimés.',
+
     // Errors
     'err.generic': 'Erreur',
     'err.empty_field': 'vide',
@@ -187,6 +199,18 @@ const TRANSLATIONS = {
     'groups.prompt_rename': 'New name for the group:',
     'groups.confirm_delete': 'Delete group "{name}"?\n\nThe {count} salons it contains will NOT be deleted — they will simply return to "Salons without group".',
 
+    // Bulk actions
+    'bulk.count_label': '{count} salons match the active filter',
+    'bulk.move': 'Move',
+    'bulk.delete': 'Delete',
+    'bulk.choose_target': '— Choose a target group —',
+    'bulk.target_no_group': 'Remove from group (becomes "without group")',
+    'bulk.confirm_move': 'Move {count} salons to "{target}"?',
+    'bulk.moved_success': '{count} salons moved successfully.',
+    'bulk.confirm_delete_1': 'Permanently delete {count} salons?\n\nThis action cannot be undone — all data, screenshots and customizations will be lost.',
+    'bulk.confirm_delete_2': 'Really? Click OK to confirm permanently.',
+    'bulk.deleted_success': '{count} salons deleted.',
+
     'err.generic': 'Error',
     'err.empty_field': 'empty',
     'err.saving': '…'
@@ -276,6 +300,18 @@ const TRANSLATIONS = {
     'groups.prompt_new_description': '描述（可选）：',
     'groups.prompt_rename': '分组的新名称：',
     'groups.confirm_delete': '删除分组 "{name}"？\n\n其中包含的 {count} 个沙龙不会被删除——它们将回到"未分组的沙龙"。',
+
+    // 批量操作
+    'bulk.count_label': '{count} 个沙龙符合当前筛选条件',
+    'bulk.move': '移动',
+    'bulk.delete': '删除',
+    'bulk.choose_target': '— 选择目标分组 —',
+    'bulk.target_no_group': '从分组中移除（变为"未分组"）',
+    'bulk.confirm_move': '将 {count} 个沙龙移动到 "{target}"？',
+    'bulk.moved_success': '已成功移动 {count} 个沙龙。',
+    'bulk.confirm_delete_1': '永久删除 {count} 个沙龙？\n\n此操作无法撤销 — 所有数据、截图和自定义内容都将丢失。',
+    'bulk.confirm_delete_2': '确定吗？点击"确定"以确认永久删除。',
+    'bulk.deleted_success': '已删除 {count} 个沙龙。',
 
     'err.generic': '错误',
     'err.empty_field': '空',

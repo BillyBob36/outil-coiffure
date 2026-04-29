@@ -80,6 +80,7 @@ async function loadSalons() {
   $('page-info').textContent = `${data.offset + 1}-${Math.min(data.offset + data.rows.length, data.total)} / ${data.total}`;
   $('prev-page').disabled = state.page === 0;
   $('next-page').disabled = (state.page + 1) * state.pageSize >= state.total;
+  updateBulkActionsBar();
 }
 
 function escapeHtml(s) {
@@ -610,6 +611,128 @@ $('btn-delete-group').addEventListener('click', async () => {
     await loadSalons();
   } catch (e) { alert(e.message); }
 });
+
+// ==============================
+// BULK ACTIONS (déplacer / supprimer en masse)
+// ==============================
+function currentBulkFilter() {
+  return {
+    group_id: state.groupId || null,
+    csv_source: state.csvSource || null,
+    search: state.search || null
+  };
+}
+
+function isFilterActive() {
+  return !!(state.groupId || state.csvSource || state.search);
+}
+
+function updateBulkActionsBar() {
+  const bar = $('bulk-actions');
+  if (!bar) return;
+  if (!isFilterActive()) { bar.hidden = true; return; }
+  bar.hidden = false;
+
+  // Count = state.total (deja calcule par loadSalons)
+  const countLabel = $('bulk-count');
+  if (countLabel) {
+    countLabel.textContent = t('bulk.count_label', { count: state.total });
+  }
+
+  // Repeupler le select target avec les groupes (sauf le groupe actif)
+  const sel = $('bulk-target-group');
+  if (sel) {
+    const opts = [`<option value="">${escapeHtml(t('bulk.choose_target'))}</option>`];
+    // Option "Sans groupe" si on est dans un groupe specifique (pour retirer)
+    if (state.groupId && state.groupId !== 'none') {
+      opts.push(`<option value="__none__">${escapeHtml(t('bulk.target_no_group'))}</option>`);
+    }
+    for (const g of state.groups) {
+      // Ne pas proposer le groupe actif comme cible
+      if (state.groupId && String(g.id) === String(state.groupId)) continue;
+      opts.push(`<option value="${g.id}">${escapeHtml(g.name)}</option>`);
+    }
+    const prev = sel.value;
+    sel.innerHTML = opts.join('');
+    sel.value = prev || '';
+    $('btn-bulk-move').disabled = !sel.value;
+  }
+}
+
+document.addEventListener('change', (e) => {
+  if (e.target && e.target.id === 'bulk-target-group') {
+    $('btn-bulk-move').disabled = !e.target.value;
+  }
+});
+
+async function bulkMoveToGroup() {
+  const sel = $('bulk-target-group');
+  if (!sel || !sel.value) return;
+  const targetGroupId = sel.value === '__none__' ? null : parseInt(sel.value, 10);
+  const targetName = sel.options[sel.selectedIndex].text;
+  const filter = currentBulkFilter();
+  const count = state.total;
+  if (!confirm(t('bulk.confirm_move', { count, target: targetName }))) return;
+  try {
+    const res = await api('/admin/salons/bulk-assign-group', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        target_group_id: targetGroupId,
+        ...filter
+      })
+    });
+    // Si on etait dans un groupe specifique ou "sans groupe", la vue se vide ; on bascule vers le groupe cible
+    if (targetGroupId) {
+      state.groupId = String(targetGroupId);
+      localStorage.setItem(ACTIVE_GROUP_KEY, state.groupId);
+    } else {
+      state.groupId = '';
+      localStorage.removeItem(ACTIVE_GROUP_KEY);
+    }
+    state.csvSource = '';
+    state.search = '';
+    state.page = 0;
+    $('search-input').value = '';
+    $('csv-source-filter').value = '';
+    await loadGroups();
+    await loadStats();
+    await loadSalons();
+    $('active-group-select').value = state.groupId || '';
+    alert(t('bulk.moved_success', { count: res.moved }));
+  } catch (e) {
+    alert(t('err.generic') + ': ' + e.message);
+  }
+}
+
+async function bulkDeleteSalons() {
+  const filter = currentBulkFilter();
+  const count = state.total;
+  // Double confirmation pour la suppression
+  if (!confirm(t('bulk.confirm_delete_1', { count }))) return;
+  if (!confirm(t('bulk.confirm_delete_2'))) return;
+  try {
+    const res = await api('/admin/salons/bulk', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: true, ...filter })
+    });
+    state.csvSource = '';
+    state.search = '';
+    state.page = 0;
+    $('search-input').value = '';
+    $('csv-source-filter').value = '';
+    await loadGroups();
+    await loadStats();
+    await loadSalons();
+    alert(t('bulk.deleted_success', { count: res.deleted }));
+  } catch (e) {
+    alert(t('err.generic') + ': ' + e.message);
+  }
+}
+
+if ($('btn-bulk-move')) $('btn-bulk-move').addEventListener('click', bulkMoveToGroup);
+if ($('btn-bulk-delete')) $('btn-bulk-delete').addEventListener('click', bulkDeleteSalons);
 
 // Language switcher
 applyTranslations();

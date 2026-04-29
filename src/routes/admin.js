@@ -137,6 +137,67 @@ router.put('/groups/assign-csv-source', express.json(), (req, res) => {
   res.json({ ok: true, moved: result.changes });
 });
 
+// Construire un WHERE clause + params a partir d'un filtre frontend (group_id, csv_source, search)
+function buildFilterWhere({ group_id, csv_source, search }) {
+  const conds = [];
+  const params = [];
+  if (group_id === 'none') conds.push('group_id IS NULL');
+  else if (group_id != null && group_id !== '') {
+    const gid = parseInt(group_id, 10);
+    if (Number.isFinite(gid)) { conds.push('group_id = ?'); params.push(gid); }
+  }
+  if (csv_source) { conds.push('csv_source = ?'); params.push(csv_source); }
+  if (search) {
+    conds.push('(nom LIKE ? OR nom_clean LIKE ? OR ville LIKE ? OR slug LIKE ?)');
+    const s = `%${search}%`;
+    params.push(s, s, s, s);
+  }
+  return { where: conds.length ? 'WHERE ' + conds.join(' AND ') : '', params };
+}
+
+// Compter les salons matchant un filtre (utile cote UI pour preview)
+router.post('/salons/bulk-count', express.json(), (req, res) => {
+  const { where, params } = buildFilterWhere(req.body || {});
+  const n = db.prepare(`SELECT COUNT(*) AS n FROM salons ${where}`).get(...params).n;
+  res.json({ count: n });
+});
+
+// Deplacer en masse des salons (filtre group_id/csv_source/search) vers un groupe cible
+router.put('/salons/bulk-assign-group', express.json(), (req, res) => {
+  const { target_group_id, group_id, csv_source, search } = req.body || {};
+  if (target_group_id === undefined) {
+    return res.status(400).json({ error: 'target_group_id requis (utiliser null pour retirer du groupe)' });
+  }
+  let target = null;
+  if (target_group_id != null && target_group_id !== '') {
+    target = parseInt(target_group_id, 10);
+    if (!Number.isFinite(target)) return res.status(400).json({ error: 'target_group_id invalide' });
+    // Verifier que le groupe existe
+    const g = db.prepare('SELECT id FROM salon_groups WHERE id = ?').get(target);
+    if (!g) return res.status(404).json({ error: 'Groupe cible introuvable' });
+  }
+
+  const { where, params } = buildFilterWhere({ group_id, csv_source, search });
+  if (!where) return res.status(400).json({ error: 'Au moins un filtre est requis (group_id, csv_source ou search)' });
+
+  const result = db.prepare(`UPDATE salons SET group_id = ?, updated_at = datetime('now') ${where}`)
+    .run(target, ...params);
+  res.json({ ok: true, moved: result.changes });
+});
+
+// Supprimer en masse des salons (filtre group_id/csv_source/search)
+router.delete('/salons/bulk', express.json(), (req, res) => {
+  const { confirm, group_id, csv_source, search } = req.body || {};
+  if (confirm !== true) return res.status(400).json({ error: 'confirm: true requis pour valider la suppression' });
+
+  const { where, params } = buildFilterWhere({ group_id, csv_source, search });
+  if (!where) return res.status(400).json({ error: 'Au moins un filtre est requis pour eviter une suppression totale accidentelle' });
+
+  const count = db.prepare(`SELECT COUNT(*) AS n FROM salons ${where}`).get(...params).n;
+  const result = db.prepare(`DELETE FROM salons ${where}`).run(...params);
+  res.json({ ok: true, deleted: result.changes, expected: count });
+});
+
 router.post('/screenshot/:slug', async (req, res) => {
   const result = await captureSalon(req.params.slug);
   if (result.success) res.json(result);
