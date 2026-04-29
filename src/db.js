@@ -11,6 +11,7 @@ db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
 export function initSchema() {
+  // 1. Tables (creates if absent ; pas d'index sur edit_token ici pour les vieilles BDD)
   db.exec(`
     CREATE TABLE IF NOT EXISTS salons (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +41,7 @@ export function initSchema() {
       screenshot_path TEXT,
       screenshot_generated_at TEXT,
       csv_source TEXT,
-      edit_token TEXT UNIQUE,
+      edit_token TEXT,
       overrides_json TEXT,
       overrides_updated_at TEXT,
       created_at TEXT DEFAULT (datetime('now')),
@@ -50,7 +51,6 @@ export function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_salons_slug ON salons(slug);
     CREATE INDEX IF NOT EXISTS idx_salons_csv_source ON salons(csv_source);
     CREATE INDEX IF NOT EXISTS idx_salons_screenshot ON salons(screenshot_path);
-    CREATE INDEX IF NOT EXISTS idx_salons_edit_token ON salons(edit_token);
 
     CREATE TABLE IF NOT EXISTS csv_imports (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,14 +70,14 @@ export function initSchema() {
     );
   `);
 
-  // Migrations idempotentes : ajouter les colonnes si elles n'existent pas (BDD existante)
+  // 2. Migrations idempotentes : pour les BDD existantes, ajoute les colonnes manquantes
   const cols = db.prepare("PRAGMA table_info(salons)").all().map(c => c.name);
-  if (!cols.includes('edit_token')) {
-    db.exec("ALTER TABLE salons ADD COLUMN edit_token TEXT");
-    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_salons_edit_token_unique ON salons(edit_token) WHERE edit_token IS NOT NULL");
-  }
+  if (!cols.includes('edit_token')) db.exec("ALTER TABLE salons ADD COLUMN edit_token TEXT");
   if (!cols.includes('overrides_json')) db.exec("ALTER TABLE salons ADD COLUMN overrides_json TEXT");
   if (!cols.includes('overrides_updated_at')) db.exec("ALTER TABLE salons ADD COLUMN overrides_updated_at TEXT");
+
+  // 3. Index sur edit_token : seulement maintenant que la colonne existe
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_salons_edit_token ON salons(edit_token) WHERE edit_token IS NOT NULL");
 }
 
 initSchema();
