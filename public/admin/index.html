@@ -6,55 +6,60 @@
     <title>Outil coiffure — Admin</title>
     <link rel="stylesheet" href="/admin/admin.css">
 </head>
-<body>
+<body data-i18n-title="app.title">
     <header class="topbar">
         <div class="topbar-inner">
-            <h1>Outil coiffure</h1>
+            <h1 data-i18n="app.title">Outil coiffure</h1>
             <div class="topbar-actions">
+                <div class="lang-switcher" role="group" aria-label="Langue">
+                    <button class="lang-btn" data-lang="fr" type="button">FR</button>
+                    <button class="lang-btn" data-lang="en" type="button">EN</button>
+                    <button class="lang-btn" data-lang="zh" type="button">中</button>
+                </div>
                 <span id="user-email"></span>
-                <button id="logout-btn" class="btn-link">Déconnexion</button>
+                <button id="logout-btn" class="btn-link" data-i18n="app.logout">Déconnexion</button>
             </div>
         </div>
     </header>
 
     <main class="container">
         <section class="panel">
-            <h2>Statistiques</h2>
+            <h2 data-i18n="stats.title">Statistiques</h2>
             <div class="stats-grid" id="stats-grid">
-                <div class="stat-box"><span class="stat-value" id="stat-total">—</span><span class="stat-label">Salons en base</span></div>
-                <div class="stat-box"><span class="stat-value" id="stat-with-screenshot">—</span><span class="stat-label">Avec capture</span></div>
-                <div class="stat-box"><span class="stat-value" id="stat-without-screenshot">—</span><span class="stat-label">Sans capture</span></div>
-                <div class="stat-box"><span class="stat-value" id="stat-csv-sources">—</span><span class="stat-label">Imports CSV</span></div>
-                <div class="stat-box"><span class="stat-value" id="stat-clean-names">—</span><span class="stat-label">Noms nettoyés</span></div>
+                <div class="stat-box"><span class="stat-value" id="stat-total">—</span><span class="stat-label" data-i18n="stats.total">Salons en base</span></div>
+                <div class="stat-box"><span class="stat-value" id="stat-with-screenshot">—</span><span class="stat-label" data-i18n="stats.with_screenshot">Avec capture</span></div>
+                <div class="stat-box"><span class="stat-value" id="stat-without-screenshot">—</span><span class="stat-label" data-i18n="stats.without_screenshot">Sans capture</span></div>
+                <div class="stat-box"><span class="stat-value" id="stat-csv-sources">—</span><span class="stat-label" data-i18n="stats.csv_sources">Imports CSV</span></div>
+                <div class="stat-box"><span class="stat-value" id="stat-clean-names">—</span><span class="stat-label" data-i18n="stats.clean_names">Noms nettoyés</span></div>
             </div>
         </section>
 
         <section class="panel">
-            <h2>Importer un CSV</h2>
+            <h2 data-i18n="csv.title">Importer un CSV</h2>
             <form id="upload-form" class="upload-form">
                 <input type="file" name="csv" accept=".csv,.tsv,.txt" required>
-                <input type="text" name="source_name" placeholder="Nom de la source (ex: coiffeurs-auvergne-ain)" required>
-                <button type="submit">Importer</button>
+                <input type="text" name="source_name" data-i18n-placeholder="csv.source_name_placeholder" placeholder="Nom de la source" required>
+                <button type="submit" data-i18n="csv.import_btn">Importer</button>
             </form>
             <pre class="result-box" id="upload-result"></pre>
         </section>
 
         <section class="panel">
             <div class="panel-header">
-                <h2>Salons</h2>
+                <h2 data-i18n="table.title">Salons</h2>
                 <div class="panel-controls">
-                    <input type="text" id="search-input" placeholder="Rechercher (nom, ville, slug)…">
+                    <input type="text" id="search-input" data-i18n-placeholder="table.search_placeholder" placeholder="Rechercher…">
                     <select id="csv-source-filter">
-                        <option value="">Toutes les sources</option>
+                        <option value="" data-i18n="table.all_sources">Toutes les sources</option>
                     </select>
-                    <button id="refresh-btn">Actualiser</button>
+                    <button id="refresh-btn" data-i18n="table.refresh">Actualiser</button>
                 </div>
             </div>
 
             <div class="batch-actions">
-                <button id="batch-screenshots-btn" class="btn-primary">Générer toutes les captures manquantes</button>
-                <button id="clean-names-btn" class="btn-primary" title="Nettoie les noms à rallonge via IA (Azure GPT)">Nettoyer les noms (IA)</button>
-                <button id="export-csv-btn" class="btn-secondary">Exporter CSV enrichi</button>
+                <button id="batch-screenshots-btn" class="btn-primary" data-i18n="table.batch_screenshots">Générer toutes les captures manquantes</button>
+                <button id="clean-names-btn" class="btn-primary" data-i18n="table.clean_names" data-i18n-title="table.clean_names_tooltip">Nettoyer les noms (IA)</button>
+                <button id="export-csv-btn" class="btn-secondary" data-i18n="table.export_csv">Exporter CSV enrichi</button>
                 <span id="job-status"></span>
             </div>
 
@@ -62,23 +67,23 @@
                 <table class="salons-table">
                     <thead>
                         <tr>
-                            <th>Nom scrappé</th>
-                            <th>Nom final <span class="th-hint">(éditable)</span></th>
-                            <th>Ville</th>
-                            <th>Note</th>
-                            <th>URL Landing</th>
-                            <th>URL Édition</th>
-                            <th>Capture</th>
-                            <th>Actions</th>
+                            <th data-i18n="col.nom_scrappe">Nom scrappé</th>
+                            <th><span data-i18n="col.nom_final">Nom final</span> <span class="th-hint" data-i18n="col.editable_hint">(éditable)</span></th>
+                            <th data-i18n="col.ville">Ville</th>
+                            <th data-i18n="col.note">Note</th>
+                            <th data-i18n="col.url_landing">URL Landing</th>
+                            <th data-i18n="col.url_edition">URL Édition</th>
+                            <th data-i18n="col.capture">Capture</th>
+                            <th data-i18n="col.actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="salons-tbody"></tbody>
                 </table>
             </div>
             <div class="pagination">
-                <button id="prev-page">←</button>
+                <button id="prev-page" data-i18n="page.previous">←</button>
                 <span id="page-info">—</span>
-                <button id="next-page">→</button>
+                <button id="next-page" data-i18n="page.next">→</button>
             </div>
         </section>
     </main>
@@ -86,10 +91,10 @@
     <div class="modal-backdrop" id="screenshot-modal" hidden>
         <div class="modal">
             <button class="modal-close" id="modal-close">×</button>
-            <img id="modal-image" alt="Capture d'écran">
+            <img id="modal-image" alt="Capture">
         </div>
     </div>
 
-    <script src="/admin/admin.js"></script>
+    <script type="module" src="/admin/admin.js"></script>
 </body>
 </html>

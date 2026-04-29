@@ -6,24 +6,35 @@
     <title>Connexion — Outil coiffure</title>
     <link rel="stylesheet" href="/admin/admin.css">
 </head>
-<body class="login-page">
+<body class="login-page" data-i18n-title="login.title">
+    <div class="login-lang-switcher">
+        <button class="lang-btn" data-lang="fr" type="button">FR</button>
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+        <button class="lang-btn" data-lang="zh" type="button">中</button>
+    </div>
     <div class="login-box">
-        <h1>Outil coiffure</h1>
-        <p class="login-subtitle">Connexion administrateur</p>
+        <h1 data-i18n="login.title">Outil coiffure</h1>
+        <p class="login-subtitle" data-i18n="login.subtitle">Connexion administrateur</p>
         <form id="login-form">
             <label>
-                <span>Email</span>
+                <span data-i18n="login.email">Email</span>
                 <input type="email" name="email" required autocomplete="username">
             </label>
             <label>
-                <span>Mot de passe</span>
+                <span data-i18n="login.password">Mot de passe</span>
                 <input type="password" name="password" required autocomplete="current-password">
             </label>
-            <button type="submit">Se connecter</button>
+            <button type="submit" data-i18n="login.submit">Se connecter</button>
             <p class="error-message" id="error-message"></p>
         </form>
     </div>
-    <script>
+    <script type="module">
+        import { t, setLang, applyTranslations, getCurrentLang } from '/admin/i18n.js';
+        applyTranslations();
+        document.querySelectorAll('.lang-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.lang === getCurrentLang());
+            b.addEventListener('click', () => setLang(b.dataset.lang));
+        });
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const fd = new FormData(e.target);
@@ -37,7 +48,7 @@
                 });
                 const data = await res.json();
                 if (res.ok) location.href = '/admin';
-                else errEl.textContent = data.error || 'Erreur de connexion';
+                else errEl.textContent = data.error || t('login.error_default');
             } catch (err) {
                 errEl.textContent = err.message;
             }

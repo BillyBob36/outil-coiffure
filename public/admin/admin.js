@@ -1,3 +1,5 @@
+import { t, setLang, applyTranslations, getCurrentLang } from '/admin/i18n.js';
+
 const state = {
   page: 0,
   pageSize: 50,
@@ -68,9 +70,8 @@ function salonRow(r) {
   const editUrl = r.edit_token ? `/edit/${r.slug}?token=${r.edit_token}` : null;
   const screenshotCell = r.screenshot_path
     ? `<img class="screenshot-thumb" src="${r.screenshot_path}" alt="capture" data-full="${r.screenshot_path}">`
-    : `<span class="no-screenshot">non</span>`;
+    : `<span class="no-screenshot">${t('cell.no_screenshot')}</span>`;
 
-  // Nom scrappé (read-only) + Nom final (éditable inline)
   const nomScrappe = r.nom || '';
   const nomFinal = (r.nom_clean && r.nom_clean.trim()) || r.nom || '';
   const wasModified = nomFinal !== nomScrappe;
@@ -84,7 +85,7 @@ function salonRow(r) {
   `;
 
   const editCell = editUrl
-    ? `<a href="${editUrl}" target="_blank" class="edit-link" title="Lien d'édition à envoyer au coiffeur"><span class="edit-icon">✏️</span> Modifier</a> <button class="btn-icon copy-btn" data-copy="${escapeHtml(window.location.origin + editUrl)}" title="Copier le lien">📋</button>`
+    ? `<a href="${editUrl}" target="_blank" class="edit-link" title="${escapeHtml(t('cell.edit_link_tooltip'))}"><span class="edit-icon">✏️</span> ${escapeHtml(t('cell.edit_link'))}</a> <button class="btn-icon copy-btn" data-copy="${escapeHtml(window.location.origin + editUrl)}" title="${escapeHtml(t('cell.copy_tooltip'))}">📋</button>`
     : `<span class="no-screenshot">—</span>`;
   return `<tr data-slug="${escapeHtml(r.slug)}">
     <td>${nomScrappeCell}</td>
@@ -95,8 +96,8 @@ function salonRow(r) {
     <td class="url-cell">${editCell}</td>
     <td>${screenshotCell}</td>
     <td class="actions">
-      <button class="btn-small btn-primary action-screenshot">Capture</button>
-      <button class="btn-small btn-danger action-delete">×</button>
+      <button class="btn-small btn-primary action-screenshot">${escapeHtml(t('action.capture'))}</button>
+      <button class="btn-small btn-danger action-delete" title="${escapeHtml(t('action.delete'))}">×</button>
     </td>
   </tr>`;
 }
@@ -107,16 +108,16 @@ function bindRowActions() {
       const tr = btn.closest('tr');
       const slug = tr.dataset.slug;
       btn.disabled = true;
-      btn.textContent = '…';
+      btn.textContent = t('action.deleting');
       try {
         await api(`/admin/screenshot/${encodeURIComponent(slug)}`, { method: 'POST' });
         await loadSalons();
         await loadStats();
       } catch (e) {
-        alert('Erreur: ' + e.message);
+        alert(t('err.generic') + ': ' + e.message);
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Capture';
+        btn.textContent = t('action.capture');
       }
     });
   });
@@ -125,7 +126,7 @@ function bindRowActions() {
     btn.addEventListener('click', async () => {
       const tr = btn.closest('tr');
       const slug = tr.dataset.slug;
-      if (!confirm(`Supprimer ${slug} ?`)) return;
+      if (!confirm(t('confirm.delete_salon', { slug }))) return;
       try {
         await api(`/admin/salon/${encodeURIComponent(slug)}`, { method: 'DELETE' });
         await loadSalons();
@@ -170,13 +171,13 @@ function bindRowActions() {
       const current = input.value.trim();
       if (current === original) { status.textContent = ''; return; }
       if (!current) {
-        status.textContent = 'vide ✗';
+        status.textContent = t('err.empty_field') + ' ✗';
         status.className = 'nom-final-status error';
         input.value = original;
         return;
       }
       saving = true;
-      status.textContent = '…';
+      status.textContent = t('err.saving');
       status.className = 'nom-final-status saving';
       try {
         const res = await fetch(`/admin/salon/${encodeURIComponent(slug)}/nom-final`, {
@@ -222,7 +223,7 @@ $('upload-form').addEventListener('submit', async (e) => {
   const fd = new FormData(e.target);
   const result = $('upload-result');
   result.classList.add('visible');
-  result.textContent = 'Import en cours…';
+  result.textContent = t('csv.importing');
   try {
     const res = await fetch('/admin/upload-csv', {
       method: 'POST',
@@ -230,13 +231,13 @@ $('upload-form').addEventListener('submit', async (e) => {
       credentials: 'same-origin'
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erreur');
+    if (!res.ok) throw new Error(data.error || t('err.generic'));
     result.textContent = JSON.stringify(data, null, 2);
     e.target.reset();
     await loadStats();
     await loadSalons();
   } catch (e) {
-    result.textContent = 'Erreur: ' + e.message;
+    result.textContent = t('err.generic') + ': ' + e.message;
   }
 });
 
@@ -272,7 +273,8 @@ $('screenshot-modal').addEventListener('click', (e) => {
 
 $('batch-screenshots-btn').addEventListener('click', async () => {
   const csvSource = state.csvSource || null;
-  if (!confirm('Lancer la génération des captures manquantes ?' + (csvSource ? ` (source: ${csvSource})` : ' (toutes sources)'))) return;
+  const suffix = csvSource ? t('confirm.batch_screenshots_source', { source: csvSource }) : t('confirm.batch_screenshots_all');
+  if (!confirm(t('confirm.batch_screenshots') + suffix)) return;
   try {
     const res = await api('/admin/screenshot-batch', {
       method: 'POST',
@@ -290,7 +292,12 @@ async function pollJob(jobId) {
   const interval = setInterval(async () => {
     try {
       const job = await api(`/admin/job/${jobId}`);
-      status.textContent = `[${job.status}] ${job.done}/${job.total} (${job.errors} erreurs)`;
+      status.textContent = t('job.status_label', {
+        status: job.status,
+        done: job.done,
+        total: job.total,
+        errors: job.errors
+      });
       if (job.status === 'finished' || job.status === 'error') {
         clearInterval(interval);
         await loadSalons();
@@ -312,9 +319,9 @@ $('export-csv-btn').addEventListener('click', () => {
 $('clean-names-btn').addEventListener('click', async () => {
   const csvSource = state.csvSource || null;
   const msg = csvSource
-    ? `Lancer le nettoyage IA des noms pour la source "${csvSource}" ?`
-    : 'Lancer le nettoyage IA pour toutes les sources ?';
-  if (!confirm(msg + '\n\n(Seuls les noms pas encore nettoyés sont traités.)')) return;
+    ? t('confirm.clean_names_source', { source: csvSource })
+    : t('confirm.clean_names_all');
+  if (!confirm(msg + t('confirm.clean_names_note'))) return;
   try {
     const res = await api('/admin/clean-names', {
       method: 'POST',
@@ -322,7 +329,7 @@ $('clean-names-btn').addEventListener('click', async () => {
       body: JSON.stringify({ csv_source: csvSource })
     });
     if (res.total === 0) {
-      $('job-status').textContent = 'Aucun nom à nettoyer.';
+      $('job-status').textContent = t('msg.no_names_to_clean');
       setTimeout(() => { $('job-status').textContent = ''; }, 3000);
       return;
     }
@@ -336,6 +343,16 @@ function debounce(fn, ms) {
   let t;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
+
+// Language switcher
+applyTranslations();
+document.querySelectorAll('.lang-btn').forEach(b => {
+  b.addEventListener('click', () => setLang(b.dataset.lang));
+});
+// Re-render dynamic content (table) when language changes
+window.onLangChange = () => {
+  loadSalons();
+};
 
 (async () => {
   try {
