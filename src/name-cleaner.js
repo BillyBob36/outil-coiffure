@@ -108,7 +108,7 @@ export async function startCleanNames({ csvSource = null, onlyMissing = true, fo
   const conds = [];
   const params = [];
   if (csvSource) { conds.push('csv_source = ?'); params.push(csvSource); }
-  if (onlyMissing && !force) conds.push('(nom_clean IS NULL OR nom_clean = "")');
+  if (onlyMissing && !force) conds.push("(nom_clean IS NULL OR nom_clean = '')");
   if (conds.length) query += ' WHERE ' + conds.join(' AND ');
   query += ' ORDER BY id ASC';
 

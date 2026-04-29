@@ -56,7 +56,7 @@ router.get('/stats', (req, res) => {
   const total = db.prepare('SELECT COUNT(*) as n FROM salons').get().n;
   const withScreenshot = db.prepare('SELECT COUNT(*) as n FROM salons WHERE screenshot_path IS NOT NULL').get().n;
   const withoutScreenshot = total - withScreenshot;
-  const withCleanName = db.prepare('SELECT COUNT(*) as n FROM salons WHERE nom_clean IS NOT NULL AND nom_clean != ""').get().n;
+  const withCleanName = db.prepare("SELECT COUNT(*) as n FROM salons WHERE nom_clean IS NOT NULL AND nom_clean != ''").get().n;
   const csvSources = db.prepare('SELECT csv_source, COUNT(*) as n FROM salons GROUP BY csv_source ORDER BY n DESC').all();
   res.json({ total, withScreenshot, withoutScreenshot, withCleanName, csvSources });
 });
