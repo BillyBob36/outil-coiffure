@@ -32,6 +32,7 @@ async function loadStats() {
   $('stat-with-screenshot').textContent = stats.withScreenshot;
   $('stat-without-screenshot').textContent = stats.withoutScreenshot;
   $('stat-csv-sources').textContent = stats.csvSources.length;
+  if ($('stat-clean-names')) $('stat-clean-names').textContent = stats.withCleanName ?? '—';
 
   const select = $('csv-source-filter');
   const current = select.value;
@@ -67,8 +68,13 @@ function salonRow(r) {
   const screenshotCell = r.screenshot_path
     ? `<img class="screenshot-thumb" src="${r.screenshot_path}" alt="capture" data-full="${r.screenshot_path}">`
     : `<span class="no-screenshot">non</span>`;
+  const displayName = r.nom_clean && r.nom_clean.trim() ? r.nom_clean : r.nom;
+  const wasCleaned = !!(r.nom_clean && r.nom_clean.trim() && r.nom_clean !== r.nom);
+  const nameCell = wasCleaned
+    ? `<strong title="Original : ${escapeHtml(r.nom)}">${escapeHtml(displayName)} <span class="cleaned-tag">✨</span></strong>`
+    : `<strong>${escapeHtml(displayName)}</strong>`;
   return `<tr data-slug="${escapeHtml(r.slug)}">
-    <td><strong>${escapeHtml(r.nom)}</strong></td>
+    <td>${nameCell}</td>
     <td>${escapeHtml(r.ville || '')}</td>
     <td>${r.note_avis ? `<span class="badge-rating">${r.note_avis}/5${r.nb_avis ? ` · ${r.nb_avis}` : ''}</span>` : '—'}</td>
     <td><code>${escapeHtml(r.slug)}</code></td>
@@ -214,6 +220,29 @@ $('export-csv-btn').addEventListener('click', () => {
   const params = new URLSearchParams();
   if (state.csvSource) params.set('csv_source', state.csvSource);
   location.href = '/admin/export-csv?' + params;
+});
+
+$('clean-names-btn').addEventListener('click', async () => {
+  const csvSource = state.csvSource || null;
+  const msg = csvSource
+    ? `Lancer le nettoyage IA des noms pour la source "${csvSource}" ?`
+    : 'Lancer le nettoyage IA pour toutes les sources ?';
+  if (!confirm(msg + '\n\n(Seuls les noms pas encore nettoyés sont traités.)')) return;
+  try {
+    const res = await api('/admin/clean-names', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csv_source: csvSource })
+    });
+    if (res.total === 0) {
+      $('job-status').textContent = 'Aucun nom à nettoyer.';
+      setTimeout(() => { $('job-status').textContent = ''; }, 3000);
+      return;
+    }
+    pollJob(res.jobId);
+  } catch (e) {
+    alert(e.message);
+  }
 });
 
 function debounce(fn, ms) {

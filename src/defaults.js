@@ -122,10 +122,13 @@ export function buildSalonView(salonRow) {
   let hours = null;
   try { hours = salonRow.heures_ouverture ? JSON.parse(salonRow.heures_ouverture) : null; } catch {}
 
+  // Nom affiche : nom_clean s'il existe, sinon nom brut du CSV
+  const displayName = (salonRow.nom_clean && salonRow.nom_clean.trim()) || salonRow.nom;
+
   // Enrichissement avec les colonnes typees
   const flat = {
     ...csvData,
-    nom: salonRow.nom,
+    nom: displayName,
     ville: salonRow.ville,
     code_postal: salonRow.code_postal,
     adresse: salonRow.adresse,
@@ -152,7 +155,8 @@ export function buildSalonView(salonRow) {
 
   return {
     slug: salonRow.slug,
-    nom: salonRow.nom,
+    nom: displayName,
+    nom_original: salonRow.nom,
     ville: salonRow.ville,
     note_avis: salonRow.note_avis,
     nb_avis: salonRow.nb_avis,

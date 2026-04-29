@@ -25,6 +25,7 @@
                 <div class="stat-box"><span class="stat-value" id="stat-with-screenshot">—</span><span class="stat-label">Avec capture</span></div>
                 <div class="stat-box"><span class="stat-value" id="stat-without-screenshot">—</span><span class="stat-label">Sans capture</span></div>
                 <div class="stat-box"><span class="stat-value" id="stat-csv-sources">—</span><span class="stat-label">Imports CSV</span></div>
+                <div class="stat-box"><span class="stat-value" id="stat-clean-names">—</span><span class="stat-label">Noms nettoyés</span></div>
             </div>
         </section>
 
@@ -52,6 +53,7 @@
 
             <div class="batch-actions">
                 <button id="batch-screenshots-btn" class="btn-primary">Générer toutes les captures manquantes</button>
+                <button id="clean-names-btn" class="btn-primary" title="Nettoie les noms à rallonge via IA (Azure GPT)">Nettoyer les noms (IA)</button>
                 <button id="export-csv-btn" class="btn-secondary">Exporter CSV enrichi</button>
                 <span id="job-status"></span>
             </div>

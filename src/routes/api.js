@@ -29,9 +29,10 @@ router.get('/salons', (req, res) => {
 
   const total = db.prepare(`SELECT COUNT(*) as n FROM salons WHERE ${where}`).get(params).n;
   const rows = db.prepare(`
-    SELECT id, slug, nom, ville, code_postal, telephone, email, note_avis, nb_avis,
+    SELECT id, slug, nom, nom_clean, ville, code_postal, telephone, email, note_avis, nb_avis,
            screenshot_path, screenshot_generated_at, csv_source, edit_token,
-           overrides_json IS NOT NULL AS has_overrides, overrides_updated_at, created_at
+           overrides_json IS NOT NULL AS has_overrides, overrides_updated_at,
+           nom_clean_at, created_at
     FROM salons
     WHERE ${where}
     ORDER BY id DESC
@@ -55,8 +56,9 @@ router.get('/stats', (req, res) => {
   const total = db.prepare('SELECT COUNT(*) as n FROM salons').get().n;
   const withScreenshot = db.prepare('SELECT COUNT(*) as n FROM salons WHERE screenshot_path IS NOT NULL').get().n;
   const withoutScreenshot = total - withScreenshot;
+  const withCleanName = db.prepare('SELECT COUNT(*) as n FROM salons WHERE nom_clean IS NOT NULL AND nom_clean != ""').get().n;
   const csvSources = db.prepare('SELECT csv_source, COUNT(*) as n FROM salons GROUP BY csv_source ORDER BY n DESC').all();
-  res.json({ total, withScreenshot, withoutScreenshot, csvSources });
+  res.json({ total, withScreenshot, withoutScreenshot, withCleanName, csvSources });
 });
 
 export default router;

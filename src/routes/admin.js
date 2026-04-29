@@ -7,6 +7,7 @@ import { join, basename } from 'path';
 import db from '../db.js';
 import { importCsvFile } from '../csv-importer.js';
 import { captureSalon, captureBatch } from '../screenshot-worker.js';
+import { startCleanNames, getCleanJob } from '../name-cleaner.js';
 
 const router = express.Router();
 const UPLOAD_DIR = './data/csv-uploads';
@@ -106,9 +107,24 @@ router.post('/screenshot-batch', async (req, res) => {
 });
 
 router.get('/job/:jobId', (req, res) => {
-  const job = activeJobs.get(req.params.jobId);
+  const job = activeJobs.get(req.params.jobId) || getCleanJob(req.params.jobId);
   if (!job) return res.status(404).json({ error: 'Job inconnu' });
   res.json(job);
+});
+
+router.post('/clean-names', express.json(), async (req, res) => {
+  const { csv_source = null, force = false } = req.body || {};
+  try {
+    const result = await startCleanNames({ csvSource: csv_source, onlyMissing: true, force });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/reset-clean-name/:slug', (req, res) => {
+  const result = db.prepare('UPDATE salons SET nom_clean = NULL, nom_clean_at = NULL WHERE slug = ?').run(req.params.slug);
+  res.json({ ok: true, updated: result.changes });
 });
 
 router.get('/export-csv', (req, res) => {
@@ -116,7 +132,7 @@ router.get('/export-csv', (req, res) => {
   const publicBase = process.env.PUBLIC_BASE_URL || 'https://coiffure.lamidetlm.com';
   const adminBase = process.env.ADMIN_BASE_URL || 'https://outil-coiffure.lamidetlm.com';
 
-  let query = `SELECT slug, nom, ville, code_postal, adresse, telephone, email,
+  let query = `SELECT slug, nom, nom_clean, ville, code_postal, adresse, telephone, email,
                       note_avis, nb_avis, lien_facebook, lien_instagram, lien_google_maps,
                       screenshot_path, csv_source, edit_token, data_json
                FROM salons`;
@@ -128,7 +144,8 @@ router.get('/export-csv', (req, res) => {
 
   const enriched = rows.map(r => ({
     slug: r.slug,
-    nom: r.nom,
+    nom: (r.nom_clean && r.nom_clean.trim()) || r.nom,
+    nom_original: r.nom,
     ville: r.ville,
     code_postal: r.code_postal,
     adresse: r.adresse,
