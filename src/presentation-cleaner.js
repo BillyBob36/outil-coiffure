@@ -135,52 +135,68 @@ export async function startCorrectPresentation({ slugs = [] } = {}) {
   return { jobId, total: rows.length };
 }
 
+// Concurrence : presentations ont ~2400 tokens par batch de 8, ~3s.
+// Avec 6 en parallele : 6/3 = 2 req/s = 120 req/min. Tokens : 6×2400 = 14k tokens utilises
+// par cycle de 3s, soit 280k tokens/min. C'est legerement au-dessus du token rate limit (250k/min).
+// On reduit a 5 pour rester sous la limite.
+const PARALLEL_BATCHES = 5;
+
 async function processBatches(jobId, rows) {
   const job = presentationJobs.get(jobId);
   const updateStmt = db.prepare(`UPDATE salons SET overrides_json = ?, overrides_updated_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`);
 
+  // Decoupe en batches
+  const batches = [];
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE);
-    const items = batch.map(r => {
-      // Recup meta_description : colonne directe OU dans data_json
-      let metaDesc = r.meta_description || '';
-      if (!metaDesc) {
-        try {
-          const data = JSON.parse(r.data_json || '{}');
-          metaDesc = data.meta_description || '';
-        } catch {}
-      }
-      const displayName = (r.nom_clean && r.nom_clean.trim()) || r.nom || '';
-      return { id: r.id, slug: r.slug, nom: displayName, ville: r.ville || '', raw: metaDesc };
-    });
-
-    try {
-      const results = await callAzure(items);
-      const byIndex = new Map(results.map(r => [Number(r.i), String(r.description || '').trim()]));
-
-      const tx = db.transaction(() => {
-        batch.forEach((row, idx) => {
-          const cleaned = byIndex.get(idx);
-          if (!cleaned || cleaned.length < 10) return; // skip si reponse vide ou trop courte
-
-          // Merger dans overrides_json existants pour ne pas ecraser d'autres champs
-          let overrides = {};
-          try { overrides = row.overrides_json ? JSON.parse(row.overrides_json) : {}; } catch {}
-          if (!overrides.intro) overrides.intro = {};
-          overrides.intro.description = cleaned;
-
-          updateStmt.run(JSON.stringify(overrides), row.id);
-          job.updated++;
-        });
-      });
-      tx();
-      job.done += batch.length;
-      job.last = batch[batch.length - 1].slug;
-    } catch (e) {
-      job.errors += batch.length;
-      job.last = `ERROR: ${e.message}`;
-    }
+    batches.push(rows.slice(i, i + BATCH_SIZE));
   }
 
+  let nextBatch = 0;
+  const workers = Array.from({ length: Math.min(PARALLEL_BATCHES, batches.length) }, async () => {
+    while (true) {
+      const idx = nextBatch++;
+      if (idx >= batches.length) return;
+      const batch = batches[idx];
+      const items = batch.map(r => {
+        let metaDesc = r.meta_description || '';
+        if (!metaDesc) {
+          try {
+            const data = JSON.parse(r.data_json || '{}');
+            metaDesc = data.meta_description || '';
+          } catch {}
+        }
+        const displayName = (r.nom_clean && r.nom_clean.trim()) || r.nom || '';
+        return { id: r.id, slug: r.slug, nom: displayName, ville: r.ville || '', raw: metaDesc };
+      });
+
+      try {
+        const results = await callAzure(items);
+        const byIndex = new Map(results.map(r => [Number(r.i), String(r.description || '').trim()]));
+
+        const tx = db.transaction(() => {
+          batch.forEach((row, k) => {
+            const cleaned = byIndex.get(k);
+            if (!cleaned || cleaned.length < 10) return;
+
+            let overrides = {};
+            try { overrides = row.overrides_json ? JSON.parse(row.overrides_json) : {}; } catch {}
+            if (!overrides.intro) overrides.intro = {};
+            overrides.intro.description = cleaned;
+
+            updateStmt.run(JSON.stringify(overrides), row.id);
+            job.updated++;
+          });
+        });
+        tx();
+        job.done += batch.length;
+        job.last = batch[batch.length - 1].slug;
+      } catch (e) {
+        job.errors += batch.length;
+        job.last = `ERROR: ${e.message}`;
+      }
+    }
+  });
+
+  await Promise.all(workers);
   job.status = 'finished';
 }

@@ -9,6 +9,7 @@ import { importCsvFile } from '../csv-importer.js';
 import { captureSalon, captureBatch } from '../screenshot-worker.js';
 import { startCleanNames, getCleanJob } from '../name-cleaner.js';
 import { startCorrectPresentation, getPresentationJob } from '../presentation-cleaner.js';
+import { captureBatchParallel } from '../screenshot-worker.js';
 
 const router = express.Router();
 const UPLOAD_DIR = './data/csv-uploads';
@@ -226,7 +227,7 @@ router.post('/screenshot/:slug', async (req, res) => {
 
 const activeJobs = new Map();
 
-router.post('/screenshot-batch', async (req, res) => {
+router.post('/screenshot-batch', express.json(), async (req, res) => {
   const { csv_source, group_id, only_missing = true, slugs: explicitSlugs } = req.body || {};
   let slugs;
   if (Array.isArray(explicitSlugs) && explicitSlugs.length > 0) {
@@ -291,10 +292,156 @@ router.post('/correct-presentation', express.json(), async (req, res) => {
   }
 });
 
+// =====================================================================
+// ORCHESTRATEUR : lance plusieurs actions en parallele sur une selection
+// Body : { slugs: [...], actions: { capture, clean_names, correct_presentation } }
+// Retourne un jobId unique qui agrege la progression de toutes les sous-taches.
+// =====================================================================
+const runJobs = new Map();
+
+router.get('/run-job/:jobId', (req, res) => {
+  const job = runJobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job inconnu' });
+  res.json(job);
+});
+
+router.post('/run-actions', express.json(), async (req, res) => {
+  const { slugs, actions } = req.body || {};
+  if (!Array.isArray(slugs) || slugs.length === 0) {
+    return res.status(400).json({ error: 'slugs requis (tableau non vide)' });
+  }
+  if (!actions || typeof actions !== 'object') {
+    return res.status(400).json({ error: 'actions requis (objet)' });
+  }
+  const enabledActions = Object.entries(actions).filter(([_, v]) => v).map(([k]) => k);
+  if (enabledActions.length === 0) {
+    return res.status(400).json({ error: 'Au moins une action doit etre activee' });
+  }
+
+  const jobId = 'run_' + Date.now();
+  const job = {
+    id: jobId,
+    total: 0,
+    done: 0,
+    errors: 0,
+    status: 'running',
+    last: null,
+    breakdown: {}
+  };
+
+  // Calculer le total : N (nombre de slugs) x nombre d'actions activees
+  for (const a of enabledActions) {
+    job.breakdown[a] = { total: slugs.length, done: 0, errors: 0, updated: 0 };
+    job.total += slugs.length;
+  }
+  runJobs.set(jobId, job);
+  res.json({ jobId, total: job.total, actions: enabledActions });
+
+  // ====== ORCHESTRATION ======
+  // Logique : les actions IA (clean_names, correct_presentation) modifient le contenu de la
+  // landing. Donc si capture est aussi demandee, on doit attendre que les modifs IA aient
+  // ete sauvegardees avant de lancer les captures, sinon les captures auraient l'ancien contenu.
+  //
+  // Phase 1 (parallele) : clean_names + correct_presentation
+  // Phase 2 (apres phase 1) : capture
+  // Si une seule action est cochee, c'est direct.
+  // ===========================
+  (async () => {
+    try {
+      // Phase 1 : actions IA en parallele
+      const phase1 = [];
+
+      if (actions.clean_names) {
+        phase1.push((async () => {
+          const sub = await startCleanNames({ slugs, force: true });
+          if (!sub.jobId) return;
+          while (true) {
+            const subJob = getCleanJob(sub.jobId);
+            if (!subJob) break;
+            const b = job.breakdown.clean_names;
+            const delta = subJob.done - b.done;
+            b.done = subJob.done;
+            b.errors = subJob.errors || 0;
+            b.updated = subJob.updated || 0;
+            job.done += delta;
+            job.errors += (subJob.errors || 0) - (b.errorsReported || 0);
+            b.errorsReported = subJob.errors || 0;
+            if (subJob.last) job.last = String(subJob.last).slice(0, 80);
+            if (subJob.status === 'finished' || subJob.status === 'error') break;
+            await new Promise(r => setTimeout(r, 800));
+          }
+        })().catch(e => {
+          job.breakdown.clean_names.errors = slugs.length;
+          job.errors += slugs.length;
+          job.last = `ERROR clean_names: ${e.message}`;
+        }));
+      }
+
+      if (actions.correct_presentation) {
+        phase1.push((async () => {
+          const sub = await startCorrectPresentation({ slugs });
+          if (!sub.jobId) return;
+          while (true) {
+            const subJob = getPresentationJob(sub.jobId);
+            if (!subJob) break;
+            const b = job.breakdown.correct_presentation;
+            const delta = subJob.done - b.done;
+            b.done = subJob.done;
+            b.errors = subJob.errors || 0;
+            b.updated = subJob.updated || 0;
+            job.done += delta;
+            job.errors += (subJob.errors || 0) - (b.errorsReported || 0);
+            b.errorsReported = subJob.errors || 0;
+            if (subJob.last) job.last = String(subJob.last).slice(0, 80);
+            if (subJob.status === 'finished' || subJob.status === 'error') break;
+            await new Promise(r => setTimeout(r, 800));
+          }
+        })().catch(e => {
+          job.breakdown.correct_presentation.errors = slugs.length;
+          job.errors += slugs.length;
+          job.last = `ERROR correct_presentation: ${e.message}`;
+        }));
+      }
+
+      if (phase1.length > 0) {
+        job.phase = 'ai';
+        await Promise.all(phase1);
+      }
+
+      // Phase 2 : captures (avec contenu mis a jour par phase 1)
+      if (actions.capture) {
+        job.phase = 'capture';
+        await captureBatchParallel(slugs, 4, ({ done, total, last }) => {
+          const b = job.breakdown.capture;
+          const delta = done - b.done;
+          b.done = done;
+          if (last && !last.success) {
+            b.errors++;
+            job.errors++;
+          }
+          job.done += delta;
+          if (last) job.last = (last.slug || String(last)).slice(0, 80);
+        }).catch(e => {
+          job.breakdown.capture.errors = slugs.length;
+          job.errors += slugs.length;
+          job.last = `ERROR capture: ${e.message}`;
+        });
+      }
+
+      job.status = 'finished';
+    } catch (e) {
+      job.status = 'error';
+      job.error = e.message;
+    }
+  })();
+});
+
+// Etend startCleanNames pour accepter un tableau de slugs explicites
+
 router.post('/clean-names', express.json(), async (req, res) => {
-  const { csv_source = null, group_id = null, force = false } = req.body || {};
+  const { csv_source = null, group_id = null, force = false, slugs = null } = req.body || {};
   try {
-    const result = await startCleanNames({ csvSource: csv_source, groupId: group_id, onlyMissing: true, force });
+    const result = await startCleanNames({ csvSource: csv_source, onlyMissing: true, force, slugs });
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -322,6 +469,35 @@ router.put('/salon/:slug/nom-final', express.json(), (req, res) => {
 
   if (result.changes === 0) return res.status(404).json({ error: 'Salon introuvable' });
   res.json({ ok: true, nom_final: value });
+});
+
+// Edition manuelle de la presentation corrigee (overrides_json.intro.description)
+router.put('/salon/:slug/presentation', express.json(), (req, res) => {
+  const value = String(req.body?.presentation || '').trim();
+  if (value.length > 1000) return res.status(400).json({ error: 'presentation trop longue (max 1000 caracteres)' });
+
+  const row = db.prepare('SELECT id, overrides_json FROM salons WHERE slug = ?').get(req.params.slug);
+  if (!row) return res.status(404).json({ error: 'Salon introuvable' });
+
+  let overrides = {};
+  try { overrides = row.overrides_json ? JSON.parse(row.overrides_json) : {}; } catch {}
+  if (!overrides.intro) overrides.intro = {};
+  if (value) {
+    overrides.intro.description = value;
+  } else {
+    // Vider la presentation = revenir au defaut (meta_description ou fallback)
+    delete overrides.intro.description;
+    if (Object.keys(overrides.intro).length === 0) delete overrides.intro;
+  }
+
+  db.prepare(`
+    UPDATE salons
+    SET overrides_json = ?, overrides_updated_at = datetime('now'), updated_at = datetime('now'),
+        screenshot_path = NULL, screenshot_generated_at = NULL
+    WHERE id = ?
+  `).run(Object.keys(overrides).length === 0 ? null : JSON.stringify(overrides), row.id);
+
+  res.json({ ok: true, presentation: value });
 });
 
 router.get('/export-csv', (req, res) => {

@@ -134,8 +134,21 @@ function salonRow(r) {
     </div>
   `;
 
-  const landingDisplay = `/preview/${r.slug}`;
-  const editDisplay = editUrl ? `/admin/${r.slug}?token=...` : null;
+  // URLs compactes : on affiche un texte court, le full URL est dans le hover/title
+  const landingDisplay = '/preview/…';
+  const editDisplay = editUrl ? '/admin/…' : null;
+
+  // Presentations : clickables (ouvrent une modale)
+  const presScrappee = r.presentation_scrappee || '';
+  const presCorrigee = r.presentation_corrigee || '';
+  const presScrappeeShort = presScrappee.length > 50 ? presScrappee.slice(0, 50) + '…' : presScrappee;
+  const presCorrigeeShort = presCorrigee.length > 50 ? presCorrigee.slice(0, 50) + '…' : presCorrigee;
+  const presScrappeeCell = presScrappee
+    ? `<span class="presentation-cell" title="${escapeHtml(presScrappee)}">${escapeHtml(presScrappeeShort)}</span>`
+    : `<span class="presentation-cell empty">—</span>`;
+  const presCorrigeeCell = presCorrigee
+    ? `<span class="presentation-cell modified" title="${escapeHtml(presCorrigee)}">${escapeHtml(presCorrigeeShort)}</span>`
+    : `<span class="presentation-cell empty">${escapeHtml(t('cell.click_to_edit'))}</span>`;
 
   const checked = state.selectedSlugs.has(r.slug) ? 'checked' : '';
 
@@ -145,10 +158,11 @@ function salonRow(r) {
     </td>
     <td>${nomScrappeCell}</td>
     <td>${nomFinalCell}</td>
+    <td class="col-presentation"><div class="open-presentation" data-slug="${escapeHtml(r.slug)}">${presScrappeeCell}</div></td>
+    <td class="col-presentation"><div class="open-presentation" data-slug="${escapeHtml(r.slug)}">${presCorrigeeCell}</div></td>
     <td>${escapeHtml(r.ville || '')}</td>
-    <td>${r.note_avis ? `<span class="badge-rating">${r.note_avis}/5${r.nb_avis ? ` · ${r.nb_avis}` : ''}</span>` : '—'}</td>
-    <td class="url-cell">${urlCell(landingDisplay, fullLanding, landingUrl)}</td>
-    <td class="url-cell">${editDisplay ? urlCell(editDisplay, fullEdit, editUrl) : '<span class="no-screenshot">—</span>'}</td>
+    <td class="url-cell col-url-compact">${urlCell(landingDisplay, fullLanding, landingUrl)}</td>
+    <td class="url-cell col-url-compact">${editDisplay ? urlCell(editDisplay, fullEdit, editUrl) : '<span class="no-screenshot">—</span>'}</td>
     <td>${screenshotCell}</td>
   </tr>`;
 }
@@ -167,6 +181,14 @@ function bindRowActions() {
         tr.classList.remove('row-selected');
       }
       updateSelectionUI();
+    });
+  });
+
+  // Click sur une cellule presentation : ouvre la modale
+  document.querySelectorAll('.open-presentation').forEach(el => {
+    el.addEventListener('click', () => {
+      const slug = el.dataset.slug;
+      openPresentationModal(slug);
     });
   });
 
@@ -683,12 +705,9 @@ function updateSelectionUI() {
   }
 
   // Boutons qui dependent de la selection
-  const captureBtn = $('batch-screenshots-btn');
-  const correctBtn = $('correct-presentation-btn');
   const deleteBtn = $('bulk-delete-selection-btn');
-  if (captureBtn) captureBtn.disabled = count === 0;
-  if (correctBtn) correctBtn.disabled = count === 0;
   if (deleteBtn) deleteBtn.disabled = count === 0;
+  updateRunButtonState();
 
   // Master checkbox : etat (checked / unchecked / indeterminate)
   const master = $('select-all-checkbox');
@@ -736,44 +755,87 @@ if ($('clear-selection-btn')) {
   $('clear-selection-btn').addEventListener('click', clearSelection);
 }
 
-// Action: Generer captures sur la selection
-async function runCaptureSelection() {
+// Etat des cases a cocher d'actions (capture, clean_names, correct_presentation)
+function getCheckedActions() {
+  const actions = {};
+  document.querySelectorAll('.action-checkbox input[type="checkbox"]').forEach(cb => {
+    actions[cb.dataset.action] = cb.checked;
+  });
+  return actions;
+}
+
+function anyActionChecked() {
+  return Object.values(getCheckedActions()).some(Boolean);
+}
+
+function updateRunButtonState() {
+  const btn = $('run-actions-btn');
+  if (!btn) return;
+  btn.disabled = state.selectedSlugs.size === 0 || !anyActionChecked();
+}
+
+document.querySelectorAll('.action-checkbox input[type="checkbox"]').forEach(cb => {
+  cb.addEventListener('change', updateRunButtonState);
+});
+
+// Action: Run les actions cochees sur la selection
+async function runActions() {
   const slugs = Array.from(state.selectedSlugs);
   if (slugs.length === 0) return;
-  if (!confirm(t('confirm.capture_selection', { count: slugs.length }))) return;
+  const actions = getCheckedActions();
+  const enabled = Object.entries(actions).filter(([_, v]) => v).map(([k]) => k);
+  if (enabled.length === 0) return;
+
+  // Construire le message de confirmation
+  const labelsByKey = {
+    capture: t('table.batch_screenshots'),
+    clean_names: t('table.clean_names'),
+    correct_presentation: t('table.correct_presentation')
+  };
+  const labels = enabled.map(k => labelsByKey[k]).join(', ');
+  if (!confirm(t('run.confirm', { count: slugs.length, actions: labels }))) return;
+
   try {
-    const res = await api('/admin/screenshot-batch', {
+    const res = await api('/admin/run-actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slugs, only_missing: false })
+      body: JSON.stringify({ slugs, actions })
     });
     showProgressBar(res.total);
-    pollJob(res.jobId, res.total);
+    pollRunJob(res.jobId, res.total);
   } catch (e) {
     alert(t('err.generic') + ': ' + e.message);
   }
 }
 
-// Action: Corriger la presentation (GPT) sur la selection
-async function runCorrectPresentation() {
-  const slugs = Array.from(state.selectedSlugs);
-  if (slugs.length === 0) return;
-  if (!confirm(t('confirm.correct_presentation', { count: slugs.length }))) return;
-  try {
-    const res = await api('/admin/correct-presentation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slugs })
-    });
-    if (res.total === 0) {
-      alert(t('msg.no_presentation_to_correct'));
-      return;
+async function pollRunJob(jobId, expectedTotal) {
+  const status = $('job-status');
+  const interval = setInterval(async () => {
+    try {
+      const job = await api(`/admin/run-job/${jobId}`);
+      const phase = job.phase ? ` [${job.phase}]` : '';
+      status.textContent = t('job.status_label', {
+        status: job.status + phase,
+        done: job.done,
+        total: job.total,
+        errors: job.errors
+      });
+      if (job.total > 0) {
+        updateProgressBar(job.done, job.total, job.last || '');
+      }
+      if (job.status === 'finished' || job.status === 'error') {
+        clearInterval(interval);
+        if (job.total > 0) updateProgressBar(job.done, job.total, '');
+        hideProgressBar();
+        await loadSalons();
+        await loadStats();
+        setTimeout(() => { status.textContent = ''; }, 5000);
+      }
+    } catch {
+      clearInterval(interval);
+      hideProgressBar();
     }
-    showProgressBar(res.total);
-    pollJob(res.jobId, res.total);
-  } catch (e) {
-    alert(t('err.generic') + ': ' + e.message);
-  }
+  }, 1000);
 }
 
 // Action: Supprimer la selection
@@ -798,9 +860,73 @@ async function runDeleteSelection() {
   }
 }
 
-if ($('batch-screenshots-btn')) $('batch-screenshots-btn').onclick = runCaptureSelection;
-if ($('correct-presentation-btn')) $('correct-presentation-btn').addEventListener('click', runCorrectPresentation);
+if ($('run-actions-btn')) $('run-actions-btn').addEventListener('click', runActions);
 if ($('bulk-delete-selection-btn')) $('bulk-delete-selection-btn').addEventListener('click', runDeleteSelection);
+
+// =================================================================
+// MODALE PRESENTATION : afficher + editer la presentation corrigee
+// =================================================================
+let currentPresentationSlug = null;
+
+async function openPresentationModal(slug) {
+  currentPresentationSlug = slug;
+  const modal = $('presentation-modal');
+  const status = $('presentation-modal-status');
+  status.textContent = '';
+
+  // Recuperer les donnees a jour
+  try {
+    const data = await api(`/api/salons?limit=1&search=${encodeURIComponent(slug)}`);
+    const row = (data.rows || []).find(r => r.slug === slug);
+    if (!row) throw new Error('Salon introuvable');
+
+    $('presentation-modal-title').textContent = row.nom_clean || row.nom;
+    $('presentation-modal-scrappee').textContent = row.presentation_scrappee || '(vide — pas de meta description dans le CSV)';
+    $('presentation-modal-corrigee').value = row.presentation_corrigee || '';
+    modal.hidden = false;
+  } catch (e) {
+    alert(t('err.generic') + ': ' + e.message);
+  }
+}
+
+async function savePresentationModal() {
+  if (!currentPresentationSlug) return;
+  const value = $('presentation-modal-corrigee').value.trim();
+  const status = $('presentation-modal-status');
+  status.textContent = '…';
+  status.className = 'modal-presentation-status saving';
+  try {
+    await api(`/admin/salon/${encodeURIComponent(currentPresentationSlug)}/presentation`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ presentation: value })
+    });
+    status.textContent = '✓ ' + t('modal.saved');
+    status.className = 'modal-presentation-status saved';
+    await loadSalons();
+    setTimeout(() => { $('presentation-modal').hidden = true; }, 800);
+  } catch (e) {
+    status.textContent = '✗ ' + e.message;
+    status.className = 'modal-presentation-status error';
+  }
+}
+
+if ($('presentation-modal-close')) {
+  $('presentation-modal-close').addEventListener('click', () => { $('presentation-modal').hidden = true; });
+}
+if ($('presentation-modal-save')) {
+  $('presentation-modal-save').addEventListener('click', savePresentationModal);
+}
+if ($('presentation-modal-reset')) {
+  $('presentation-modal-reset').addEventListener('click', () => {
+    $('presentation-modal-corrigee').value = '';
+  });
+}
+if ($('presentation-modal')) {
+  $('presentation-modal').addEventListener('click', (e) => {
+    if (e.target === $('presentation-modal')) $('presentation-modal').hidden = true;
+  });
+}
 
 // Language switcher
 applyTranslations();

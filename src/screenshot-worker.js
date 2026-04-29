@@ -75,11 +75,31 @@ export async function captureSalon(slug) {
 }
 
 export async function captureBatch(slugs, onProgress) {
-  const results = [];
-  for (let i = 0; i < slugs.length; i++) {
-    const result = await captureSalon(slugs[i]);
-    results.push(result);
-    if (onProgress) onProgress({ done: i + 1, total: slugs.length, last: result });
-  }
+  // Backward compat : appelle la version parallele avec concurrence 1
+  return captureBatchParallel(slugs, 1, onProgress);
+}
+
+// Pool de workers : N captures Puppeteer concurrentes (N pages dans le meme browser).
+// Chaque page consomme ~80-150 Mo. 4 en parallele est un bon compromis pour un VPS 2 Go.
+export async function captureBatchParallel(slugs, concurrency = 4, onProgress) {
+  const results = new Array(slugs.length);
+  let nextIndex = 0;
+  let completed = 0;
+
+  // Pre-warm le browser une fois pour partager entre les workers
+  await getBrowser();
+
+  const workers = Array.from({ length: Math.min(concurrency, slugs.length) }, async () => {
+    while (true) {
+      const i = nextIndex++;
+      if (i >= slugs.length) return;
+      const result = await captureSalon(slugs[i]);
+      results[i] = result;
+      completed++;
+      if (onProgress) onProgress({ done: completed, total: slugs.length, last: result });
+    }
+  });
+
+  await Promise.all(workers);
   return results;
 }

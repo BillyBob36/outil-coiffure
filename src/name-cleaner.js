@@ -108,21 +108,25 @@ const cleanJobs = new Map();
 
 export function getCleanJob(jobId) { return cleanJobs.get(jobId); }
 
-// Lance un job de nettoyage. only_missing = true : ne traite que les noms non encore traites par l'IA
-export async function startCleanNames({ csvSource = null, groupId = null, onlyMissing = true, force = false } = {}) {
-  let query = 'SELECT id, slug, nom, ville FROM salons';
-  const conds = [];
-  const params = [];
-  if (csvSource) { conds.push('csv_source = ?'); params.push(csvSource); }
-  if (groupId === 'none') conds.push('group_id IS NULL');
-  else if (groupId) { conds.push('group_id = ?'); params.push(parseInt(groupId, 10)); }
-  // "onlyMissing" = noms non encore traites par l'IA (nom_clean_at est NULL).
-  // "force" = re-traiter tous les noms quel que soit leur etat (utile apres amelioration du prompt).
-  if (onlyMissing && !force) conds.push("nom_clean_at IS NULL");
-  if (conds.length) query += ' WHERE ' + conds.join(' AND ');
-  query += ' ORDER BY id ASC';
-
-  const rows = db.prepare(query).all(...params);
+// Lance un job de nettoyage. Si `slugs` est fourni, on traite exactement cette selection.
+// Sinon, on filtre par csvSource/groupId et on respecte onlyMissing/force.
+export async function startCleanNames({ csvSource = null, groupId = null, onlyMissing = true, force = false, slugs = null } = {}) {
+  let rows;
+  if (Array.isArray(slugs) && slugs.length > 0) {
+    const placeholders = slugs.map(() => '?').join(',');
+    rows = db.prepare(`SELECT id, slug, nom, ville FROM salons WHERE slug IN (${placeholders}) ORDER BY id ASC`).all(...slugs);
+  } else {
+    let query = 'SELECT id, slug, nom, ville FROM salons';
+    const conds = [];
+    const params = [];
+    if (csvSource) { conds.push('csv_source = ?'); params.push(csvSource); }
+    if (groupId === 'none') conds.push('group_id IS NULL');
+    else if (groupId) { conds.push('group_id = ?'); params.push(parseInt(groupId, 10)); }
+    if (onlyMissing && !force) conds.push("nom_clean_at IS NULL");
+    if (conds.length) query += ' WHERE ' + conds.join(' AND ');
+    query += ' ORDER BY id ASC';
+    rows = db.prepare(query).all(...params);
+  }
   const jobId = 'clean_' + Date.now();
   const job = { id: jobId, total: rows.length, done: 0, errors: 0, status: 'running', updated: 0, last: null };
   cleanJobs.set(jobId, job);
@@ -136,40 +140,53 @@ export async function startCleanNames({ csvSource = null, groupId = null, onlyMi
   return { jobId, total: rows.length };
 }
 
+// Concurrence : Azure deployment a 250 req/min et 250k tokens/min.
+// Avec batches de 20 noms (~1400 tokens chacun, ~2s par requete), 6 en parallele
+// nous donne ~6/2 = 3 req/s = 180 req/min, large marge sous la limite.
+const PARALLEL_BATCHES = 6;
+
 async function processBatches(jobId, rows) {
   const job = cleanJobs.get(jobId);
   const updateStmt = db.prepare(`UPDATE salons SET nom_clean = ?, nom_clean_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`);
 
+  // Decoupe en batches
+  const batches = [];
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE);
-    const items = batch.map(r => ({ id: r.id, raw: r.nom, ville: r.ville || '' }));
-
-    try {
-      const results = await callAzure(items);
-      // Map result.i -> name
-      const byIndex = new Map(results.map(r => [Number(r.i), String(r.name || '').trim()]));
-
-      const tx = db.transaction(() => {
-        batch.forEach((row, idx) => {
-          const cleaned = byIndex.get(idx);
-          if (cleaned && cleaned.length > 0 && cleaned !== row.nom) {
-            updateStmt.run(cleaned, row.id);
-            job.updated++;
-          } else if (cleaned && cleaned === row.nom) {
-            // Nom deja propre : on enregistre quand meme nom_clean = nom pour ne pas re-traiter
-            updateStmt.run(cleaned, row.id);
-          }
-        });
-      });
-      tx();
-      job.done += batch.length;
-      job.last = batch[batch.length - 1].nom;
-    } catch (e) {
-      job.errors += batch.length;
-      job.last = `ERROR: ${e.message}`;
-      // On ne bloque pas le job en cas d'echec ponctuel, on continue
-    }
+    batches.push(rows.slice(i, i + BATCH_SIZE));
   }
 
+  // Worker pool : PARALLEL_BATCHES en parallele
+  let nextBatch = 0;
+  const workers = Array.from({ length: Math.min(PARALLEL_BATCHES, batches.length) }, async () => {
+    while (true) {
+      const idx = nextBatch++;
+      if (idx >= batches.length) return;
+      const batch = batches[idx];
+      const items = batch.map(r => ({ id: r.id, raw: r.nom, ville: r.ville || '' }));
+
+      try {
+        const results = await callAzure(items);
+        const byIndex = new Map(results.map(r => [Number(r.i), String(r.name || '').trim()]));
+
+        const tx = db.transaction(() => {
+          batch.forEach((row, k) => {
+            const cleaned = byIndex.get(k);
+            if (cleaned && cleaned.length > 0) {
+              updateStmt.run(cleaned, row.id);
+              if (cleaned !== row.nom) job.updated++;
+            }
+          });
+        });
+        tx();
+        job.done += batch.length;
+        job.last = batch[batch.length - 1].nom;
+      } catch (e) {
+        job.errors += batch.length;
+        job.last = `ERROR: ${e.message}`;
+      }
+    }
+  });
+
+  await Promise.all(workers);
   job.status = 'finished';
 }

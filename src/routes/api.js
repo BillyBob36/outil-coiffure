@@ -37,6 +37,7 @@ router.get('/salons', (req, res) => {
   const total = db.prepare(`SELECT COUNT(*) as n FROM salons WHERE ${where}`).get(params).n;
   const rows = db.prepare(`
     SELECT id, slug, nom, nom_clean, ville, code_postal, telephone, email, note_avis, nb_avis,
+           meta_description, overrides_json, data_json,
            screenshot_path, screenshot_generated_at, csv_source, edit_token,
            overrides_json IS NOT NULL AS has_overrides, overrides_updated_at,
            nom_clean_at, created_at
@@ -46,7 +47,28 @@ router.get('/salons', (req, res) => {
     LIMIT @limit OFFSET @offset
   `).all({ ...params, limit, offset });
 
-  res.json({ total, limit, offset, rows });
+  // Enrichir : extraire presentation_scrappee et presentation_corrigee
+  const enrichedRows = rows.map(r => {
+    let presentationScrappee = r.meta_description || '';
+    if (!presentationScrappee && r.data_json) {
+      try {
+        const data = JSON.parse(r.data_json);
+        presentationScrappee = data.meta_description || '';
+      } catch {}
+    }
+    let presentationCorrigee = '';
+    if (r.overrides_json) {
+      try {
+        const overrides = JSON.parse(r.overrides_json);
+        presentationCorrigee = overrides?.intro?.description || '';
+      } catch {}
+    }
+    // On retire les colonnes brutes pour reduire la taille de la reponse
+    const { meta_description, overrides_json, data_json, ...rest } = r;
+    return { ...rest, presentation_scrappee: presentationScrappee, presentation_corrigee: presentationCorrigee };
+  });
+
+  res.json({ total, limit, offset, rows: enrichedRows });
 });
 
 router.get('/csv-imports', (req, res) => {
