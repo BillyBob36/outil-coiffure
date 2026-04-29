@@ -15,16 +15,23 @@ router.get('/salons', (req, res) => {
   const offset = parseInt(req.query.offset) || 0;
   const search = req.query.search || '';
   const csvSource = req.query.csv_source || '';
+  const groupId = req.query.group_id || ''; // peut etre 'none' pour les sans-groupe
 
   let where = '1=1';
   const params = {};
   if (search) {
-    where += ' AND (nom LIKE @search OR ville LIKE @search OR slug LIKE @search)';
+    where += ' AND (nom LIKE @search OR nom_clean LIKE @search OR ville LIKE @search OR slug LIKE @search)';
     params.search = `%${search}%`;
   }
   if (csvSource) {
     where += ' AND csv_source = @csv_source';
     params.csv_source = csvSource;
+  }
+  if (groupId === 'none') {
+    where += ' AND group_id IS NULL';
+  } else if (groupId) {
+    where += ' AND group_id = @group_id';
+    params.group_id = parseInt(groupId, 10);
   }
 
   const total = db.prepare(`SELECT COUNT(*) as n FROM salons WHERE ${where}`).get(params).n;
@@ -53,11 +60,21 @@ router.get('/csv-imports', (req, res) => {
 });
 
 router.get('/stats', (req, res) => {
-  const total = db.prepare('SELECT COUNT(*) as n FROM salons').get().n;
-  const withScreenshot = db.prepare('SELECT COUNT(*) as n FROM salons WHERE screenshot_path IS NOT NULL').get().n;
+  const groupId = req.query.group_id || '';
+  let groupClause = '';
+  const groupParams = {};
+  if (groupId === 'none') {
+    groupClause = ' WHERE group_id IS NULL';
+  } else if (groupId) {
+    groupClause = ' WHERE group_id = @group_id';
+    groupParams.group_id = parseInt(groupId, 10);
+  }
+
+  const total = db.prepare('SELECT COUNT(*) as n FROM salons' + groupClause).get(groupParams).n;
+  const withScreenshot = db.prepare('SELECT COUNT(*) as n FROM salons' + (groupClause ? groupClause + ' AND' : ' WHERE') + ' screenshot_path IS NOT NULL').get(groupParams).n;
   const withoutScreenshot = total - withScreenshot;
-  const withCleanName = db.prepare("SELECT COUNT(*) as n FROM salons WHERE nom_clean IS NOT NULL AND nom_clean != ''").get().n;
-  const csvSources = db.prepare('SELECT csv_source, COUNT(*) as n FROM salons GROUP BY csv_source ORDER BY n DESC').all();
+  const withCleanName = db.prepare("SELECT COUNT(*) as n FROM salons" + (groupClause ? groupClause + ' AND' : ' WHERE') + " nom_clean_at IS NOT NULL").get(groupParams).n;
+  const csvSources = db.prepare('SELECT csv_source, COUNT(*) as n FROM salons' + groupClause + ' GROUP BY csv_source ORDER BY n DESC').all(groupParams);
   res.json({ total, withScreenshot, withoutScreenshot, withCleanName, csvSources });
 });
 

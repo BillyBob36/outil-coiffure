@@ -103,7 +103,7 @@ function rowToSalonData(row) {
   };
 }
 
-export function importCsvFile(filePath, csvSourceName) {
+export function importCsvFile(filePath, csvSourceName, groupId = null) {
   const raw = readFileSync(filePath, 'utf-8').replace(/^﻿/, '');
   const firstLine = raw.split(/\r?\n/, 1)[0];
   const delimiter = detectDelimiter(firstLine);
@@ -125,13 +125,13 @@ export function importCsvFile(filePath, csvSourceName) {
       latitude, longitude, types, note_avis, nb_avis, heures_ouverture,
       lien_facebook, lien_instagram, lien_tiktok, lien_youtube, lien_google_maps,
       meta_image, titre_site, meta_description, site_internet_original,
-      data_json, csv_source, edit_token
+      data_json, csv_source, edit_token, group_id
     ) VALUES (
       @slug, @nom, @nom, @ville, @code_postal, @adresse, @telephone, @email,
       @latitude, @longitude, @types, @note_avis, @nb_avis, @heures_ouverture,
       @lien_facebook, @lien_instagram, @lien_tiktok, @lien_youtube, @lien_google_maps,
       @meta_image, @titre_site, @meta_description, @site_internet_original,
-      @data_json, @csv_source, @edit_token
+      @data_json, @csv_source, @edit_token, @group_id
     )
   `);
 
@@ -188,7 +188,8 @@ export function importCsvFile(filePath, csvSourceName) {
           site_internet_original: data.site_internet_original,
           data_json: JSON.stringify({ ...data, original_row: row }),
           csv_source: csvSourceName,
-          edit_token: generateEditToken()
+          edit_token: generateEditToken(),
+          group_id: groupId
         });
         imported++;
         importedSlugs.push(slug);

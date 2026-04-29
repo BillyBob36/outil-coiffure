@@ -68,6 +68,14 @@ export function initSchema() {
       password_hash TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS salon_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      description TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // 2. Migrations idempotentes : pour les BDD existantes, ajoute les colonnes manquantes
@@ -77,6 +85,10 @@ export function initSchema() {
   if (!cols.includes('overrides_updated_at')) db.exec("ALTER TABLE salons ADD COLUMN overrides_updated_at TEXT");
   if (!cols.includes('nom_clean')) db.exec("ALTER TABLE salons ADD COLUMN nom_clean TEXT");
   if (!cols.includes('nom_clean_at')) db.exec("ALTER TABLE salons ADD COLUMN nom_clean_at TEXT");
+  if (!cols.includes('group_id')) {
+    db.exec("ALTER TABLE salons ADD COLUMN group_id INTEGER");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_salons_group_id ON salons(group_id)");
+  }
 
   // 3. Index sur edit_token : seulement maintenant que la colonne existe
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_salons_edit_token ON salons(edit_token) WHERE edit_token IS NOT NULL");

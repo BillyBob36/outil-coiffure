@@ -108,13 +108,17 @@ const cleanJobs = new Map();
 
 export function getCleanJob(jobId) { return cleanJobs.get(jobId); }
 
-// Lance un job de nettoyage. only_missing = true : ne traite que les nom_clean IS NULL
-export async function startCleanNames({ csvSource = null, onlyMissing = true, force = false } = {}) {
+// Lance un job de nettoyage. only_missing = true : ne traite que les noms non encore traites par l'IA
+export async function startCleanNames({ csvSource = null, groupId = null, onlyMissing = true, force = false } = {}) {
   let query = 'SELECT id, slug, nom, ville FROM salons';
   const conds = [];
   const params = [];
   if (csvSource) { conds.push('csv_source = ?'); params.push(csvSource); }
-  if (onlyMissing && !force) conds.push("(nom_clean IS NULL OR nom_clean = '')");
+  if (groupId === 'none') conds.push('group_id IS NULL');
+  else if (groupId) { conds.push('group_id = ?'); params.push(parseInt(groupId, 10)); }
+  // "onlyMissing" = noms non encore traites par l'IA (nom_clean_at est NULL).
+  // "force" = re-traiter tous les noms quel que soit leur etat (utile apres amelioration du prompt).
+  if (onlyMissing && !force) conds.push("nom_clean_at IS NULL");
   if (conds.length) query += ' WHERE ' + conds.join(' AND ');
   query += ' ORDER BY id ASC';
 
