@@ -471,20 +471,12 @@ $('export-csv-btn').addEventListener('click', () => {
   location.href = '/admin/export-csv?' + params;
 });
 
-$('clean-names-btn').addEventListener('click', async () => {
-  const csvSource = state.csvSource || null;
-  const msg = csvSource
-    ? t('confirm.clean_names_source', { source: csvSource })
-    : t('confirm.clean_names_all');
-  if (!confirm(msg + t('confirm.clean_names_note'))) return;
-  await runCleanNames({ csv_source: csvSource, force: false });
-});
+// Le bouton clean-names-btn a ete remplace par la checkbox + bouton Run.
+// La fonction runCleanNames legacy reste utilisable manuellement mais n'est plus liee
+// a un bouton (l'orchestrateur /run-actions se charge des appels Azure).
 
 async function runCleanNames({ csv_source, force }) {
-  const btn = $('clean-names-btn');
-  const original = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = '…';
+  const btn = null; // bouton supprime
   try {
     const res = await api('/admin/clean-names', {
       method: 'POST',
@@ -496,7 +488,6 @@ async function runCleanNames({ csv_source, force }) {
       const total = parseInt($('stat-total').textContent) || 0;
       const ok = confirm(t('msg.all_clean_already', { total }) + '\n\n' + t('msg.force_clean_question'));
       if (ok) {
-        btn.disabled = false; btn.textContent = original;
         return runCleanNames({ csv_source, force: true });
       }
       return;
@@ -505,9 +496,6 @@ async function runCleanNames({ csv_source, force }) {
     pollJob(res.jobId, res.total);
   } catch (e) {
     alert(e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = original;
   }
 }
 
