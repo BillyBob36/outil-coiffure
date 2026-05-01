@@ -124,8 +124,12 @@ function salonRow(r) {
   const fullLanding = landingUrl;
   const fullEdit = editUrl;
 
+  // Cache-buster sur les images : on force le rechargement quand la capture est regenerée
+  // (sinon le navigateur affiche la version en cache meme apres regeneration cote serveur).
+  const cacheBuster = r.screenshot_generated_at ? '?v=' + encodeURIComponent(r.screenshot_generated_at) : '';
+  const screenshotSrc = r.screenshot_path ? r.screenshot_path + cacheBuster : '';
   const screenshotCell = r.screenshot_path
-    ? `<img class="screenshot-thumb" src="${r.screenshot_path}" alt="capture" data-full="${r.screenshot_path}">`
+    ? `<img class="screenshot-thumb" src="${screenshotSrc}" alt="capture" data-full="${screenshotSrc}">`
     : `<span class="no-screenshot">${t('cell.no_screenshot')}</span>`;
 
   const nomScrappe = r.nom || '';

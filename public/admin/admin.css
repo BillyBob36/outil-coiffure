@@ -607,12 +607,14 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     box-shadow: 0 0 0 3px rgba(201,169,110,0.15);
     cursor: text;
 }
-.nom-final-wrap.modified::before {
-    content: '✨';
-    font-size: 0.85rem;
-    flex: 0 0 auto;
-    cursor: help;
-    title: 'Différent du nom scrappé';
+/* Quand le Nom final differe du Nom scrappe : juste un cadre or visible (sans picto) */
+.nom-final-wrap.modified .nom-final-input {
+    border-color: var(--accent-dark);
+    background: rgba(201, 169, 110, 0.06);
+}
+.nom-final-wrap.modified .nom-final-input:hover {
+    border-color: var(--accent-dark);
+    background: rgba(201, 169, 110, 0.10);
 }
 
 .nom-final-status {
