@@ -23,6 +23,10 @@ const CAPTURE_TIMEOUT_MS = Math.max(10000, parseInt(process.env.SCREENSHOT_TIMEO
 // connexions zombies, GPU buffers...). Sans ca, le browser se degrade
 // progressivement sur les longs batches.
 const BROWSER_RECYCLE_EVERY = Math.max(0, parseInt(process.env.SCREENSHOT_BROWSER_RECYCLE || '30', 10));
+// Stagger entre les workers au demarrage d'un chunk : sur Chrome freshly-launched,
+// 6 page.screenshot() concurrents peuvent serialiser et timeout. En decalant les
+// demarrages de WORKER_STAGGER_MS, on lisse la charge sur l'init du browser.
+const WORKER_STAGGER_MS = Math.max(0, parseInt(process.env.SCREENSHOT_WORKER_STAGGER_MS || '350', 10));
 
 mkdirSync(SCREENSHOTS_DIR, { recursive: true });
 
@@ -277,6 +281,12 @@ export async function captureBatchParallel(slugs, concurrency, onProgress) {
 
     let nextIndex = 0;
     const workers = Array.from({ length: Math.min(c, chunk.length) }, async (_, workerId) => {
+      // Stagger au demarrage du chunk : worker#0 part immediatement, #1 attend
+      // WORKER_STAGGER_MS, etc. Evite que 6 page.screenshot() concurrents tombent
+      // sur un Chrome qui vient d'etre lance et serialise tout en interne.
+      if (workerId > 0 && WORKER_STAGGER_MS > 0) {
+        await new Promise(r => setTimeout(r, workerId * WORKER_STAGGER_MS));
+      }
       while (true) {
         const i = nextIndex++;
         if (i >= chunk.length) return;
