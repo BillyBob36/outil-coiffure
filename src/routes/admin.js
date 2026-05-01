@@ -175,6 +175,19 @@ router.post('/salons/bulk-count', express.json(), (req, res) => {
   res.json({ count: n });
 });
 
+// Liste TOUS les slugs matchant les filtres actifs (group_id, csv_source, search).
+// Utilise par l'UI quand l'utilisateur clique sur "Selectionner tous les N salons"
+// (mode toutes-les-pages) sans avoir a paginer.
+router.get('/salon-slugs', (req, res) => {
+  const { where, params } = buildFilterWhere({
+    group_id: req.query.group_id,
+    csv_source: req.query.csv_source,
+    search: req.query.search
+  });
+  const rows = db.prepare(`SELECT slug FROM salons ${where} ORDER BY id ASC`).all(...params);
+  res.json({ slugs: rows.map(r => r.slug), count: rows.length });
+});
+
 // Deplacer en masse des salons (filtre group_id/csv_source/search) vers un groupe cible
 router.put('/salons/bulk-assign-group', express.json(), (req, res) => {
   const { target_group_id, group_id, csv_source, search } = req.body || {};

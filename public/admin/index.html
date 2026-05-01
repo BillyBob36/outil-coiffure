@@ -125,6 +125,12 @@
                 <button class="btn-link-light" id="clear-selection-btn" type="button" data-i18n="table.clear_selection">Tout désélectionner</button>
             </div>
 
+            <!-- Bandeau cross-pages : visible quand toute la page courante est cochée et qu'il existe des salons sur d'autres pages -->
+            <div class="cross-pages-banner" id="cross-pages-banner" hidden>
+                <span class="cross-pages-text" id="cross-pages-text"></span>
+                <button class="btn-link-light cross-pages-action" id="cross-pages-action" type="button"></button>
+            </div>
+
             <div class="table-wrap">
                 <table class="salons-table">
                     <thead>
@@ -149,6 +155,16 @@
                 <button id="prev-page" data-i18n="page.previous">←</button>
                 <span id="page-info">—</span>
                 <button id="next-page" data-i18n="page.next">→</button>
+                <div class="page-size-wrap">
+                    <label for="page-size-select" data-i18n="table.page_size_label">Par page :</label>
+                    <select id="page-size-select">
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="500">500</option>
+                        <option value="1000">1 000</option>
+                        <option value="10000">10 000</option>
+                    </select>
+                </div>
             </div>
         </section>
     </main>

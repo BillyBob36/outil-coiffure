@@ -332,6 +332,31 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 .selection-info[hidden] { display: none; }
 .selection-info strong { font-weight: 700; }
+
+/* Bandeau cross-pages : style Gmail "Les N de cette page sont cochés. [Tout cocher M]" */
+.cross-pages-banner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 14px;
+    margin-bottom: 12px;
+    background: rgba(201, 169, 110, 0.05);
+    border: 1px dashed rgba(201, 169, 110, 0.45);
+    border-radius: 6px;
+    font-size: 0.88rem;
+    color: var(--text);
+    flex-wrap: wrap;
+}
+.cross-pages-banner[hidden] { display: none; }
+.cross-pages-banner strong { color: var(--accent-dark); font-weight: 700; }
+.cross-pages-banner .cross-pages-action {
+    font-weight: 600;
+}
+.cross-pages-banner .cross-pages-action[disabled] {
+    opacity: 0.5;
+    cursor: progress;
+}
 .btn-link-light {
     background: transparent;
     color: var(--accent-dark);
@@ -633,6 +658,30 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     align-items: center;
     gap: 12px;
     margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+.page-size-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 24px;
+}
+.page-size-wrap label {
+    color: var(--muted);
+    font-size: 0.88rem;
+}
+.page-size-wrap select {
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+.page-size-wrap select:hover {
+    border-color: var(--accent-dark);
 }
 
 .modal-backdrop {

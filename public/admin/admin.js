@@ -16,6 +16,14 @@ const state = {
 const ACTIVE_GROUP_KEY = 'outil-coiffure-active-group';
 state.groupId = localStorage.getItem(ACTIVE_GROUP_KEY) || '';
 
+// Persistance de la taille de page (50 par defaut)
+const PAGE_SIZE_KEY = 'outil-coiffure-page-size';
+const ALLOWED_PAGE_SIZES = [50, 100, 500, 1000, 10000];
+const storedPageSize = parseInt(localStorage.getItem(PAGE_SIZE_KEY), 10);
+if (Number.isFinite(storedPageSize) && ALLOWED_PAGE_SIZES.includes(storedPageSize)) {
+  state.pageSize = storedPageSize;
+}
+
 const $ = id => document.getElementById(id);
 
 async function api(path, opts = {}) {
@@ -430,6 +438,20 @@ $('refresh-btn').addEventListener('click', () => {
 $('prev-page').addEventListener('click', () => { state.page = Math.max(0, state.page - 1); loadSalons(); });
 $('next-page').addEventListener('click', () => { state.page++; loadSalons(); });
 
+// Selecteur de taille de page (50 / 100 / 500 / 1000 / 10000)
+const pageSizeSelect = $('page-size-select');
+if (pageSizeSelect) {
+  pageSizeSelect.value = String(state.pageSize);
+  pageSizeSelect.addEventListener('change', () => {
+    const v = parseInt(pageSizeSelect.value, 10);
+    if (!ALLOWED_PAGE_SIZES.includes(v)) return;
+    state.pageSize = v;
+    localStorage.setItem(PAGE_SIZE_KEY, String(v));
+    state.page = 0;
+    loadSalons();
+  });
+}
+
 $('logout-btn').addEventListener('click', async () => {
   await fetch('/admin/logout', { method: 'POST', credentials: 'same-origin' });
   location.href = '/admin/login';
@@ -704,18 +726,102 @@ function updateSelectionUI() {
 
   // Master checkbox : etat (checked / unchecked / indeterminate)
   const master = $('select-all-checkbox');
+  let allVisibleSelected = false;
+  let visibleSlugs = [];
   if (master) {
-    const visibleSlugs = Array.from(document.querySelectorAll('.row-checkbox')).map(cb => cb.closest('tr').dataset.slug);
+    visibleSlugs = Array.from(document.querySelectorAll('.row-checkbox')).map(cb => cb.closest('tr').dataset.slug);
     if (visibleSlugs.length === 0) {
       master.checked = false;
       master.indeterminate = false;
     } else {
-      const allSelected = visibleSlugs.every(s => state.selectedSlugs.has(s));
+      allVisibleSelected = visibleSlugs.every(s => state.selectedSlugs.has(s));
       const noneSelected = visibleSlugs.every(s => !state.selectedSlugs.has(s));
-      master.checked = allSelected;
-      master.indeterminate = !allSelected && !noneSelected;
+      master.checked = allVisibleSelected;
+      master.indeterminate = !allVisibleSelected && !noneSelected;
     }
   }
+
+  updateCrossPagesBanner({ visibleSlugs, allVisibleSelected });
+}
+
+// =====================================================================
+// Bandeau "selectionner toutes les pages" (style Gmail)
+// =====================================================================
+function updateCrossPagesBanner({ visibleSlugs, allVisibleSelected }) {
+  const banner = $('cross-pages-banner');
+  if (!banner) return;
+  const text = $('cross-pages-text');
+  const action = $('cross-pages-action');
+  if (!text || !action) return;
+
+  const total = state.total || 0;
+  const visibleCount = visibleSlugs.length;
+  const moreThanCurrentPage = total > visibleCount;
+
+  // Pas de page courante affichee : on cache.
+  // Toute la page n'est pas selectionnee : on cache.
+  // Pas plus de salons que la page courante : on cache.
+  if (visibleCount === 0 || !allVisibleSelected || !moreThanCurrentPage) {
+    banner.hidden = true;
+    return;
+  }
+
+  // Cas 1 : tous les salons (sur toutes les pages) sont selectionnes -> proposer d'annuler
+  if (state.selectedSlugs.size >= total) {
+    text.innerHTML = t('table.cross_pages_all_selected', { total });
+    action.textContent = t('table.cross_pages_clear');
+    action.dataset.mode = 'clear';
+  } else {
+    // Cas 2 : seules les lignes de la page courante sont selectionnees -> proposer de tout cocher
+    text.innerHTML = t('table.cross_pages_prompt', { count: visibleCount });
+    action.innerHTML = t('table.cross_pages_action', { total });
+    action.dataset.mode = 'select-all';
+  }
+  banner.hidden = false;
+}
+
+async function selectAllAcrossPages() {
+  const action = $('cross-pages-action');
+  if (!action) return;
+  const oldHtml = action.innerHTML;
+  action.disabled = true;
+  action.textContent = '…';
+  try {
+    const params = new URLSearchParams();
+    if (state.search) params.set('search', state.search);
+    if (state.csvSource) params.set('csv_source', state.csvSource);
+    if (state.groupId) params.set('group_id', state.groupId);
+    const data = await api('/admin/salon-slugs?' + params.toString());
+    if (Array.isArray(data.slugs)) {
+      for (const s of data.slugs) state.selectedSlugs.add(s);
+    }
+    // Re-cocher toutes les checkboxes visibles
+    document.querySelectorAll('.row-checkbox').forEach(cb => {
+      const tr = cb.closest('tr');
+      const slug = tr.dataset.slug;
+      if (state.selectedSlugs.has(slug)) {
+        cb.checked = true;
+        tr.classList.add('row-selected');
+      }
+    });
+    updateSelectionUI();
+  } catch (e) {
+    action.innerHTML = oldHtml;
+    alert(t('err.generic') + ': ' + e.message);
+  } finally {
+    action.disabled = false;
+  }
+}
+
+if ($('cross-pages-action')) {
+  $('cross-pages-action').addEventListener('click', () => {
+    const mode = $('cross-pages-action').dataset.mode;
+    if (mode === 'clear') {
+      clearSelection();
+    } else {
+      selectAllAcrossPages();
+    }
+  });
 }
 
 function clearSelection() {
