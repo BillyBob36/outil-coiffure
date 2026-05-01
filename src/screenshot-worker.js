@@ -137,6 +137,23 @@ async function waitForRenderComplete(page) {
   if (SETTLE_MS > 0) await new Promise(r => setTimeout(r, SETTLE_MS));
 }
 
+// CSS injecte sur chaque page pour rendre les captures deterministes :
+//   - animation-duration: 0s  → toute animation @keyframes (ex. fadeInUp 1s sur
+//     .hero-content, bounce sur le scroll-indicator) est instantanement a son
+//     etat final. Sinon, la capture peut tomber pendant le fade-in (titre
+//     transparent ou en train d'apparaitre).
+//   - transition-duration: 0s → pareil pour les transitions
+const DISABLE_ANIMATIONS_CSS = `
+  *, *::before, *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+`;
+
 export async function captureSalon(slug) {
   const t0 = Date.now();
   const browser = await getBrowser();
@@ -148,6 +165,9 @@ export async function captureSalon(slug) {
     const tNav0 = Date.now();
     await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
     const tNav1 = Date.now();
+    // Desactive les animations CSS AVANT les waits : sinon fadeInUp 1s sur
+    // .hero-content peut laisser le titre semi-transparent au moment du shot.
+    await page.addStyleTag({ content: DISABLE_ANIMATIONS_CSS });
     await waitForRenderComplete(page);
     const tWait1 = Date.now();
 
