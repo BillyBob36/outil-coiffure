@@ -10,9 +10,11 @@ const JPEG_QUALITY = 80;
 // Concurrence par defaut : 6 pages Puppeteer en parallele dans le meme browser.
 // Override via env var SCREENSHOT_CONCURRENCY (ex: 8 si plus de RAM, 4 si VPS petit).
 const DEFAULT_CONCURRENCY = Math.max(1, parseInt(process.env.SCREENSHOT_CONCURRENCY || '6', 10));
-// Buffer final apres les waits explicites (fonts + images). Plus court qu'avant
-// (avant 800ms aveugle) car les attentes ci-dessous sont deterministes.
-const SETTLE_MS = Math.max(0, parseInt(process.env.SCREENSHOT_SETTLE_MS || '250', 10));
+// Buffer final apres les waits explicites (fonts + images + reflow). 400ms par
+// defaut : suffit pour le repaint apres font swap, configurable via env.
+const SETTLE_MS = Math.max(0, parseInt(process.env.SCREENSHOT_SETTLE_MS || '400', 10));
+// Logs temporels (active par defaut pour diagnostic). Mettre SCREENSHOT_DEBUG=0 pour couper.
+const DEBUG = process.env.SCREENSHOT_DEBUG !== '0';
 
 mkdirSync(SCREENSHOTS_DIR, { recursive: true });
 
@@ -46,24 +48,62 @@ export async function closeBrowser() {
   }
 }
 
-// Attend que le rendu soit reellement termine avant la capture :
-//   1. document.fonts.ready  -> toutes les @font-face (Google Fonts, etc.) sont chargees
-//      → sans ca, les titres en font web peuvent etre invisibles (FOIT) ou en fallback.
-//   2. Toutes les <img> ET les background-image CSS sont chargees + decoded
-//      → le hero du site utilise background-image:url(unsplash...) en CSS, donc
-//        networkidle0 + 800ms ne suffit pas si la connexion est lente.
-// Cette strategie est plus rapide ET plus fiable qu'un sleep aveugle de 1-2s.
+// Attend que le rendu soit reellement termine avant la capture.
+// Strategie : forcer le chargement explicite de chaque font/img/bg-image,
+// puis verifier l'etat 'loaded' de document.fonts, puis forcer un reflow.
+// Plus robuste que document.fonts.ready seul car :
+//   - le site utilise Google Fonts avec display=swap → ready peut resoudre
+//     avant que le repaint avec la vraie font soit applique
+//   - le hero est background-image CSS → networkidle0 ne garantit pas le paint
+//   - certaines fonts sont utilisees apres le premier ready (snapshot piege)
 async function waitForRenderComplete(page) {
-  // 1) Polices web pretes (titre lisible)
+  // 1) FONTS : forcer le chargement de chaque font-family utilisee dans le DOM
+  //    via document.fonts.load() (plus deterministe que document.fonts.ready).
   try {
-    await page.evaluate(() => (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve());
+    await page.evaluate(async () => {
+      if (!document.fonts) return;
+
+      // Collecte toutes les font-family utilisees dans le DOM
+      const stacks = new Set();
+      for (const el of document.querySelectorAll('*')) {
+        const ff = getComputedStyle(el).fontFamily;
+        if (ff && ff !== 'inherit') stacks.add(ff);
+      }
+
+      // Force le chargement pour les variantes courantes (poids 300/400/500/600/700, italique).
+      // document.fonts.load() retourne une Promise qui ne resout que lorsque
+      // les FontFace correspondantes sont vraiment "loaded" (telechargees + utilisables).
+      const variants = ['300 16px', '400 16px', '500 16px', '600 16px', '700 16px',
+                        'italic 400 16px', 'italic 700 16px'];
+      const promises = [];
+      for (const stack of stacks) {
+        for (const v of variants) {
+          // document.fonts.load throw si la query est invalide ; on catch silencieusement
+          promises.push(document.fonts.load(`${v} ${stack}`).catch(() => null));
+        }
+      }
+      await Promise.allSettled(promises);
+
+      // Filet de securite : attendre le ready global apres les loads explicites
+      try { await document.fonts.ready; } catch {}
+    });
   } catch {}
 
-  // 2) Images <img> + background-image CSS chargees
+  // 2) Force un reflow + repaint pour appliquer le swap des fonts qui
+  //    viennent d'arriver. Sans ca, l'ancien layout (font fallback) peut
+  //    persister jusqu'au screenshot.
+  try {
+    await page.evaluate(() => {
+      // Touch layout property -> force synchronous reflow
+      // eslint-disable-next-line no-unused-expressions
+      document.body.offsetHeight;
+    });
+  } catch {}
+
+  // 3) IMAGES : <img> + background-image CSS chargees et decodees
   try {
     await page.evaluate(() => new Promise(resolve => {
       const urls = new Set();
-      // Collecte tous les background-image: url(...) du DOM visible
       for (const el of document.querySelectorAll('*')) {
         const bg = getComputedStyle(el).backgroundImage;
         if (!bg || bg === 'none') continue;
@@ -73,7 +113,6 @@ async function waitForRenderComplete(page) {
           if (m[2]) urls.add(m[2]);
         }
       }
-      // Tous les <img> du DOM (galerie lazy-load incluse — on force le chargement)
       for (const img of document.images) {
         if (img.src) urls.add(img.src);
       }
@@ -88,26 +127,29 @@ async function waitForRenderComplete(page) {
         i.onerror = finish;
         i.src = src;
         if (i.complete) finish();
-        // Garde-fou : 8s max par image pour eviter qu'une image cassee bloque tout
         setTimeout(finish, 8000);
       }));
       Promise.all(promises).then(() => resolve());
     }));
   } catch {}
 
-  // 3) Petit buffer final pour laisser settler les animations CSS / paint
+  // 4) Buffer final : laisse le repaint final settler (animations, font swap)
   if (SETTLE_MS > 0) await new Promise(r => setTimeout(r, SETTLE_MS));
 }
 
 export async function captureSalon(slug) {
+  const t0 = Date.now();
   const browser = await getBrowser();
   const page = await browser.newPage();
+  if (DEBUG) console.log(`[shot ${slug}] start  t=${new Date(t0).toISOString()}`);
   try {
     await page.setViewport(VIEWPORT);
-    // URL publique du salon : /preview/{slug} (depuis la migration monsitehq.com)
     const url = `${INTERNAL_BASE}/preview/${slug}?nocapture=1`;
+    const tNav0 = Date.now();
     await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
+    const tNav1 = Date.now();
     await waitForRenderComplete(page);
+    const tWait1 = Date.now();
 
     const filename = `${slug}.jpg`;
     const filepath = join(SCREENSHOTS_DIR, filename);
@@ -125,8 +167,13 @@ export async function captureSalon(slug) {
       WHERE slug = ?
     `).run(relativeUrl, slug);
 
+    if (DEBUG) {
+      const tEnd = Date.now();
+      console.log(`[shot ${slug}] done   nav=${tNav1 - tNav0}ms wait=${tWait1 - tNav1}ms shot=${tEnd - tWait1}ms total=${tEnd - t0}ms`);
+    }
     return { slug, success: true, screenshot_path: relativeUrl };
   } catch (e) {
+    if (DEBUG) console.log(`[shot ${slug}] error  ${e.message}`);
     return { slug, success: false, error: e.message };
   } finally {
     await page.close();
@@ -147,14 +194,17 @@ export async function captureBatchParallel(slugs, concurrency, onProgress) {
   const results = new Array(slugs.length);
   let nextIndex = 0;
   let completed = 0;
+  const tStart = Date.now();
+  if (DEBUG) console.log(`[batch] start total=${slugs.length} concurrency=${c} settle=${SETTLE_MS}ms`);
 
   // Pre-warm le browser une fois pour partager entre les workers
   await getBrowser();
 
-  const workers = Array.from({ length: Math.min(c, slugs.length) }, async () => {
+  const workers = Array.from({ length: Math.min(c, slugs.length) }, async (_, workerId) => {
     while (true) {
       const i = nextIndex++;
       if (i >= slugs.length) return;
+      if (DEBUG) console.log(`[batch] worker#${workerId} -> slug ${slugs[i]} (${i + 1}/${slugs.length})`);
       const result = await captureSalon(slugs[i]);
       results[i] = result;
       completed++;
@@ -163,5 +213,6 @@ export async function captureBatchParallel(slugs, concurrency, onProgress) {
   });
 
   await Promise.all(workers);
+  if (DEBUG) console.log(`[batch] finished total=${slugs.length} elapsed=${Date.now() - tStart}ms`);
   return results;
 }
