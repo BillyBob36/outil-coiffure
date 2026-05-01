@@ -3,152 +3,153 @@ import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import db from './db.js';
 
+// =============================================================================
+// CONFIG
+// =============================================================================
 const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR || './public/screenshots';
 const INTERNAL_BASE = process.env.INTERNAL_SCREENSHOT_BASE_URL || 'http://localhost:3000';
 const VIEWPORT = { width: 1280, height: 800 };
 const JPEG_QUALITY = 80;
-// Concurrence par defaut : 4 pages Puppeteer en parallele dans le meme browser.
-// On a baisse de 6 a 4 car avec 6 il y avait du serialization sur page.screenshot()
-// dans Chromium freshly-launched (logs production : 5/6 captures bloquaient ~25s).
-// 4 est un bon compromis vitesse/fiabilite. Override via env SCREENSHOT_CONCURRENCY.
+
+// Concurrence par defaut. Avec l'architecture "un browser par worker"
+// (cf. plus bas), 4 workers = 4 instances Chromium = ~800 Mo de RAM
+// pour les browsers seuls. Reste large sur un VPS de 2-4 Go.
 const DEFAULT_CONCURRENCY = Math.max(1, parseInt(process.env.SCREENSHOT_CONCURRENCY || '4', 10));
-// Buffer final apres les waits explicites (fonts + images + reflow). 400ms par
-// defaut : suffit pour le repaint apres font swap, configurable via env.
+
+// Buffer final apres les waits explicites (fonts + images + reflow)
 const SETTLE_MS = Math.max(0, parseInt(process.env.SCREENSHOT_SETTLE_MS || '400', 10));
-// Logs temporels (active par defaut pour diagnostic). Mettre SCREENSHOT_DEBUG=0 pour couper.
+
+// Logs verbeux pour diagnostic (mettre SCREENSHOT_DEBUG=0 pour couper)
 const DEBUG = process.env.SCREENSHOT_DEBUG !== '0';
-// Timeout dur par capture : au-dela de ce delai, on force-close la page et on
-// retourne une erreur "capture timeout". Evite qu'un renderer Chrome bloque
-// indefiniment (default puppeteer protocolTimeout = 180s, beaucoup trop long).
+
+// Timeout dur par capture : si une capture ne finit pas en CAPTURE_TIMEOUT_MS,
+// le watchdog force-close la page. Avec architecture per-worker, on peut aussi
+// recycler le browser entier si la capture timeout (cf. WORKER_ERROR_THRESHOLD).
 const CAPTURE_TIMEOUT_MS = Math.max(10000, parseInt(process.env.SCREENSHOT_TIMEOUT_MS || '30000', 10));
-// Recyclage du browser toutes les N captures pour reset l'etat (memory leak,
-// connexions zombies, GPU buffers...). Sans ca, le browser se degrade
-// progressivement sur les longs batches.
-const BROWSER_RECYCLE_EVERY = Math.max(0, parseInt(process.env.SCREENSHOT_BROWSER_RECYCLE || '30', 10));
-// Stagger entre les workers au demarrage d'un chunk : sur Chrome freshly-launched,
-// 6 page.screenshot() concurrents peuvent serialiser et timeout. En decalant les
-// demarrages de WORKER_STAGGER_MS, on lisse la charge sur l'init du browser.
-// Note : avec le warmup ci-dessous, le stagger devient secondaire ; on garde 200ms
-// par defense en profondeur.
-const WORKER_STAGGER_MS = Math.max(0, parseInt(process.env.SCREENSHOT_WORKER_STAGGER_MS || '200', 10));
+
+// Recyclage proactif du browser de chaque worker apres N captures.
+// Reset l'etat (memory leak, GPU buffers, connexions zombies) avant que le
+// browser ne degrade. La preuve dans les logs production : la degradation
+// commencait apres ~14-15 captures sur un browser frais.
+const WORKER_RECYCLE_EVERY = Math.max(0, parseInt(process.env.SCREENSHOT_BROWSER_RECYCLE || '15', 10));
+
+// Recyclage reactif : si un worker a N captures consecutives en erreur,
+// on assume que son browser est mort/figé et on le relance.
+const WORKER_ERROR_THRESHOLD = Math.max(1, parseInt(process.env.SCREENSHOT_ERROR_THRESHOLD || '2', 10));
+
+// Stagger entre les workers au demarrage : evite que les N workers tapent
+// sur le serveur Express en meme temps avec leurs page.goto().
+const WORKER_STAGGER_MS = Math.max(0, parseInt(process.env.SCREENSHOT_WORKER_STAGGER_MS || '300', 10));
+
+// Options de lancement Chromium partagees
+const LAUNCH_OPTS = {
+  headless: true,
+  // protocolTimeout = delai max pour une commande CDP. Default 180s = trop long.
+  // 25s permet le fail-fast quand le renderer bloque.
+  protocolTimeout: 25000,
+  args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-accelerated-2d-canvas',
+    '--no-first-run',
+    '--no-zygote',
+    '--disable-gpu'
+  ]
+};
+if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+  LAUNCH_OPTS.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+}
 
 mkdirSync(SCREENSHOTS_DIR, { recursive: true });
 
-let browserInstance = null;
-// Compteur global de captures depuis le lancement du browser. Quand il atteint
-// BROWSER_RECYCLE_EVERY, on relance Chrome pour reset son etat.
-let capturesSinceLaunch = 0;
-
-async function getBrowser() {
-  if (browserInstance && browserInstance.connected) return browserInstance;
-  const launchOpts = {
-    headless: true,
-    // protocolTimeout = delai max pour une commande CDP. Default 180s = beaucoup
-    // trop. On le baisse a 25s pour fail-fast si le renderer bloque.
-    protocolTimeout: 25000,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu'
-    ]
-  };
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-    launchOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+// =============================================================================
+// CSS injecte sur chaque page : neutralise toutes animations/transitions pour
+// que le screenshot capture l'etat final immediatement (pas pendant un fadeIn).
+// =============================================================================
+const DISABLE_ANIMATIONS_CSS = `
+  *, *::before, *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
   }
-  browserInstance = await puppeteer.launch(launchOpts);
-  capturesSinceLaunch = 0;
-  if (DEBUG) console.log(`[browser] launched (protocolTimeout=25s, recycle every ${BROWSER_RECYCLE_EVERY})`);
-  return browserInstance;
+`;
+
+// =============================================================================
+// BROWSER PARTAGE (utilise uniquement pour les captures single-shot via
+// captureSalon(slug) sans batch). Le batch parallele utilise des browsers
+// per-worker (cf. plus bas).
+// =============================================================================
+let sharedBrowser = null;
+
+async function getSharedBrowser() {
+  if (sharedBrowser && sharedBrowser.connected) return sharedBrowser;
+  sharedBrowser = await puppeteer.launch(LAUNCH_OPTS);
+  if (DEBUG) console.log(`[browser:shared] launched`);
+  return sharedBrowser;
 }
 
 export async function closeBrowser() {
-  if (browserInstance) {
-    await browserInstance.close().catch(() => {});
-    browserInstance = null;
-    capturesSinceLaunch = 0;
+  if (sharedBrowser) {
+    await sharedBrowser.close().catch(() => {});
+    sharedBrowser = null;
   }
 }
 
-// Note : le recyclage du browser se fait entre les chunks dans
-// captureBatchParallel (cf. plus bas) — pas via une helper ici, car on doit
-// quiescer tous les workers avant de fermer le browser pour eviter qu'une
-// page soit tuee en plein vol.
-
-// Warm-up du browser : prend une capture "fictive" sur about:blank pour amorcer
-// le pipeline de rendu interne de Chromium. Sans ca, le tout premier screenshot
-// concurrent declenche une serialisation interne (probablement init compositeur
-// + V8 JIT + GPU buffers) qui fait que 5 captures sur 6 bloquent ~25s.
-// Avec ce warmup (~500ms), les workers reels demarrent sur un browser amorce.
-async function warmupBrowser() {
+// =============================================================================
+// Helper : amorce le pipeline rendering d'un browser frais via une capture
+// "fictive" sur about:blank. Force Chromium a initialiser son compositeur,
+// V8 JIT, encodeur JPEG, GPU buffers ... AVANT que les vraies captures
+// concurrentes ne tapent dessus. Sans ca, les 1eres captures se serialisent.
+// =============================================================================
+async function warmupBrowser(browser, label = '') {
   const t0 = Date.now();
-  const browser = await getBrowser();
   let page;
   try {
     page = await browser.newPage();
     await page.setViewport(VIEWPORT);
-    // about:blank est instantane, pas de network. Le screenshot force l'init
-    // de tout le pipeline rendering (compositor, paint, encoder JPEG).
     await page.goto('about:blank', { timeout: 5000 });
     await page.screenshot({ type: 'jpeg', quality: 50 });
-    if (DEBUG) console.log(`[browser] warmed up in ${Date.now() - t0}ms`);
+    if (DEBUG) console.log(`[browser${label}] warmed up in ${Date.now() - t0}ms`);
   } catch (e) {
-    if (DEBUG) console.log(`[browser] warmup failed (non-fatal): ${e.message}`);
+    if (DEBUG) console.log(`[browser${label}] warmup failed (non-fatal): ${e.message}`);
   } finally {
     if (page) page.close({ runBeforeUnload: false }).catch(() => {});
   }
 }
 
-// Attend que le rendu soit reellement termine avant la capture.
-// Strategie : forcer le chargement explicite de chaque font/img/bg-image,
-// puis verifier l'etat 'loaded' de document.fonts, puis forcer un reflow.
-// Plus robuste que document.fonts.ready seul car :
-//   - le site utilise Google Fonts avec display=swap → ready peut resoudre
-//     avant que le repaint avec la vraie font soit applique
-//   - le hero est background-image CSS → networkidle0 ne garantit pas le paint
-//   - certaines fonts sont utilisees apres le premier ready (snapshot piege)
+// =============================================================================
+// Attente deterministe avant capture : fonts + images + bg-image + reflow
+// =============================================================================
 async function waitForRenderComplete(page) {
   // 1) FONTS : forcer le chargement de chaque font-family utilisee dans le DOM
-  //    via document.fonts.load() (plus deterministe que document.fonts.ready).
   try {
     await page.evaluate(async () => {
       if (!document.fonts) return;
-
-      // Collecte toutes les font-family utilisees dans le DOM
       const stacks = new Set();
       for (const el of document.querySelectorAll('*')) {
         const ff = getComputedStyle(el).fontFamily;
         if (ff && ff !== 'inherit') stacks.add(ff);
       }
-
-      // Force le chargement pour les variantes courantes (poids 300/400/500/600/700, italique).
-      // document.fonts.load() retourne une Promise qui ne resout que lorsque
-      // les FontFace correspondantes sont vraiment "loaded" (telechargees + utilisables).
       const variants = ['300 16px', '400 16px', '500 16px', '600 16px', '700 16px',
                         'italic 400 16px', 'italic 700 16px'];
       const promises = [];
       for (const stack of stacks) {
         for (const v of variants) {
-          // document.fonts.load throw si la query est invalide ; on catch silencieusement
           promises.push(document.fonts.load(`${v} ${stack}`).catch(() => null));
         }
       }
       await Promise.allSettled(promises);
-
-      // Filet de securite : attendre le ready global apres les loads explicites
       try { await document.fonts.ready; } catch {}
     });
   } catch {}
 
-  // 2) Force un reflow + repaint pour appliquer le swap des fonts qui
-  //    viennent d'arriver. Sans ca, l'ancien layout (font fallback) peut
-  //    persister jusqu'au screenshot.
+  // 2) Force un reflow synchrone pour appliquer le swap des fonts
   try {
     await page.evaluate(() => {
-      // Touch layout property -> force synchronous reflow
       // eslint-disable-next-line no-unused-expressions
       document.body.offsetHeight;
     });
@@ -187,41 +188,24 @@ async function waitForRenderComplete(page) {
     }));
   } catch {}
 
-  // 4) Buffer final : laisse le repaint final settler (animations, font swap)
+  // 4) Buffer final pour settle des animations residuelles
   if (SETTLE_MS > 0) await new Promise(r => setTimeout(r, SETTLE_MS));
 }
 
-// CSS injecte sur chaque page pour rendre les captures deterministes :
-//   - animation-duration: 0s  → toute animation @keyframes (ex. fadeInUp 1s sur
-//     .hero-content, bounce sur le scroll-indicator) est instantanement a son
-//     etat final. Sinon, la capture peut tomber pendant le fade-in (titre
-//     transparent ou en train d'apparaitre).
-//   - transition-duration: 0s → pareil pour les transitions
-const DISABLE_ANIMATIONS_CSS = `
-  *, *::before, *::after {
-    animation-duration: 0s !important;
-    animation-delay: 0s !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0s !important;
-    transition-delay: 0s !important;
-    scroll-behavior: auto !important;
-  }
-`;
-
-export async function captureSalon(slug) {
+// =============================================================================
+// Capture sur un browser donne (utilise par captureSalon et par les workers).
+// Watchdog : si la capture ne finit pas en CAPTURE_TIMEOUT_MS, on force-close
+// la page (qui annule toutes les commandes CDP en cours et propage une erreur).
+// =============================================================================
+async function captureSalonOnBrowser(browser, slug, workerLabel = '') {
   const t0 = Date.now();
-  const browser = await getBrowser();
   const page = await browser.newPage();
-  capturesSinceLaunch++;
-  if (DEBUG) console.log(`[shot ${slug}] start  t=${new Date(t0).toISOString()}`);
+  if (DEBUG) console.log(`[shot ${slug}]${workerLabel} start  t=${new Date(t0).toISOString()}`);
 
-  // Watchdog : si la capture ne se termine pas en CAPTURE_TIMEOUT_MS,
-  // on force-close la page (qui annule toutes les commandes CDP en cours
-  // et fait propager une erreur dans le try/catch ci-dessous).
   let timedOut = false;
   const watchdog = setTimeout(() => {
     timedOut = true;
-    if (DEBUG) console.log(`[shot ${slug}] watchdog fired (${CAPTURE_TIMEOUT_MS}ms) -> force close page`);
+    if (DEBUG) console.log(`[shot ${slug}]${workerLabel} watchdog fired (${CAPTURE_TIMEOUT_MS}ms) -> force close page`);
     page.close({ runBeforeUnload: false }).catch(() => {});
   }, CAPTURE_TIMEOUT_MS);
 
@@ -231,8 +215,6 @@ export async function captureSalon(slug) {
     const tNav0 = Date.now();
     await page.goto(url, { waitUntil: 'networkidle0', timeout: 25000 });
     const tNav1 = Date.now();
-    // Desactive les animations CSS AVANT les waits : sinon fadeInUp 1s sur
-    // .hero-content peut laisser le titre semi-transparent au moment du shot.
     await page.addStyleTag({ content: DISABLE_ANIMATIONS_CSS });
     await waitForRenderComplete(page);
     const tWait1 = Date.now();
@@ -255,19 +237,25 @@ export async function captureSalon(slug) {
 
     if (DEBUG) {
       const tEnd = Date.now();
-      console.log(`[shot ${slug}] done   nav=${tNav1 - tNav0}ms wait=${tWait1 - tNav1}ms shot=${tEnd - tWait1}ms total=${tEnd - t0}ms`);
+      console.log(`[shot ${slug}]${workerLabel} done   nav=${tNav1 - tNav0}ms wait=${tWait1 - tNav1}ms shot=${tEnd - tWait1}ms total=${tEnd - t0}ms`);
     }
     return { slug, success: true, screenshot_path: relativeUrl };
   } catch (e) {
     const reason = timedOut ? `capture timeout (${CAPTURE_TIMEOUT_MS}ms)` : e.message;
-    if (DEBUG) console.log(`[shot ${slug}] error  ${reason}`);
+    if (DEBUG) console.log(`[shot ${slug}]${workerLabel} error  ${reason}`);
     return { slug, success: false, error: reason };
   } finally {
     clearTimeout(watchdog);
-    // Best-effort close (non-bloquant) : si la page est deja fermee par le
-    // watchdog ou un crash, .close() throw silencieusement.
     page.close({ runBeforeUnload: false }).catch(() => {});
   }
+}
+
+// =============================================================================
+// Capture single-shot : utilise le browser partage (utilise par /admin/screenshot/:slug)
+// =============================================================================
+export async function captureSalon(slug) {
+  const browser = await getSharedBrowser();
+  return captureSalonOnBrowser(browser, slug);
 }
 
 export async function captureBatch(slugs, onProgress) {
@@ -275,64 +263,99 @@ export async function captureBatch(slugs, onProgress) {
   return captureBatchParallel(slugs, 1, onProgress);
 }
 
-// Pool de workers : N captures Puppeteer concurrentes (N pages dans le meme browser).
-// Chaque page consomme ~100-180 Mo. Defaut 6 (configurable via SCREENSHOT_CONCURRENCY).
+// =============================================================================
+// BATCH PARALLELE : architecture per-worker browser
 //
-// Pour eviter la degradation progressive du browser sur les longs batches
-// (memory leak, connexions zombies), le batch est decoupe en CHUNKS de
-// BROWSER_RECYCLE_EVERY captures. Entre chaque chunk, le browser est ferme
-// et relance. A l'interieur d'un chunk, aucun recyclage (pas de race).
+// Chaque worker maintient SON PROPRE browser Chromium independant. Quand son
+// browser degrade (memory leak, GPU buffers), il le recycle SEUL — sans
+// affecter les autres workers. Trois conditions de recyclage :
+//   1. Proactif : tous les WORKER_RECYCLE_EVERY captures (defaut 15)
+//   2. Reactif : apres WORKER_ERROR_THRESHOLD captures consecutives en erreur
+//   3. Reactif : si le browser process s'est deconnecte (crash)
+//
+// Chaque browser est warmed-up apres lancement (warmupBrowser) pour eviter
+// la serialisation interne du pipeline Chromium au demarrage.
+//
+// Cout RAM : ~200 Mo par browser. Avec concurrency=4 -> ~800 Mo de browsers,
+// + ~100 Mo de pages actives -> ~1 Go pendant un batch. Reste large sur un
+// VPS de 2 Go.
+// =============================================================================
 export async function captureBatchParallel(slugs, concurrency, onProgress) {
   const c = Math.max(1, concurrency || DEFAULT_CONCURRENCY);
-  const chunkSize = BROWSER_RECYCLE_EVERY > 0 ? BROWSER_RECYCLE_EVERY : slugs.length;
   const results = new Array(slugs.length);
+  let nextIndex = 0;
   let completed = 0;
   const tStart = Date.now();
-  if (DEBUG) console.log(`[batch] start total=${slugs.length} concurrency=${c} chunk=${chunkSize} settle=${SETTLE_MS}ms`);
+  if (DEBUG) console.log(`[batch] start total=${slugs.length} workers=${c} recycle=${WORKER_RECYCLE_EVERY} settle=${SETTLE_MS}ms`);
 
-  // Pre-warm le browser ET amorce son pipeline rendering (cf. warmupBrowser)
-  await getBrowser();
-  await warmupBrowser();
+  // Lancement parallele de N workers, chacun avec son browser dedie
+  const workers = Array.from({ length: Math.min(c, slugs.length) }, async (_, workerId) => {
+    const label = ` w#${workerId}`;
+    let browser = null;
+    let captureCount = 0;
+    let consecutiveErrors = 0;
 
-  // Decoupage en chunks pour permettre le recyclage du browser entre les chunks
-  for (let chunkStart = 0; chunkStart < slugs.length; chunkStart += chunkSize) {
-    const chunkEnd = Math.min(chunkStart + chunkSize, slugs.length);
-    const chunk = slugs.slice(chunkStart, chunkEnd);
+    // Helper : (re)lance le browser de ce worker + warmup
+    const launchBrowser = async () => {
+      if (browser) {
+        await browser.close().catch(() => {});
+        browser = null;
+      }
+      const t0 = Date.now();
+      browser = await puppeteer.launch(LAUNCH_OPTS);
+      captureCount = 0;
+      if (DEBUG) console.log(`[browser${label}] launched`);
+      await warmupBrowser(browser, label);
+      if (DEBUG) console.log(`[browser${label}] ready in ${Date.now() - t0}ms`);
+    };
 
-    // Recycler le browser entre les chunks (sauf avant le premier)
-    if (chunkStart > 0) {
-      if (DEBUG) console.log(`[browser] recycle before chunk starting at ${chunkStart + 1}/${slugs.length}`);
-      const tRecycle0 = Date.now();
-      await closeBrowser();
-      await getBrowser();
-      // Amorcer le nouveau browser avant de relacher les workers paralleles
-      await warmupBrowser();
-      if (DEBUG) console.log(`[browser] recycled+warmed in ${Date.now() - tRecycle0}ms`);
+    // Stagger : decale les demarrages des workers pour ne pas saturer le
+    // serveur Express avec N goto() simultanes ni Chrome avec N launch().
+    if (workerId > 0 && WORKER_STAGGER_MS > 0) {
+      await new Promise(r => setTimeout(r, workerId * WORKER_STAGGER_MS));
     }
 
-    let nextIndex = 0;
-    const workers = Array.from({ length: Math.min(c, chunk.length) }, async (_, workerId) => {
-      // Stagger au demarrage du chunk : worker#0 part immediatement, #1 attend
-      // WORKER_STAGGER_MS, etc. Evite que 6 page.screenshot() concurrents tombent
-      // sur un Chrome qui vient d'etre lance et serialise tout en interne.
-      if (workerId > 0 && WORKER_STAGGER_MS > 0) {
-        await new Promise(r => setTimeout(r, workerId * WORKER_STAGGER_MS));
-      }
+    try {
+      await launchBrowser();
+
       while (true) {
         const i = nextIndex++;
-        if (i >= chunk.length) return;
-        const globalIdx = chunkStart + i;
-        if (DEBUG) console.log(`[batch] worker#${workerId} -> slug ${chunk[i]} (${globalIdx + 1}/${slugs.length})`);
-        const result = await captureSalon(chunk[i]);
-        results[globalIdx] = result;
+        if (i >= slugs.length) return;
+
+        // Recyclage proactif : eviter la degradation progressive
+        if (WORKER_RECYCLE_EVERY > 0 && captureCount >= WORKER_RECYCLE_EVERY) {
+          if (DEBUG) console.log(`[browser${label}] proactive recycle (after ${captureCount} captures)`);
+          await launchBrowser();
+        }
+
+        // Recyclage reactif : trop d'erreurs consecutives = browser zombie
+        if (consecutiveErrors >= WORKER_ERROR_THRESHOLD) {
+          if (DEBUG) console.log(`[browser${label}] reactive recycle (${consecutiveErrors} consecutive errors)`);
+          await launchBrowser();
+          consecutiveErrors = 0;
+        }
+
+        // Si le browser s'est deconnecte (crash silencieux), le relancer
+        if (!browser || !browser.connected) {
+          if (DEBUG) console.log(`[browser${label}] disconnected -> relaunch`);
+          await launchBrowser();
+        }
+
+        if (DEBUG) console.log(`[batch${label}] -> slug ${slugs[i]} (${i + 1}/${slugs.length})`);
+        captureCount++;
+        const result = await captureSalonOnBrowser(browser, slugs[i], label);
+        results[i] = result;
         completed++;
+        if (result.success) consecutiveErrors = 0;
+        else consecutiveErrors++;
         if (onProgress) onProgress({ done: completed, total: slugs.length, last: result });
       }
-    });
+    } finally {
+      if (browser) await browser.close().catch(() => {});
+    }
+  });
 
-    await Promise.all(workers);
-  }
-
+  await Promise.all(workers);
   if (DEBUG) console.log(`[batch] finished total=${slugs.length} elapsed=${Date.now() - tStart}ms`);
   return results;
 }
