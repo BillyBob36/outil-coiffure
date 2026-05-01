@@ -7,9 +7,11 @@ const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR || './public/screenshots';
 const INTERNAL_BASE = process.env.INTERNAL_SCREENSHOT_BASE_URL || 'http://localhost:3000';
 const VIEWPORT = { width: 1280, height: 800 };
 const JPEG_QUALITY = 80;
-// Concurrence par defaut : 6 pages Puppeteer en parallele dans le meme browser.
-// Override via env var SCREENSHOT_CONCURRENCY (ex: 8 si plus de RAM, 4 si VPS petit).
-const DEFAULT_CONCURRENCY = Math.max(1, parseInt(process.env.SCREENSHOT_CONCURRENCY || '6', 10));
+// Concurrence par defaut : 4 pages Puppeteer en parallele dans le meme browser.
+// On a baisse de 6 a 4 car avec 6 il y avait du serialization sur page.screenshot()
+// dans Chromium freshly-launched (logs production : 5/6 captures bloquaient ~25s).
+// 4 est un bon compromis vitesse/fiabilite. Override via env SCREENSHOT_CONCURRENCY.
+const DEFAULT_CONCURRENCY = Math.max(1, parseInt(process.env.SCREENSHOT_CONCURRENCY || '4', 10));
 // Buffer final apres les waits explicites (fonts + images + reflow). 400ms par
 // defaut : suffit pour le repaint apres font swap, configurable via env.
 const SETTLE_MS = Math.max(0, parseInt(process.env.SCREENSHOT_SETTLE_MS || '400', 10));
@@ -26,7 +28,9 @@ const BROWSER_RECYCLE_EVERY = Math.max(0, parseInt(process.env.SCREENSHOT_BROWSE
 // Stagger entre les workers au demarrage d'un chunk : sur Chrome freshly-launched,
 // 6 page.screenshot() concurrents peuvent serialiser et timeout. En decalant les
 // demarrages de WORKER_STAGGER_MS, on lisse la charge sur l'init du browser.
-const WORKER_STAGGER_MS = Math.max(0, parseInt(process.env.SCREENSHOT_WORKER_STAGGER_MS || '350', 10));
+// Note : avec le warmup ci-dessous, le stagger devient secondaire ; on garde 200ms
+// par defense en profondeur.
+const WORKER_STAGGER_MS = Math.max(0, parseInt(process.env.SCREENSHOT_WORKER_STAGGER_MS || '200', 10));
 
 mkdirSync(SCREENSHOTS_DIR, { recursive: true });
 
@@ -73,6 +77,30 @@ export async function closeBrowser() {
 // captureBatchParallel (cf. plus bas) — pas via une helper ici, car on doit
 // quiescer tous les workers avant de fermer le browser pour eviter qu'une
 // page soit tuee en plein vol.
+
+// Warm-up du browser : prend une capture "fictive" sur about:blank pour amorcer
+// le pipeline de rendu interne de Chromium. Sans ca, le tout premier screenshot
+// concurrent declenche une serialisation interne (probablement init compositeur
+// + V8 JIT + GPU buffers) qui fait que 5 captures sur 6 bloquent ~25s.
+// Avec ce warmup (~500ms), les workers reels demarrent sur un browser amorce.
+async function warmupBrowser() {
+  const t0 = Date.now();
+  const browser = await getBrowser();
+  let page;
+  try {
+    page = await browser.newPage();
+    await page.setViewport(VIEWPORT);
+    // about:blank est instantane, pas de network. Le screenshot force l'init
+    // de tout le pipeline rendering (compositor, paint, encoder JPEG).
+    await page.goto('about:blank', { timeout: 5000 });
+    await page.screenshot({ type: 'jpeg', quality: 50 });
+    if (DEBUG) console.log(`[browser] warmed up in ${Date.now() - t0}ms`);
+  } catch (e) {
+    if (DEBUG) console.log(`[browser] warmup failed (non-fatal): ${e.message}`);
+  } finally {
+    if (page) page.close({ runBeforeUnload: false }).catch(() => {});
+  }
+}
 
 // Attend que le rendu soit reellement termine avant la capture.
 // Strategie : forcer le chargement explicite de chaque font/img/bg-image,
@@ -262,8 +290,9 @@ export async function captureBatchParallel(slugs, concurrency, onProgress) {
   const tStart = Date.now();
   if (DEBUG) console.log(`[batch] start total=${slugs.length} concurrency=${c} chunk=${chunkSize} settle=${SETTLE_MS}ms`);
 
-  // Pre-warm le browser
+  // Pre-warm le browser ET amorce son pipeline rendering (cf. warmupBrowser)
   await getBrowser();
+  await warmupBrowser();
 
   // Decoupage en chunks pour permettre le recyclage du browser entre les chunks
   for (let chunkStart = 0; chunkStart < slugs.length; chunkStart += chunkSize) {
@@ -276,7 +305,9 @@ export async function captureBatchParallel(slugs, concurrency, onProgress) {
       const tRecycle0 = Date.now();
       await closeBrowser();
       await getBrowser();
-      if (DEBUG) console.log(`[browser] recycled in ${Date.now() - tRecycle0}ms`);
+      // Amorcer le nouveau browser avant de relacher les workers paralleles
+      await warmupBrowser();
+      if (DEBUG) console.log(`[browser] recycled+warmed in ${Date.now() - tRecycle0}ms`);
     }
 
     let nextIndex = 0;
