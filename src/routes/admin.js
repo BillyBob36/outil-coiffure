@@ -424,7 +424,8 @@ router.post('/run-actions', express.json(), async (req, res) => {
       // Phase 2 : captures (avec contenu mis a jour par phase 1)
       if (actions.capture) {
         job.phase = 'capture';
-        await captureBatchParallel(slugs, 4, ({ done, total, last }) => {
+        // Concurrence : laisse le default du worker (env SCREENSHOT_CONCURRENCY ou 6)
+        await captureBatchParallel(slugs, undefined, ({ done, total, last }) => {
           const b = job.breakdown.capture;
           const delta = done - b.done;
           b.done = done;
