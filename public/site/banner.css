@@ -1,6 +1,6 @@
 /* =============================================================================
-   Banner sticky "Mettez ce site en ligne" — style SaaS Pro (delibere different
-   du theme du site coiffeur pour signaler une experience commerciale distincte)
+   Banner sticky "Mettez ce site en ligne" — style SaaS Pro light, coherent
+   avec la modal pricing. Toujours en BOTTOM (mobile + desktop).
    ============================================================================= */
 
 @import url('https://rsms.me/inter/inter.css');
@@ -8,11 +8,16 @@
 #mqs-banner {
     position: fixed;
     z-index: 9999;
-    background: #0a0a0a;
-    color: #fafafa;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    transform: translateY(110%);
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%) translateY(150%);
+    width: min(720px, calc(100vw - 24px));
+    background: #ffffff;
+    color: #0a0a0a;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 14px 18px;
     transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.0), opacity 0.3s ease;
     opacity: 0;
     pointer-events: none;
@@ -22,49 +27,39 @@
 }
 
 #mqs-banner.mqs-show {
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
     opacity: 1;
     pointer-events: auto;
 }
 
-/* === Desktop : top sticky, centred, large radius === */
-@media (min-width: 768px) {
-    #mqs-banner {
-        top: 16px;
-        left: 50%;
-        transform: translateX(-50%) translateY(-150%);
-        width: min(760px, calc(100vw - 32px));
-        border-radius: 14px;
-        padding: 18px 22px;
-    }
-    #mqs-banner.mqs-show {
-        transform: translateX(-50%) translateY(0);
-    }
-}
-
-/* === Mobile : bottom sticky === */
+/* === Mobile : full-width au bas, sans border-radius, safe-area === */
 @media (max-width: 767px) {
     #mqs-banner {
         bottom: 0;
         left: 0;
         right: 0;
-        padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+        transform: translateY(100%);
+        width: 100%;
+        border-radius: 0;
         border-left: 0;
         border-right: 0;
         border-bottom: 0;
-        border-radius: 0;
+        padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+    }
+    #mqs-banner.mqs-show {
+        transform: translateY(0);
     }
 }
 
 #mqs-banner-inner {
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 14px;
 }
 
 @media (max-width: 767px) {
     #mqs-banner-inner {
-        gap: 12px;
+        gap: 10px;
     }
 }
 
@@ -74,42 +69,42 @@
 }
 
 #mqs-banner-text-line1 {
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     font-weight: 600;
-    color: #ffffff;
+    color: #0a0a0a;
     margin: 0;
-    line-height: 1.35;
+    line-height: 1.3;
     letter-spacing: -0.015em;
 }
 
 #mqs-banner-text-line2 {
-    font-size: 0.78rem;
-    color: rgba(255, 255, 255, 0.55);
-    margin: 4px 0 0;
-    line-height: 1.45;
+    font-size: 0.74rem;
+    color: #6b7280;
+    margin: 2px 0 0;
+    line-height: 1.4;
     font-weight: 400;
     letter-spacing: -0.005em;
 }
 
 @media (max-width: 767px) {
     #mqs-banner-text-line1 {
-        font-size: 0.85rem;
+        font-size: 0.82rem;
     }
     #mqs-banner-text-line2 {
-        font-size: 0.72rem;
+        font-size: 0.7rem;
     }
 }
 
-/* === CTA : pill button blanc sur fond noir === */
+/* === CTA : pill button noir === */
 #mqs-banner-cta {
-    background: #ffffff;
-    color: #0a0a0a;
+    background: #0a0a0a;
+    color: #ffffff;
     border: 0;
-    padding: 11px 22px;
+    padding: 10px 18px;
     border-radius: 999px;
     font-family: inherit;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     letter-spacing: -0.01em;
     cursor: pointer;
     white-space: nowrap;
@@ -117,14 +112,14 @@
 }
 
 #mqs-banner-cta:hover {
-    background: #f0f0f0;
+    background: #1a1a1a;
     transform: translateY(-1px);
 }
 
 @media (max-width: 767px) {
     #mqs-banner-cta {
-        padding: 9px 16px;
-        font-size: 0.78rem;
+        padding: 8px 14px;
+        font-size: 0.76rem;
     }
 }
 
@@ -132,10 +127,10 @@
 #mqs-banner-close {
     background: transparent;
     border: 0;
-    color: rgba(255, 255, 255, 0.4);
+    color: #9ca3af;
     cursor: pointer;
-    padding: 8px;
-    margin: -8px -6px -8px 0;
+    padding: 6px;
+    margin: -6px -4px -6px 0;
     transition: color 0.15s ease;
     display: flex;
     align-items: center;
@@ -143,7 +138,7 @@
 }
 
 #mqs-banner-close:hover {
-    color: rgba(255, 255, 255, 0.85);
+    color: #0a0a0a;
 }
 
 #mqs-banner-close svg {
