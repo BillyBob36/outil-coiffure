@@ -1,25 +1,24 @@
 /* =============================================================================
-   Banner sticky "Mettez ce site en ligne" — affiche sur les pages /preview/{slug}
-   - Mobile (< 768px) : sticky bottom, full-width
-   - Desktop : sticky top, centré 720px
-   - Apparaît après 10s OU au premier scroll significatif (200px)
-   - Closeable avec X. Réapparaît après 30s.
-   - Cache si ?nocapture=1 (Puppeteer screenshots) ou ?banner=off (debug)
+   Banner sticky "Mettez ce site en ligne" — style SaaS Pro (delibere different
+   du theme du site coiffeur pour signaler une experience commerciale distincte)
    ============================================================================= */
+
+@import url('https://rsms.me/inter/inter.css');
 
 #mqs-banner {
     position: fixed;
     z-index: 9999;
-    background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
-    color: #fff;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(201, 169, 110, 0.35);
-    border-radius: 0;
+    background: #0a0a0a;
+    color: #fafafa;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     transform: translateY(110%);
-    transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.0), opacity 0.3s ease;
+    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.0), opacity 0.3s ease;
     opacity: 0;
     pointer-events: none;
-    font-family: 'Montserrat', system-ui, sans-serif;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
 }
 
 #mqs-banner.mqs-show {
@@ -28,22 +27,22 @@
     pointer-events: auto;
 }
 
-/* === Desktop (> 768px) : top sticky, centred === */
+/* === Desktop : top sticky, centred, large radius === */
 @media (min-width: 768px) {
     #mqs-banner {
         top: 16px;
         left: 50%;
         transform: translateX(-50%) translateY(-150%);
-        width: min(720px, calc(100vw - 32px));
-        border-radius: 12px;
-        padding: 18px 24px;
+        width: min(760px, calc(100vw - 32px));
+        border-radius: 14px;
+        padding: 18px 22px;
     }
     #mqs-banner.mqs-show {
         transform: translateX(-50%) translateY(0);
     }
 }
 
-/* === Mobile : bottom sticky, full-width === */
+/* === Mobile : bottom sticky === */
 @media (max-width: 767px) {
     #mqs-banner {
         bottom: 0;
@@ -52,15 +51,15 @@
         padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
         border-left: 0;
         border-right: 0;
+        border-bottom: 0;
         border-radius: 0;
-        border-top: 1px solid rgba(201, 169, 110, 0.5);
     }
 }
 
 #mqs-banner-inner {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 18px;
 }
 
 @media (max-width: 767px) {
@@ -75,78 +74,76 @@
 }
 
 #mqs-banner-text-line1 {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.1rem;
-    font-weight: 500;
-    color: #c9a96e;
-    letter-spacing: 0.4px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #ffffff;
     margin: 0;
-    line-height: 1.25;
+    line-height: 1.35;
+    letter-spacing: -0.015em;
 }
 
 #mqs-banner-text-line2 {
     font-size: 0.78rem;
-    color: rgba(255, 255, 255, 0.78);
+    color: rgba(255, 255, 255, 0.55);
     margin: 4px 0 0;
-    line-height: 1.35;
+    line-height: 1.45;
     font-weight: 400;
+    letter-spacing: -0.005em;
 }
 
 @media (max-width: 767px) {
     #mqs-banner-text-line1 {
-        font-size: 0.95rem;
+        font-size: 0.85rem;
     }
     #mqs-banner-text-line2 {
         font-size: 0.72rem;
     }
 }
 
+/* === CTA : pill button blanc sur fond noir === */
 #mqs-banner-cta {
-    background: linear-gradient(135deg, #c9a96e 0%, #b8965d 100%);
-    color: #1a1a1a;
+    background: #ffffff;
+    color: #0a0a0a;
     border: 0;
     padding: 11px 22px;
-    border-radius: 6px;
-    font-family: 'Montserrat', sans-serif;
+    border-radius: 999px;
+    font-family: inherit;
     font-weight: 600;
-    font-size: 0.88rem;
-    letter-spacing: 0.4px;
+    font-size: 0.85rem;
+    letter-spacing: -0.01em;
     cursor: pointer;
     white-space: nowrap;
-    transition: transform 0.15s ease, box-shadow 0.2s ease;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+    transition: transform 0.15s ease, background 0.2s ease;
 }
 
 #mqs-banner-cta:hover {
+    background: #f0f0f0;
     transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(201, 169, 110, 0.4);
 }
 
 @media (max-width: 767px) {
     #mqs-banner-cta {
-        padding: 9px 14px;
+        padding: 9px 16px;
         font-size: 0.78rem;
     }
 }
 
+/* === Close button : discret === */
 #mqs-banner-close {
     background: transparent;
     border: 0;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 1.2rem;
-    line-height: 1;
+    color: rgba(255, 255, 255, 0.4);
     cursor: pointer;
     padding: 8px;
-    margin: -8px -8px -8px 0;
+    margin: -8px -6px -8px 0;
     transition: color 0.15s ease;
-    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #mqs-banner-close:hover {
-    color: #fff;
+    color: rgba(255, 255, 255, 0.85);
 }
 
 #mqs-banner-close svg {
@@ -155,12 +152,4 @@
     stroke: currentColor;
     stroke-width: 2;
     fill: none;
-}
-
-/* Sur mobile, masquer le close button mais garder le tap (X plus discret) */
-@media (max-width: 767px) {
-    #mqs-banner-close {
-        padding: 6px;
-        margin: -6px -6px -6px 0;
-    }
 }

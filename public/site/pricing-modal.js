@@ -12,59 +12,54 @@
   const PLANS = [
     {
       key: 'TWO_YEAR',
-      label: '2 ans',
-      engagement: 'Engagement 24 mois',
+      eyebrow: 'Engagement 2 ans',
       monthlyPriceTtc: 9.90,
-      savings: 'Économisez 66 % vs sans engagement',
-      isPopular: true,
+      description: 'Le meilleur tarif. Site, domaine et hébergement inclus pendant 24 mois.',
+      cta: 'Choisir ce plan',
+      isPopular: false,
       features: [
         'Site 100 % personnalisable',
-        'Domaine inclus 1ère année',
+        'Domaine .fr ou .com inclus',
         'Hébergement haute performance',
         'Support email prioritaire',
-        'Mises à jour à volonté',
       ],
     },
     {
       key: 'ONE_YEAR',
-      label: '1 an',
-      engagement: 'Engagement 12 mois',
+      eyebrow: 'Le plus choisi',
       monthlyPriceTtc: 17.90,
-      savings: 'Économisez 38 %',
-      isPopular: false,
+      description: 'Engagement 12 mois. Le compromis idéal entre prix et flexibilité.',
+      cta: 'Choisir ce plan',
+      isPopular: true,
       features: [
         'Site 100 % personnalisable',
-        'Domaine inclus 1ère année',
+        'Domaine .fr ou .com inclus',
         'Hébergement haute performance',
         'Support email',
-        'Mises à jour à volonté',
       ],
     },
     {
       key: 'FLEX',
-      label: 'Flex',
-      engagement: 'Sans engagement',
+      eyebrow: 'Sans engagement',
       monthlyPriceTtc: 29.00,
-      savings: 'Résiliable à tout moment',
+      description: 'Liberté totale. Résiliable à tout moment, sans pénalité.',
+      cta: 'Choisir ce plan',
       isPopular: false,
-      isFlex: true,
       features: [
         'Site 100 % personnalisable',
-        'Domaine inclus 1ère année',
+        'Domaine .fr ou .com inclus',
         'Hébergement haute performance',
-        'Support email',
-        'Liberté totale, aucun engagement',
+        'Aucun engagement',
       ],
     },
   ];
 
   // État interne
   let modalEl = null;
-  let selectedPlanKey = 'TWO_YEAR'; // Default sélectionné = le plus populaire
+  let selectedPlanKey = null;
 
   function formatEur(amount) {
-    // 9.9 -> "9,90 €"
-    return amount.toFixed(2).replace('.', ',') + ' €';
+    return amount.toFixed(2).replace('.', ',') + ' €';
   }
 
   function buildModal() {
@@ -86,20 +81,17 @@
           <span class="mqs-step-eyebrow">Étape 1 / 3</span>
           <h2 class="mqs-step-title">Choisissez votre formule</h2>
           <p class="mqs-step-sub">
-            Tous nos plans incluent le site, le domaine 1<sup>ère</sup> année,
-            l'hébergement et le support. Sans frais de mise en place.
+            Tous les plans incluent le site, le domaine 1<sup>ère</sup> année,
+            l'hébergement et le support — sans frais de mise en place.
           </p>
         </div>
 
         <div class="mqs-plans" id="mqs-plans">${plansHtml}</div>
 
         <div class="mqs-modal-footer">
-          <button id="mqs-cta-continue" type="button" class="mqs-cta-primary">
-            Continuer →
-          </button>
           <p class="mqs-trust">
             <strong>Sans frais de mise en place</strong> · Site en ligne sous 15 minutes ·
-            Hébergé en Europe (Cloudflare + Hetzner)
+            Hébergé en Europe
           </p>
         </div>
       </div>
@@ -115,26 +107,20 @@
       </li>
     `).join('');
 
-    const isSelected = plan.key === selectedPlanKey;
     const classes = ['mqs-plan'];
     if (plan.isPopular) classes.push('mqs-plan-popular');
-    if (isSelected) classes.push('mqs-plan-selected');
-
-    const badgeHtml = plan.isPopular
-      ? `<span class="mqs-plan-badge">Le plus choisi</span>`
-      : '';
-
-    const savingsClass = plan.isFlex ? 'mqs-plan-savings mqs-savings-flex' : 'mqs-plan-savings';
 
     return `
-      <div class="${classes.join(' ')}" data-plan="${plan.key}" role="button" tabindex="0" aria-pressed="${isSelected}">
-        ${badgeHtml}
-        <span class="mqs-plan-engagement">${escapeHtml(plan.engagement)}</span>
+      <div class="${classes.join(' ')}" data-plan="${plan.key}" role="button" tabindex="0" aria-label="Sélectionner le plan ${escapeHtml(plan.eyebrow)}">
+        <span class="mqs-plan-eyebrow">${escapeHtml(plan.eyebrow)}</span>
         <div class="mqs-plan-price-line">
           <span class="mqs-plan-price">${formatEur(plan.monthlyPriceTtc)}</span>
-          <span class="mqs-plan-period">/mois TTC</span>
+          <span class="mqs-plan-period">/mois</span>
         </div>
-        <span class="${savingsClass}">${escapeHtml(plan.savings)}</span>
+        <p class="mqs-plan-description">${escapeHtml(plan.description)}</p>
+        <button class="mqs-plan-cta" type="button" data-plan-cta="${plan.key}">
+          ${escapeHtml(plan.cta)}
+        </button>
         <ul class="mqs-plan-features">${featuresHtml}</ul>
       </div>
     `;
@@ -153,7 +139,6 @@
     cards.forEach(card => {
       const isSelected = card.dataset.plan === planKey;
       card.classList.toggle('mqs-plan-selected', isSelected);
-      card.setAttribute('aria-pressed', String(isSelected));
     });
   }
 
@@ -171,9 +156,14 @@
     // ESC ferme
     document.addEventListener('keydown', onEscapeKey);
 
-    // Click sur une card → sélectionne
+    // Click sur une card → sélectionne (sans déclencher la transition)
     modalEl.querySelectorAll('.mqs-plan').forEach(card => {
-      card.addEventListener('click', () => selectPlan(card.dataset.plan));
+      card.addEventListener('click', (e) => {
+        // Si on a cliqué sur le bouton CTA dans la card, ne pas faire la sélection
+        // (le bouton gère déjà cela + déclenche Continue).
+        if (e.target.closest('.mqs-plan-cta')) return;
+        selectPlan(card.dataset.plan);
+      });
       card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -182,9 +172,13 @@
       });
     });
 
-    // CTA "Continuer →"
-    modalEl.querySelector('#mqs-cta-continue').addEventListener('click', () => {
-      onContinue();
+    // Click sur un bouton "Choisir ce plan" → sélectionne + transition vers Step B
+    modalEl.querySelectorAll('.mqs-plan-cta').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectPlan(btn.dataset.planCta);
+        onContinue();
+      });
     });
   }
 
@@ -193,25 +187,24 @@
   }
 
   function onContinue() {
-    // V1 : Step B et C pas encore codés. On affiche un placeholder en console + alert.
-    // En V1.5 : transition vers Step B (recherche de domaine).
+    // V1 : Step B et C pas encore codés. On affiche un placeholder.
     const plan = PLANS.find(p => p.key === selectedPlanKey);
+    if (!plan) return;
     console.log('[mqs-modal] Plan choisi :', plan);
     alert(
-      `Plan sélectionné : ${plan.engagement} (${formatEur(plan.monthlyPriceTtc)}/mois TTC)\n\n` +
+      `Plan sélectionné : ${plan.eyebrow} (${formatEur(plan.monthlyPriceTtc)}/mois TTC)\n\n` +
       `Étape suivante : choix du domaine + paiement Stripe.\n` +
       `(en cours de développement)`
     );
   }
 
   function openModal() {
-    if (modalEl) return; // déjà ouvert
+    if (modalEl) return;
     modalEl = buildModal();
     document.body.appendChild(modalEl);
     bindModalEvents();
-    document.body.style.overflow = 'hidden'; // bloque le scroll en arrière
+    document.body.style.overflow = 'hidden';
 
-    // Focus pour accessibilité
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         modalEl.classList.add('mqs-modal-open');
@@ -229,6 +222,7 @@
     setTimeout(() => {
       if (modalEl && modalEl.parentNode) modalEl.parentNode.removeChild(modalEl);
       modalEl = null;
+      selectedPlanKey = null;
     }, 300);
   }
 
