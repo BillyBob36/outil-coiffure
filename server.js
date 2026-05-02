@@ -10,6 +10,7 @@ import db from './src/db.js';
 import apiRouter from './src/routes/api.js';
 import adminRouter from './src/routes/admin.js';
 import editRouter from './src/routes/edit.js';
+import checkoutRouter from './src/routes/checkout.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -98,6 +99,7 @@ app.use('/screenshots', express.static(SCREENSHOTS_DIR, { maxAge: '1h' }));
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '1h' }));
 app.use('/api', apiRouter);
 app.use('/api', editRouter); // expose /api/edit/:slug
+app.use('/api', checkoutRouter); // expose /api/domain/* + /api/checkout/*
 
 const RESERVED_ADMIN_PATHS = new Set([
   'login', 'logout', 'me', 'index.html', 'login.html',
