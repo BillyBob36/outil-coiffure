@@ -90,8 +90,37 @@ export function initSchema() {
     db.exec("CREATE INDEX IF NOT EXISTS idx_salons_group_id ON salons(group_id)");
   }
 
+  // === Migration signup / Stripe / live hosting (2026-05-02) ===
+  // Ces colonnes pilotent le passage demo -> site live (apres paiement Stripe).
+  if (!cols.includes('owner_email')) db.exec("ALTER TABLE salons ADD COLUMN owner_email TEXT");
+  if (!cols.includes('plan')) db.exec("ALTER TABLE salons ADD COLUMN plan TEXT DEFAULT 'free'");
+  if (!cols.includes('stripe_customer_id')) db.exec("ALTER TABLE salons ADD COLUMN stripe_customer_id TEXT");
+  if (!cols.includes('stripe_subscription_id')) db.exec("ALTER TABLE salons ADD COLUMN stripe_subscription_id TEXT");
+  if (!cols.includes('commitment_months')) db.exec("ALTER TABLE salons ADD COLUMN commitment_months INTEGER DEFAULT 0");
+  if (!cols.includes('commitment_until')) db.exec("ALTER TABLE salons ADD COLUMN commitment_until TEXT");
+  if (!cols.includes('subscription_status')) db.exec("ALTER TABLE salons ADD COLUMN subscription_status TEXT");
+  if (!cols.includes('live_hostname')) db.exec("ALTER TABLE salons ADD COLUMN live_hostname TEXT");
+  if (!cols.includes('signup_session_id')) db.exec("ALTER TABLE salons ADD COLUMN signup_session_id TEXT");
+  if (!cols.includes('signed_up_at')) db.exec("ALTER TABLE salons ADD COLUMN signed_up_at TEXT");
+  if (!cols.includes('cancelled_at')) db.exec("ALTER TABLE salons ADD COLUMN cancelled_at TEXT");
+
+  // Idempotency : table des Stripe events deja traites (evite double-deploiement
+  // si Stripe retry le webhook).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS stripe_events (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      payload TEXT,
+      processed_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_stripe_events_type ON stripe_events(type);
+  `);
+
   // 3. Index sur edit_token : seulement maintenant que la colonne existe
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_salons_edit_token ON salons(edit_token) WHERE edit_token IS NOT NULL");
+  // Index sur live_hostname : lookup rapide par domaine custom
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_salons_live_hostname ON salons(live_hostname) WHERE live_hostname IS NOT NULL");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_salons_subscription_status ON salons(subscription_status) WHERE subscription_status IS NOT NULL");
 
   // 4. Backfill : nom_clean doit TOUJOURS etre rempli (initialement = nom).
   //    Cela rend la colonne "Nom final" editable de facon homogene cote admin.

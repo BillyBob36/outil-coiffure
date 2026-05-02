@@ -1,0 +1,300 @@
+/* =============================================================================
+   Modale pricing — affichée quand on clique sur "Choisir mon offre" du banner
+   3 étapes : choix du plan → recherche domaine → paiement Stripe (V2)
+   ============================================================================= */
+
+#mqs-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 20, 20, 0.78);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    font-family: 'Montserrat', system-ui, sans-serif;
+}
+
+#mqs-modal-backdrop.mqs-modal-open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#mqs-modal-backdrop[hidden] {
+    display: none;
+}
+
+#mqs-modal {
+    background: #fefcf8;
+    border-radius: 16px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+    width: min(960px, calc(100vw - 40px));
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    transform: translateY(20px) scale(0.97);
+    transition: transform 0.3s ease;
+    position: relative;
+    color: #1a1a1a;
+}
+
+#mqs-modal-backdrop.mqs-modal-open #mqs-modal {
+    transform: translateY(0) scale(1);
+}
+
+@media (max-width: 600px) {
+    #mqs-modal {
+        width: 100%;
+        max-height: calc(100vh - 20px);
+        border-radius: 12px;
+    }
+}
+
+#mqs-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.05);
+    border: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    transition: background 0.15s ease, color 0.15s ease;
+    z-index: 10;
+}
+
+#mqs-modal-close:hover {
+    background: rgba(0, 0, 0, 0.12);
+    color: #000;
+}
+
+#mqs-modal-close svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+
+/* === Step header === */
+.mqs-step-header {
+    text-align: center;
+    padding: 36px 28px 24px;
+}
+
+.mqs-step-eyebrow {
+    font-size: 0.74rem;
+    color: #c9a96e;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.mqs-step-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.7rem, 3vw, 2.3rem);
+    font-weight: 500;
+    color: #1a1a1a;
+    margin: 8px 0 6px;
+    line-height: 1.15;
+}
+
+.mqs-step-sub {
+    font-size: 0.95rem;
+    color: #555;
+    max-width: 580px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
+/* === Plans grid === */
+.mqs-plans {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    padding: 0 28px 24px;
+}
+
+@media (max-width: 760px) {
+    .mqs-plans {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 0 20px 20px;
+    }
+}
+
+.mqs-plan {
+    border: 2px solid #e6e2db;
+    border-radius: 12px;
+    padding: 22px 20px;
+    cursor: pointer;
+    background: #fff;
+    position: relative;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.mqs-plan:hover {
+    border-color: #c9a96e;
+    box-shadow: 0 6px 20px rgba(201, 169, 110, 0.15);
+}
+
+.mqs-plan.mqs-plan-selected {
+    border-color: #c9a96e;
+    box-shadow: 0 8px 28px rgba(201, 169, 110, 0.25);
+    background: linear-gradient(135deg, #fdfaf3 0%, #fefcf8 100%);
+}
+
+.mqs-plan.mqs-plan-popular {
+    border-color: #c9a96e;
+}
+
+.mqs-plan-badge {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #c9a96e 0%, #b8965d 100%);
+    color: #fff;
+    font-size: 0.65rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 30px;
+    box-shadow: 0 3px 10px rgba(201, 169, 110, 0.4);
+}
+
+.mqs-plan-engagement {
+    font-size: 0.72rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.mqs-plan-price-line {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.mqs-plan-price {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.6rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    line-height: 1;
+}
+
+.mqs-plan-period {
+    font-size: 0.85rem;
+    color: #777;
+    font-weight: 500;
+}
+
+.mqs-plan-tva {
+    font-size: 0.7rem;
+    color: #999;
+    margin-bottom: 14px;
+}
+
+.mqs-plan-savings {
+    background: #fdf6e6;
+    color: #8a7140;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-bottom: 14px;
+    display: inline-block;
+}
+
+.mqs-plan-savings.mqs-savings-flex {
+    background: #f4f4f4;
+    color: #888;
+    font-weight: 500;
+}
+
+.mqs-plan-features {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex: 1;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: #444;
+}
+
+.mqs-plan-features li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.mqs-plan-features li svg {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    margin-top: 4px;
+    stroke: #c9a96e;
+    stroke-width: 2.5;
+    fill: none;
+}
+
+/* === Footer / CTA / trust === */
+.mqs-modal-footer {
+    padding: 0 28px 28px;
+    text-align: center;
+}
+
+.mqs-cta-primary {
+    background: linear-gradient(135deg, #c9a96e 0%, #b8965d 100%);
+    color: #1a1a1a;
+    border: 0;
+    padding: 14px 36px;
+    border-radius: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    width: 100%;
+    max-width: 380px;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.15s ease;
+}
+
+.mqs-cta-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.mqs-cta-primary:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(201, 169, 110, 0.4);
+}
+
+.mqs-trust {
+    margin-top: 18px;
+    color: #777;
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+
+.mqs-trust strong {
+    color: #1a1a1a;
+}
