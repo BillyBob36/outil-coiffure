@@ -47,7 +47,7 @@ const COLUMN_MAP = {
   google_id: ['Google ID'],
   lien_google_maps: ['Lien'],
   telephone: ['Téléphone international', 'Téléphone'],
-  email: ['Email de contact', 'Email', 'Email individuel'],
+  email: ['Email de contact', 'Email', 'Email individuel', 'Email 1', 'labels.frontend.export.export_fields.website_email_1'],
   site_internet_original: ['Site internet'],
   adresse: ['Adresse 1', 'Adresse complète'],
   ville: ['Ville'],
