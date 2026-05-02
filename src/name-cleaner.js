@@ -2,6 +2,7 @@
 // Batch processing, few-shot prompt, idempotent
 
 import db from './db.js';
+import { azureSlot } from './azure-rate-limiter.js';
 
 const AZURE_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT || 'https://johannfoundry.cognitiveservices.azure.com';
 const AZURE_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-5.4-mini-coiffeurs-app';
@@ -165,7 +166,8 @@ async function processBatches(jobId, rows) {
       const items = batch.map(r => ({ id: r.id, raw: r.nom, ville: r.ville || '' }));
 
       try {
-        const results = await callAzure(items);
+        // Wrap dans le sémaphore Azure global (partagé entre les 3 workers IA)
+        const results = await azureSlot(() => callAzure(items));
         const byIndex = new Map(results.map(r => [Number(r.i), String(r.name || '').trim()]));
 
         const tx = db.transaction(() => {

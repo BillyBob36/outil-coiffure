@@ -104,6 +104,11 @@ export function initSchema() {
   if (!cols.includes('signed_up_at')) db.exec("ALTER TABLE salons ADD COLUMN signed_up_at TEXT");
   if (!cols.includes('cancelled_at')) db.exec("ALTER TABLE salons ADD COLUMN cancelled_at TEXT");
 
+  // === Domain suggestions (pré-générées par GPT, sans extension TLD) ===
+  // Format JSON : [{"name":"salonjean","rank":1}, ...] (10 entries)
+  if (!cols.includes('domain_suggestions_json')) db.exec("ALTER TABLE salons ADD COLUMN domain_suggestions_json TEXT");
+  if (!cols.includes('domain_suggestions_at')) db.exec("ALTER TABLE salons ADD COLUMN domain_suggestions_at TEXT");
+
   // Idempotency : table des Stripe events deja traites (evite double-deploiement
   // si Stripe retry le webhook).
   db.exec(`

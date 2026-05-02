@@ -3,6 +3,7 @@
 // le resultat dans overrides_json.intro.description (pour qu'il s'affiche sur la landing)
 
 import db from './db.js';
+import { azureSlot } from './azure-rate-limiter.js';
 
 const AZURE_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT || 'https://johannfoundry.cognitiveservices.azure.com';
 const AZURE_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-5.4-mini-coiffeurs-app';
@@ -179,7 +180,8 @@ async function processBatches(jobId, rows) {
       });
 
       try {
-        const results = await callAzure(items);
+        // Wrap dans le sémaphore Azure global (partagé entre les 3 workers IA)
+        const results = await azureSlot(() => callAzure(items));
         const byIndex = new Map(results.map(r => [Number(r.i), String(r.description || '').trim()]));
 
         const tx = db.transaction(() => {

@@ -9,6 +9,7 @@ import { importCsvFile } from '../csv-importer.js';
 import { captureSalon, captureBatch } from '../screenshot-worker.js';
 import { startCleanNames, getCleanJob } from '../name-cleaner.js';
 import { startCorrectPresentation, getPresentationJob } from '../presentation-cleaner.js';
+import { startDomainSuggestions, getDomainSuggestionsJob } from '../domain-suggester.js';
 import { captureBatchParallel } from '../screenshot-worker.js';
 
 const router = express.Router();
@@ -413,6 +414,35 @@ router.post('/run-actions', express.json(), async (req, res) => {
           job.breakdown.correct_presentation.errors = slugs.length;
           job.errors += slugs.length;
           job.last = `ERROR correct_presentation: ${e.message}`;
+        }));
+      }
+
+      if (actions.domain_suggestions) {
+        phase1.push((async () => {
+          // force=true : on regenere meme si deja suggere (l'utilisateur peut
+          // vouloir rafraichir les propositions). Le sémaphore Azure global
+          // (azure-rate-limiter) plafonne le total concurrent avec les autres workers IA.
+          const sub = await startDomainSuggestions({ slugs, force: true });
+          if (!sub.jobId) return;
+          while (true) {
+            const subJob = getDomainSuggestionsJob(sub.jobId);
+            if (!subJob) break;
+            const b = job.breakdown.domain_suggestions;
+            const delta = subJob.done - b.done;
+            b.done = subJob.done;
+            b.errors = subJob.errors || 0;
+            b.updated = subJob.updated || 0;
+            job.done += delta;
+            job.errors += (subJob.errors || 0) - (b.errorsReported || 0);
+            b.errorsReported = subJob.errors || 0;
+            if (subJob.last) job.last = String(subJob.last).slice(0, 80);
+            if (subJob.status === 'finished' || subJob.status === 'error') break;
+            await new Promise(r => setTimeout(r, 800));
+          }
+        })().catch(e => {
+          job.breakdown.domain_suggestions.errors = slugs.length;
+          job.errors += slugs.length;
+          job.last = `ERROR domain_suggestions: ${e.message}`;
         }));
       }
 

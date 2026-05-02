@@ -889,7 +889,8 @@ async function runActions() {
   const labelsByKey = {
     capture: t('table.batch_screenshots'),
     clean_names: t('table.clean_names'),
-    correct_presentation: t('table.correct_presentation')
+    correct_presentation: t('table.correct_presentation'),
+    domain_suggestions: t('table.domain_suggestions')
   };
   const labels = enabled.map(k => labelsByKey[k]).join(', ');
   if (!confirm(t('run.confirm', { count: slugs.length, actions: labels }))) return;
