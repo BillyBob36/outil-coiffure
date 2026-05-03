@@ -1,17 +1,14 @@
 import express from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
-import { mkdirSync, writeFileSync, unlinkSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import db from '../db.js';
 import { buildSalonView } from '../defaults.js';
+import { uploadObject, deleteObject, isObjectStorageConfigured } from '../object-storage.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const router = express.Router();
-
-const UPLOADS_DIR = process.env.UPLOADS_DIR || join(process.env.SCREENSHOTS_DIR ? dirname(process.env.SCREENSHOTS_DIR) : './data', 'uploads');
-mkdirSync(UPLOADS_DIR, { recursive: true });
 
 // Multer en memoire (pour traiter via sharp avant ecriture disque)
 const upload = multer({
@@ -80,7 +77,8 @@ router.delete('/edit/:slug/overrides', requireToken, (req, res) => {
 });
 
 // POST /api/edit/:slug/upload-image - upload une image (hero ou galerie)
-// Body : champ "image" (file), champ "kind" ("hero" | "gallery"), champ "index" (optionnel pour galerie)
+// Body : champ "image" (file), champ "kind" ("hero" | "gallery")
+// Stockage : Hetzner Object Storage si configuré, sinon disk local (fallback dev).
 router.post('/edit/:slug/upload-image', upload.single('image'), requireToken, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Aucune image' });
   const kind = req.body?.kind;
@@ -88,24 +86,19 @@ router.post('/edit/:slug/upload-image', upload.single('image'), requireToken, as
     return res.status(400).json({ error: 'kind doit etre hero ou gallery' });
   }
 
-  const salonDir = join(UPLOADS_DIR, req.salon.slug);
-  mkdirSync(salonDir, { recursive: true });
-
   let filename;
   let pipeline;
 
   if (kind === 'hero') {
     filename = `hero-${Date.now()}.jpg`;
-    // Hero : 1920x1080 cover (couvre toute la zone), qualité 80, JPEG progressive
-    // → ~150-300 KB par image
+    // Hero : 1920x1080 cover, qualité 80, JPEG progressive → ~150-300 KB
     pipeline = sharp(req.file.buffer)
-      .rotate() // applique l'EXIF orientation
+      .rotate()
       .resize(1920, 1080, { fit: 'cover', position: 'center' })
       .jpeg({ quality: 80, progressive: true, mozjpeg: true });
   } else {
     filename = `gallery-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
-    // Galerie : 1024px max côté long (fit: inside conserve le ratio natif),
-    // qualité 80, JPEG progressive → ~80-180 KB par image
+    // Galerie : 1024px max côté long, ratio natif, qualité 80 → ~80-180 KB
     pipeline = sharp(req.file.buffer)
       .rotate()
       .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
@@ -114,38 +107,39 @@ router.post('/edit/:slug/upload-image', upload.single('image'), requireToken, as
 
   try {
     const buffer = await pipeline.toBuffer();
-    const filepath = join(salonDir, filename);
-    writeFileSync(filepath, buffer);
-    const publicUrl = `/uploads/${req.salon.slug}/${filename}`;
+    const key = `${req.salon.slug}/${filename}`;
+    const url = await uploadObject(key, buffer, 'image/jpeg');
     res.json({
       ok: true,
-      url: publicUrl,
+      url,                                   // URL absolue si S3, /uploads/... si fallback disk
       kind,
       size: buffer.length,
-      sizeKb: Math.round(buffer.length / 1024)
+      sizeKb: Math.round(buffer.length / 1024),
+      storage: isObjectStorageConfigured() ? 's3' : 'disk',
     });
   } catch (e) {
+    console.error('[upload-image]', e);
     res.status(500).json({ error: 'Erreur traitement image: ' + e.message });
   }
 });
 
 // DELETE /api/edit/:slug/upload-image?path=...
-router.delete('/edit/:slug/upload-image', requireToken, (req, res) => {
+// Accepte URLs absolues (S3) OU paths /uploads/... (disk legacy)
+router.delete('/edit/:slug/upload-image', requireToken, async (req, res) => {
   const path = req.query.path;
   if (!path || typeof path !== 'string') return res.status(400).json({ error: 'path manquant' });
 
-  // Securite : doit commencer par /uploads/{slug}/ pour eviter de supprimer ailleurs
-  const expected = `/uploads/${req.salon.slug}/`;
-  if (!path.startsWith(expected)) return res.status(403).json({ error: 'path non autorise' });
+  // Sécurité : la path/URL doit contenir le slug du salon owner du token
+  const slugFragment = `/${req.salon.slug}/`;
+  if (!path.includes(slugFragment)) return res.status(403).json({ error: 'path non autorisé' });
 
-  const filename = path.replace(expected, '');
-  if (filename.includes('/') || filename.includes('..')) return res.status(400).json({ error: 'path invalide' });
-
-  const filepath = join(UPLOADS_DIR, req.salon.slug, filename);
-  if (existsSync(filepath)) {
-    try { unlinkSync(filepath); } catch (e) { return res.status(500).json({ error: e.message }); }
+  try {
+    await deleteObject(path);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[upload-image DELETE]', err);
+    return res.status(500).json({ error: 'Erreur suppression: ' + err.message });
   }
-  res.json({ ok: true });
 });
 
 export default router;

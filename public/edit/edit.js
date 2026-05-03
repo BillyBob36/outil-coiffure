@@ -457,7 +457,7 @@ function rebuildGalleryTiles() {
     list.appendChild(tile);
   });
 
-  const limit = 12;
+  const limit = 50;
   const reached = state.galleryImages.length >= limit;
   if (!reached) {
     const addTile = document.createElement('div');
@@ -503,7 +503,7 @@ $('gallery-file-input').onchange = async (e) => {
   e.target.value = '';
   if (!files.length) return;
 
-  const limit = 12;
+  const limit = 50;
   const remaining = limit - state.galleryImages.length;
   if (remaining <= 0) {
     toast('Limite de 12 photos atteinte.', 'error');
