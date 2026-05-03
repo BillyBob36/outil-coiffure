@@ -18,9 +18,10 @@
       description: 'Le meilleur tarif sur 24 mois.',
       cta: 'Choisir',
       isPopular: false,
+      domainYears: 2,
       features: [
         'Site 100 % personnalisable',
-        'Domaine .fr ou .com inclus',
+        'Domaine .fr ou .com inclus 2 ans',
         'Hebergement haute performance',
       ],
     },
@@ -31,9 +32,10 @@
       description: 'Engagement 12 mois, le bon compromis.',
       cta: 'Choisir',
       isPopular: true,
+      domainYears: 1,
       features: [
         'Site 100 % personnalisable',
-        'Domaine .fr ou .com inclus',
+        'Domaine .fr ou .com inclus 1 an',
         'Hebergement haute performance',
       ],
     },
@@ -44,9 +46,10 @@
       description: 'Resiliable a tout moment.',
       cta: 'Choisir',
       isPopular: false,
+      domainYears: 1,
       features: [
         'Site 100 % personnalisable',
-        'Domaine .fr ou .com inclus',
+        'Domaine .fr ou .com inclus 1 an',
         'Hebergement haute performance',
       ],
     },
@@ -120,8 +123,8 @@
         <span class="mqs-step-eyebrow">Étape 1 / 3</span>
         <h2 class="mqs-step-title">Choisissez votre formule</h2>
         <p class="mqs-step-sub">
-          Tous les plans incluent le site, le domaine 1<sup>ère</sup> année,
-          l'hébergement et le support — sans frais de mise en place.
+          Tous les plans incluent le site, le domaine, l'hébergement
+          et le support — sans frais de mise en place.
         </p>
       </div>
       <div class="mqs-plans">${plansHtml}</div>
@@ -213,7 +216,7 @@
       </div>
 
       <p class="mqs-trust">
-        🔒 Domaine inclus 1 an · Renouvelable · Hébergé en Europe
+        🔒 ${plan.domainYears === 2 ? 'Domaine inclus 2 ans' : 'Domaine inclus 1 an'} · Renouvelable · Hébergé en Europe
       </p>
     `;
   }
@@ -293,9 +296,10 @@
     const plan = planByKey(state.selectedPlan);
     const hostname = state.selectedHostname;
     const info = state.selectedHostnameInfo;
+    const yearsLabel = plan.domainYears === 2 ? '2 ans' : '1 an';
     const supplementLabel = (info && !info.isIncluded)
       ? `+ ${formatEur(info.supplementEurTtc)} de supplément domaine premium (charge unique sur la 1ère facture)`
-      : 'Domaine inclus 1ère année';
+      : `Domaine inclus ${yearsLabel}`;
 
     const submitDisabled = (state.submitting || !state.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email)) ? 'disabled' : '';
 

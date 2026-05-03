@@ -24,24 +24,29 @@ import Stripe from 'stripe';
 const router = express.Router();
 
 // === Plans Stripe : doit matcher stripe_config.md ===
+// domainYears = durée pour laquelle le domaine est acheté chez OVH ET pour
+// laquelle on calcule le seuil "Offert" (cohérent avec l'engagement client).
 const PLANS = {
   TWO_YEAR: {
     priceId: process.env.STRIPE_PRICE_2Y,
     monthlyPriceTtc: 9.90,
     label: 'Engagement 2 ans',
     commitmentMonths: 24,
+    domainYears: 2,
   },
   ONE_YEAR: {
     priceId: process.env.STRIPE_PRICE_1Y,
     monthlyPriceTtc: 17.90,
     label: 'Engagement 1 an',
     commitmentMonths: 12,
+    domainYears: 1,
   },
   FLEX: {
     priceId: process.env.STRIPE_PRICE_FLEX,
     monthlyPriceTtc: 29.00,
     label: 'Sans engagement',
     commitmentMonths: 0,
+    domainYears: 1,
   },
 };
 
@@ -121,15 +126,22 @@ router.get('/domain/suggestions/:slug', async (req, res) => {
   //   - drops les indisponibles
   //   - drops les domaines au-dessus de MAX_REASONABLE_DOMAIN_PRICE_TTC (premium
   //     aberrant non pertinent pour un coiffeur)
+  // Logique "Offert" : on compare le COÛT TOTAL du domaine sur la durée d'engagement
+  // (priceEurTtc * domainYears) à 1 mois d'abonnement (plan.monthlyPriceTtc).
+  // - TWO_YEAR (2 ans) : domaine offert si 2×priceTtc ≤ 9.90€  → en pratique, .fr et .com classiques passent
+  // - ONE_YEAR (1 an)  : offert si priceTtc ≤ 17.90€
+  // - FLEX (1 an)      : offert si priceTtc ≤ 29€
   let droppedPremium = 0;
+  const domainYears = plan.domainYears || 1;
   const enriched = results.map(r => {
     if (!r.available) return null;
     if (r.priceEurTtc != null && r.priceEurTtc > MAX_REASONABLE_DOMAIN_PRICE_TTC) {
       droppedPremium++;
       return null;
     }
-    const isIncluded = r.priceEurTtc != null && r.priceEurTtc <= plan.monthlyPriceTtc;
-    const supplementEurTtc = isIncluded ? 0 : Math.max(0, Math.round((r.priceEurTtc - plan.monthlyPriceTtc) * 100) / 100);
+    const totalCostTtc = r.priceEurTtc != null ? r.priceEurTtc * domainYears : null;
+    const isIncluded = totalCostTtc != null && totalCostTtc <= plan.monthlyPriceTtc;
+    const supplementEurTtc = isIncluded ? 0 : Math.max(0, Math.round((totalCostTtc - plan.monthlyPriceTtc) * 100) / 100);
     return {
       hostname: r.hostname,
       name: r.name,
@@ -137,10 +149,12 @@ router.get('/domain/suggestions/:slug', async (req, res) => {
       rank: candidates.find(c => c.name === r.name && c.tld === r.tld)?.rank || 999,
       available: true,
       priceEurHt: r.priceEurHt,
-      priceEurTtc: r.priceEurTtc,
+      priceEurTtc: r.priceEurTtc,                 // prix 1 an chez OVH (info brute)
+      totalCostTtc,                                // coût domaine sur la durée d'engagement
+      domainYears,                                 // durée d'achat OVH
       isPremium: r.isPremium,
       isIncluded,
-      supplementEurTtc,
+      supplementEurTtc,                            // supplément 1 fois sur la 1ère facture
     };
   }).filter(Boolean);
 
@@ -200,18 +214,22 @@ router.post('/domain/check-custom', express.json(), async (req, res) => {
     return res.status(502).json({ error: 'Service OVH indisponible, réessayez dans 1 minute' });
   }
 
-  const isIncluded = check.available && check.priceEurTtc != null && check.priceEurTtc <= plan.monthlyPriceTtc;
-  const supplementEurTtc = isIncluded ? 0 : (check.priceEurTtc != null ? Math.max(0, Math.round((check.priceEurTtc - plan.monthlyPriceTtc) * 100) / 100) : null);
+  const domainYears = plan.domainYears || 1;
+  const totalCostTtc = check.priceEurTtc != null ? check.priceEurTtc * domainYears : null;
+  const isIncluded = check.available && totalCostTtc != null && totalCostTtc <= plan.monthlyPriceTtc;
+  const supplementEurTtc = isIncluded ? 0 : (totalCostTtc != null ? Math.max(0, Math.round((totalCostTtc - plan.monthlyPriceTtc) * 100) / 100) : null);
 
   res.json({
     hostname,
     available: check.available,
     priceEurHt: check.priceEurHt,
     priceEurTtc: check.priceEurTtc,
+    totalCostTtc,
+    domainYears,
     isPremium: check.isPremium,
     isIncluded,
     supplementEurTtc,
-    plan: { key: planKey, monthlyPriceTtc: plan.monthlyPriceTtc },
+    plan: { key: planKey, monthlyPriceTtc: plan.monthlyPriceTtc, domainYears },
     reason: check.reason,
   });
 });
@@ -244,8 +262,10 @@ router.post('/checkout/create-session', express.json(), async (req, res) => {
     return res.status(409).json({ error: 'Ce domaine n\'est plus disponible. Choisissez-en un autre.' });
   }
 
-  const isIncluded = check.priceEurTtc != null && check.priceEurTtc <= plan.monthlyPriceTtc;
-  const supplementEurTtc = isIncluded ? 0 : Math.max(0, Math.round((check.priceEurTtc - plan.monthlyPriceTtc) * 100) / 100);
+  const domainYears = plan.domainYears || 1;
+  const totalCostTtc = check.priceEurTtc != null ? check.priceEurTtc * domainYears : 0;
+  const isIncluded = totalCostTtc <= plan.monthlyPriceTtc;
+  const supplementEurTtc = isIncluded ? 0 : Math.max(0, Math.round((totalCostTtc - plan.monthlyPriceTtc) * 100) / 100);
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2026-04-22.dahlia' });
 
@@ -279,13 +299,18 @@ router.post('/checkout/create-session', express.json(), async (req, res) => {
           hostname,
           plan: planKey,
           commitment_months: String(plan.commitmentMonths),
+          domain_years: String(domainYears),
         },
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
       locale: 'fr',
       payment_method_types: ['card'],
-      metadata: { slug, hostname, plan: planKey, supplementEurTtc: String(supplementEurTtc) },
+      metadata: {
+        slug, hostname, plan: planKey,
+        supplementEurTtc: String(supplementEurTtc),
+        domain_years: String(domainYears),
+      },
       // automatic_tax: { enabled: false }, // on calcule TTC manuellement
     });
   } catch (err) {

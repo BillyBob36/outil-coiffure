@@ -104,6 +104,7 @@ async function onCheckoutCompleted(session) {
     slug,
     hostname: session.metadata.hostname,
     planKey: session.metadata.plan,
+    domainYears: parseInt(session.metadata.domain_years || '1', 10),
     customerEmail: session.customer_email || session.customer_details?.email,
     stripeCustomerId: session.customer,
     stripeSubscriptionId: session.subscription,

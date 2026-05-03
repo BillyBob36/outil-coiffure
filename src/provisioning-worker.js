@@ -97,8 +97,10 @@ export async function startProvisioning(params) {
 
 async function runProvisioning(job, params) {
   const { slug, hostname, planKey } = params;
+  // domainYears : 1 par défaut (compat ancien). Pour TWO_YEAR on passe 2.
+  const domainYears = Number.isFinite(params.domainYears) && params.domainYears >= 1 ? params.domainYears : 1;
 
-  console.log(`[provisioning] ${slug} → ${hostname} (plan=${planKey}) START${DRY_RUN ? ' (DRY_RUN)' : ''}`);
+  console.log(`[provisioning] ${slug} → ${hostname} (plan=${planKey}, ${domainYears}an${domainYears > 1 ? 's' : ''}) START${DRY_RUN ? ' (DRY_RUN)' : ''}`);
 
   if (DRY_RUN) {
     // === DRY RUN : simule chaque étape avec un délai sans appeler OVH/CF ===
@@ -141,8 +143,8 @@ async function runProvisioning(job, params) {
   // === PRODUCTION FLOW (réel) ===
   // Étape 1 : OVH register
   job.step = 'ovh_register';
-  const orderInfo = await ovhRegisterDomain(hostname);
-  console.log(`[provisioning] ${slug} OVH order ${orderInfo.orderId} placed`);
+  const orderInfo = await ovhRegisterDomain(hostname, domainYears);
+  console.log(`[provisioning] ${slug} OVH order ${orderInfo.orderId} placed (${orderInfo.duration})`);
 
   // Étape 2 : poll OVH task domain jusqu'à "done"
   job.step = 'ovh_poll';
@@ -241,7 +243,7 @@ async function sendSignupConfirmation(slug, hostname) {
 // OVH steps
 // =============================================================================
 
-async function ovhRegisterDomain(hostname) {
+async function ovhRegisterDomain(hostname, years = 1) {
   // 1. Create cart for the order
   const cart = await ovhFetch('POST', '/order/cart', {
     ovhSubsidiary: 'FR',
@@ -250,11 +252,27 @@ async function ovhRegisterDomain(hostname) {
   });
   // 2. Assign to current account
   await ovhFetch('POST', `/order/cart/${cart.cartId}/assign`, {});
-  // 3. Add the domain
-  const item = await ovhFetch('POST', `/order/cart/${cart.cartId}/domain`, {
-    domain: hostname,
-    duration: 'P1Y',
-  });
+  // 3. Add the domain — duration ISO 8601 ('P1Y', 'P2Y'...)
+  // Si OVH refuse la durée demandée (par ex .com en 2 ans non disponible
+  // chez un fournisseur), on retombe sur P1Y proprement.
+  const desiredDuration = `P${years}Y`;
+  let item;
+  try {
+    item = await ovhFetch('POST', `/order/cart/${cart.cartId}/domain`, {
+      domain: hostname,
+      duration: desiredDuration,
+    });
+  } catch (err) {
+    if (years > 1) {
+      console.warn(`[provisioning] OVH refuse ${desiredDuration} pour ${hostname}, fallback P1Y :`, err.message);
+      item = await ovhFetch('POST', `/order/cart/${cart.cartId}/domain`, {
+        domain: hostname,
+        duration: 'P1Y',
+      });
+    } else {
+      throw err;
+    }
+  }
   // 4. Configure mandatory item options (owner contact)
   // OVH demande un nichandle pour le owner. On utilise le compte par défaut (lm2236699-ovh).
   // Récupérer le contact admin par défaut s'il existe
@@ -272,7 +290,12 @@ async function ovhRegisterDomain(hostname) {
     autoPayWithPreferredPaymentMethod: true,
     waiveRetractationPeriod: true,
   });
-  return { orderId: order.orderId, cartId: cart.cartId, itemId: item.itemId };
+  return {
+    orderId: order.orderId,
+    cartId: cart.cartId,
+    itemId: item.itemId,
+    duration: item.configurations?.duration || desiredDuration,
+  };
 }
 
 async function pollOvhDomainReady(hostname, options = {}) {
