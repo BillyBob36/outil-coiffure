@@ -16,4 +16,4 @@ desktop.ini
 *.log
 *.jpg
 # Sauf les images statiques par défaut de la galerie demo (whitelistées)
-!public/site/_assets/gallery-defaults/*.jpg
+!public/site/gallery-defaults/*.jpg
