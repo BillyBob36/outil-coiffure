@@ -1,40 +1,40 @@
 /* =============================================================================
    Onboarding visite guidée — site preview public
 
-   3 bulles concises, ordre = donner envie de visiter d'abord, modifier ensuite :
-   1. "C'est votre site de démo, pas encore en ligne pour le grand public"
-      → contexte rassurant
-   2. "Visitez-le librement, descendez la page" → invite à explorer
-   3. "Tout est personnalisable depuis votre espace gérant"
-      → CTA finale, dévoile le picto persistant
+   3 bulles concises, ordre = on présente, on dévoile la modif, puis on lâche
+   le coiffeur pour qu'il explore librement :
+   1. Bienvenue (centre)
+   2. "Tout est modifiable" → highlight le bouton flottant "Modifier mon site"
+   3. "Faites le tour" → invite à scroll, lâche-prise
+
+   Visite rejouée à chaque chargement de la page, SAUF si on arrive depuis
+   l'écran de modification (referrer contient /admin/{slug}).
    ============================================================================= */
 (function () {
   'use strict';
-
-  const LS_KEY = 'mqs_preview_onb_v1_done';
 
   const STEPS = [
     {
       id: 'welcome',
       target: null,
       title: 'Bienvenue 👋',
-      text: "Voici votre site de démo, pas encore visible par le grand public. Vous êtes seul à pouvoir le voir pour l'instant.",
+      text: "Voici votre site tel qu'on l'a pensé pour vous.",
       next: 'Suivant →',
+    },
+    {
+      id: 'customize',
+      target: '.mqs-pre-edit-btn',
+      title: 'Tout est modifiable',
+      text: "Dès maintenant ou après votre achat, vous pouvez tout personnaliser depuis votre espace gérant : les images de fond, vos photos, les textes, les prestations etc.",
+      next: 'Suivant →',
+      placement: 'top',
     },
     {
       id: 'explore',
       target: null,
       title: 'Faites le tour',
-      text: 'Descendez la page pour découvrir comment vos clients verront votre salon : services, photos, avis, contact…',
-      next: 'Suivant →',
-    },
-    {
-      id: 'customize',
-      target: '.mqs-pre-help-btn',
-      title: 'Tout est modifiable',
-      text: "Dès maintenant ou après votre achat, vous pouvez personnaliser chaque élément depuis votre espace gérant. Cliquez sur le bouton en bas à droite pour relancer cette visite.",
-      next: 'Compris ✓',
-      placement: 'top',
+      text: 'Descendez la page pour découvrir comment vos clients verront votre salon : services, photos, avis, contact… Bonne découverte !',
+      next: 'C\'est parti ✓',
     },
   ];
 
@@ -42,42 +42,57 @@
     overlay: null,
     spotlight: null,
     popup: null,
-    helpBtn: null,
+    editBtn: null,
     currentStep: 0,
     onResize: null,
     onScroll: null,
   };
 
-  function isDone() {
-    return localStorage.getItem(LS_KEY) === '1';
-  }
-  function markDone() {
-    localStorage.setItem(LS_KEY, '1');
-  }
-  function clearDone() {
-    localStorage.removeItem(LS_KEY);
+  function getSlugFromUrl() {
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
+    const parts = path.split('/');
+    if (parts[0] === 'preview' && parts[1]) return parts[1];
+    return null;
   }
 
-  function injectHelpButton() {
-    if (document.querySelector('.mqs-pre-help-btn')) return;
+  // Détecte si on arrive depuis l'écran de modification du salon
+  // (referrer contient /admin/{slug} pour ce salon).
+  function arrivingFromAdmin() {
+    if (!document.referrer) return false;
+    try {
+      const ref = new URL(document.referrer);
+      const slug = getSlugFromUrl();
+      if (!slug) return false;
+      // /admin/{slug}?token=... OU /admin/{slug}/...
+      return new RegExp(`^/admin/${slug}(\\b|/|\\?|$)`).test(ref.pathname + ref.search);
+    } catch {
+      return false;
+    }
+  }
+
+  // Bouton flottant "Modifier mon site" en bas-droite (remplace l'ancien picto ⓘ).
+  // Click → redirection même onglet vers /admin/{slug} (le coiffeur arrive sur
+  // sa console, où le système de token gère l'auth s'il en a un).
+  function injectEditButton() {
+    if (document.querySelector('.mqs-pre-edit-btn')) return;
+    const slug = getSlugFromUrl();
     const btn = document.createElement('button');
-    btn.className = 'mqs-pre-help-btn';
+    btn.className = 'mqs-pre-edit-btn';
     btn.type = 'button';
-    btn.title = 'Cliquez pour comprendre cette page de démo';
-    btn.setAttribute('aria-label', 'Démo — Lancer la visite');
+    btn.title = 'Modifier mon site';
+    btn.setAttribute('aria-label', 'Modifier mon site');
     btn.innerHTML = `
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"></circle>
-        <path d="M12 16v-4"></path>
-        <path d="M12 8h.01"></path>
+        <path d="M12 20h9"/>
+        <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4z"/>
       </svg>
+      <span class="mqs-pre-edit-btn-label">Modifier mon site</span>
     `;
     btn.addEventListener('click', () => {
-      clearDone();
-      start();
+      if (slug) window.location.href = `/admin/${encodeURIComponent(slug)}`;
     });
     document.body.appendChild(btn);
-    state.helpBtn = btn;
+    state.editBtn = btn;
   }
 
   function start() {
@@ -118,10 +133,7 @@
     if (state.onScroll) window.removeEventListener('scroll', state.onScroll, true);
   }
 
-  function finish() {
-    markDone();
-    close();
-  }
+  function finish() { close(); }
 
   function renderStep() {
     const s = STEPS[state.currentStep];
@@ -189,8 +201,7 @@
     const pw = state.popup.offsetWidth || 340;
     const ph = state.popup.offsetHeight || 180;
     const margin = 20;
-    const isNarrow = window.innerWidth < 1024;
-    const placement = (isNarrow && s.placementMobile) ? s.placementMobile : (s.placement || 'bottom');
+    const placement = s.placement || 'bottom';
     let popupLeft, popupTop;
 
     switch (placement) {
@@ -226,10 +237,10 @@
   }
 
   function init() {
-    // On n'affiche le tour QUE sur les pages /preview/{slug} (pas la home, pas /admin etc.)
     if (!/^\/preview\//.test(window.location.pathname)) return;
-    injectHelpButton();
-    if (!isDone()) {
+    injectEditButton();
+    // Visite rejouée à chaque chargement, SAUF si on arrive depuis l'admin
+    if (!arrivingFromAdmin()) {
       setTimeout(start, 800);
     }
   }
@@ -240,5 +251,5 @@
     init();
   }
 
-  window.mqsPreviewOnboarding = { start, finish, clearDone };
+  window.mqsPreviewOnboarding = { start, finish };
 })();
