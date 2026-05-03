@@ -19,7 +19,7 @@
       id: 'welcome',
       target: null, // centré
       title: 'Bienvenue dans votre Espace de modification',
-      text: "D'ici, vous avez le contrôle total sur le contenu de votre site.",
+      text: "D'ici, vous avez le contrôle total sur le contenu de votre site. Si vous publiez votre site, vous recevrez un accès privé à cette page.",
       next: 'C\'est parti →',
     },
     {
