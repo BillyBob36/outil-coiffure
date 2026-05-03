@@ -304,4 +304,37 @@ router.post('/checkout/create-session', express.json(), async (req, res) => {
   res.json({ url: session.url, sessionId: session.id });
 });
 
+// =============================================================================
+// GET /api/signup/status?session_id=cs_xxx OU ?slug=xxx
+// =============================================================================
+// Endpoint léger appelé par la waiting screen post-paiement Stripe.
+// Renvoie l'état actuel du provisioning : pending / provisioning / live / error.
+router.get('/signup/status', (req, res) => {
+  const slug = req.query.slug;
+  const sessionId = req.query.session_id;
+  if (!slug && !sessionId) {
+    return res.status(400).json({ error: 'slug ou session_id requis' });
+  }
+  let row;
+  if (slug) {
+    row = db.prepare(`
+      SELECT slug, subscription_status, live_hostname, owner_email, plan, signed_up_at
+      FROM salons WHERE slug = ?
+    `).get(slug);
+  } else {
+    row = db.prepare(`
+      SELECT slug, subscription_status, live_hostname, owner_email, plan, signed_up_at
+      FROM salons WHERE signup_session_id = ?
+    `).get(sessionId);
+  }
+  if (!row) return res.status(404).json({ error: 'Inconnu' });
+  res.json({
+    slug: row.slug,
+    status: row.subscription_status || 'pending',
+    liveHostname: row.live_hostname,
+    plan: row.plan,
+    signedUpAt: row.signed_up_at,
+  });
+});
+
 export default router;

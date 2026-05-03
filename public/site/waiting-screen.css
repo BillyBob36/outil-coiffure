@@ -1,0 +1,194 @@
+/* =============================================================================
+   Waiting screen post-paiement Stripe — overlay full-screen avec checklist
+   ============================================================================= */
+
+@import url('https://rsms.me/inter/inter.css');
+
+#mqs-waiting-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 10, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+    color: #0a0a0a;
+}
+
+.mqs-waiting-card {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+    width: min(560px, calc(100vw - 48px));
+    padding: 36px 36px 30px;
+    text-align: center;
+}
+
+@media (max-width: 600px) {
+    .mqs-waiting-card {
+        padding: 28px 22px 22px;
+        border-radius: 16px;
+    }
+}
+
+.mqs-waiting-eyebrow {
+    display: inline-block;
+    font-size: 0.7rem;
+    color: #6b7280;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 600;
+    background: #f4f4f5;
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+}
+
+.mqs-waiting-title {
+    font-size: clamp(1.5rem, 3vw, 1.9rem);
+    font-weight: 700;
+    color: #0a0a0a;
+    margin: 0 0 10px;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+}
+
+.mqs-waiting-sub {
+    font-size: 0.92rem;
+    color: #4b5563;
+    line-height: 1.5;
+    margin: 0 0 24px;
+    max-width: 460px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.mqs-waiting-sub strong {
+    color: #0a0a0a;
+}
+
+/* === Checklist === */
+.mqs-waiting-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px;
+    text-align: left;
+    max-width: 360px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.mqs-waiting-step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    transition: background 0.3s ease, opacity 0.3s ease;
+}
+
+.mqs-waiting-step + .mqs-waiting-step {
+    margin-top: 4px;
+}
+
+.mqs-waiting-step.mqs-step-done {
+    background: #f0fdf4;
+}
+
+.mqs-step-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mqs-step-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.mqs-step-label {
+    font-size: 0.88rem;
+    color: #4b5563;
+    letter-spacing: -0.005em;
+    font-weight: 500;
+}
+
+.mqs-step-done .mqs-step-label {
+    color: #14532d;
+    font-weight: 600;
+}
+
+/* === Spinner === */
+.mqs-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e5e7eb;
+    border-top-color: #0a0a0a;
+    border-radius: 50%;
+    animation: mqs-spin 0.8s linear infinite;
+}
+
+@keyframes mqs-spin {
+    to { transform: rotate(360deg); }
+}
+
+.mqs-step-done .mqs-spinner {
+    display: none;
+}
+
+/* === Note === */
+.mqs-waiting-note {
+    color: #9ca3af;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    margin: 0;
+}
+
+/* === Success state (final) === */
+.mqs-success-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 18px;
+    background: #dcfce7;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mqs-success-icon svg {
+    width: 40px;
+    height: 40px;
+}
+
+/* === CTA button === */
+.mqs-waiting-cta {
+    display: inline-block;
+    background: #0a0a0a;
+    color: #ffffff;
+    border: 0;
+    padding: 14px 32px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.92rem;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    text-decoration: none;
+    margin-bottom: 16px;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.mqs-waiting-cta:hover {
+    background: #1a1a1a;
+    transform: translateY(-1px);
+}
