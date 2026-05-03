@@ -37,14 +37,16 @@ router.post('/sync/:slug', express.json({ limit: '2mb' }), requireSyncAuth, (req
     return res.status(400).json({ error: 'row.slug doit matcher :slug' });
   }
 
-  // Liste des colonnes acceptées (= toutes celles de la table salons sauf id auto)
+  // Liste des colonnes acceptées (= toutes celles de la table salons sauf id auto).
+  // NB: data_json + nom sont NOT NULL côté DB → on met des fallbacks par défaut.
   const allowed = [
     'slug', 'nom', 'nom_clean', 'nom_clean_at',
     'ville', 'code_postal', 'adresse', 'telephone', 'email',
-    'latitude', 'longitude', 'note_avis', 'nb_avis',
-    'meta_description', 'meta_image',
+    'latitude', 'longitude', 'types',
+    'note_avis', 'nb_avis', 'heures_ouverture',
+    'meta_description', 'meta_image', 'titre_site', 'site_internet_original',
     'lien_facebook', 'lien_instagram', 'lien_tiktok', 'lien_youtube', 'lien_google_maps',
-    'overrides_json', 'data_json',
+    'overrides_json', 'overrides_updated_at', 'data_json',
     'screenshot_path', 'screenshot_generated_at',
     'csv_source', 'group_id',
     'edit_token',
@@ -56,6 +58,10 @@ router.post('/sync/:slug', express.json({ limit: '2mb' }), requireSyncAuth, (req
     'domain_suggestions_json', 'domain_suggestions_at',
     'created_at', 'updated_at',
   ];
+
+  // Garantit les NOT NULL : si nom/data_json absents, on met une valeur safe
+  if (row.nom == null) row.nom = row.slug;
+  if (row.data_json == null) row.data_json = '{}';
 
   const cols = allowed.filter(c => row[c] !== undefined);
   const placeholders = cols.map(c => '@' + c).join(',');
