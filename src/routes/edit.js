@@ -96,18 +96,20 @@ router.post('/edit/:slug/upload-image', upload.single('image'), requireToken, as
 
   if (kind === 'hero') {
     filename = `hero-${Date.now()}.jpg`;
-    // Hero : 1920x1080 max, qualite 80, JPEG
+    // Hero : 1920x1080 cover (couvre toute la zone), qualité 80, JPEG progressive
+    // → ~150-300 KB par image
     pipeline = sharp(req.file.buffer)
       .rotate() // applique l'EXIF orientation
       .resize(1920, 1080, { fit: 'cover', position: 'center' })
       .jpeg({ quality: 80, progressive: true, mozjpeg: true });
   } else {
     filename = `gallery-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
-    // Galerie : 1200px max cote long, qualite 78, JPEG
+    // Galerie : 1024px max côté long (fit: inside conserve le ratio natif),
+    // qualité 80, JPEG progressive → ~80-180 KB par image
     pipeline = sharp(req.file.buffer)
       .rotate()
-      .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
-      .jpeg({ quality: 78, progressive: true, mozjpeg: true });
+      .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 80, progressive: true, mozjpeg: true });
   }
 
   try {

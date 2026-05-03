@@ -518,7 +518,10 @@ $('gallery-file-input').onchange = async (e) => {
 
   for (const file of toUpload) {
     try {
-      const blob = await compressImageFile(file, 1600, 0.82);
+      // Pré-compression client : 1280px max côté long (= 1024 cible serveur + marge)
+      // pour réduire la bande passante upload, surtout sur 4G mobile.
+      // Le serveur recompresse ensuite à 1024px / qualité 80.
+      const blob = await compressImageFile(file, 1280, 0.82);
       const result = await apiUploadImage(blob, 'gallery');
       state.galleryImages.push(result.url);
       rebuildGalleryTiles();
