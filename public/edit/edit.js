@@ -418,23 +418,36 @@ function collectServices() {
 // ----- GALLERY -----
 function renderGallery(gallery) {
   // Layout
-  $$('input[name="gallery-layout"]').forEach(r => r.checked = (r.value === (gallery.layout || 'grid')));
+  $$('input[name="gallery-layout"]').forEach(r => r.checked = (r.value === (gallery.layout || 'masonry')));
   state.galleryImages = (gallery.images || []).slice();
   rebuildGalleryTiles();
 }
 
+// Instance Sortable conservée pour pouvoir la détruire/recréer entre les renders
+let gallerySortable = null;
+
 function rebuildGalleryTiles() {
   const list = $('gallery-images-list');
   list.innerHTML = '';
-  state.galleryImages.forEach((url, i) => {
+  state.galleryImages.forEach((url) => {
     const tile = document.createElement('div');
-    tile.className = 'gallery-image-tile';
+    tile.className = 'gallery-image-tile sortable-tile';
+    tile.dataset.url = url; // ← stable identity pour suivre les déplacements
     tile.innerHTML = `
-      <img src="${escapeAttr(url)}" alt="">
+      <img src="${escapeAttr(url)}" alt="" draggable="false">
       <button class="tile-remove" title="Supprimer" type="button">×</button>
+      <span class="drag-handle" title="Glisser pour réorganiser" aria-hidden="true">
+        <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
+          <circle cx="6" cy="5" r="1.5"/><circle cx="6" cy="10" r="1.5"/><circle cx="6" cy="15" r="1.5"/>
+          <circle cx="14" cy="5" r="1.5"/><circle cx="14" cy="10" r="1.5"/><circle cx="14" cy="15" r="1.5"/>
+        </svg>
+      </span>
     `;
-    tile.querySelector('.tile-remove').onclick = () => {
-      state.galleryImages.splice(i, 1);
+    tile.querySelector('.tile-remove').onclick = (e) => {
+      e.stopPropagation();
+      // On retrouve l'index par URL au moment du clic (ordre peut avoir changé)
+      const idx = state.galleryImages.indexOf(url);
+      if (idx >= 0) state.galleryImages.splice(idx, 1);
       rebuildGalleryTiles();
     };
     list.appendChild(tile);
@@ -445,11 +458,38 @@ function rebuildGalleryTiles() {
   if (!reached) {
     const addTile = document.createElement('div');
     addTile.className = 'gallery-image-tile add-tile';
+    addTile.dataset.addTile = 'true'; // marqueur : exclu du drag
     addTile.innerHTML = '<span>+</span>';
     addTile.onclick = () => $('gallery-file-input').click();
     list.appendChild(addTile);
   }
   $('gallery-limit-warning').hidden = !reached;
+
+  // === Sortable : drag & drop (desktop souris + mobile touch) ===
+  // SortableJS gère nativement les deux. Le filter exclut la add-tile.
+  if (gallerySortable) { gallerySortable.destroy(); gallerySortable = null; }
+  if (typeof window.Sortable === 'function') {
+    gallerySortable = window.Sortable.create(list, {
+      animation: 180,
+      filter: '.add-tile, .tile-remove',  // empêche le drag sur add-tile et le bouton supprimer
+      preventOnFilter: false,             // mais le bouton supprimer reste cliquable
+      // Sur mobile : un long-press de 200ms avant de pouvoir drag
+      // (évite que le scroll vertical déclenche un drag)
+      delay: 150,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 5,
+      ghostClass: 'tile-drag-ghost',
+      chosenClass: 'tile-drag-chosen',
+      forceFallback: false,
+      onEnd: (evt) => {
+        // Reconstruit state.galleryImages depuis l'ordre du DOM
+        const newOrder = Array.from(list.querySelectorAll('.sortable-tile'))
+          .map(el => el.dataset.url)
+          .filter(Boolean);
+        state.galleryImages = newOrder;
+      },
+    });
+  }
 }
 
 $('gallery-file-input').onchange = async (e) => {

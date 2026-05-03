@@ -1,17 +1,30 @@
 // Valeurs par defaut + services standards de coiffure
 // Tout est ecrasable par les overrides du coiffeur
 
+// Galerie par défaut : 9 images triées pour un layout Pinterest (masonry)
+// optimal — alternance portrait/paysage à chaque position. Les 3 portraits
+// "humains" (barbier, mariage, couleur argent) sont en positions accrocheuses
+// (1, 3, 5) car ils créent une connexion émotionnelle plus forte que les
+// images de produits/textures.
+//   1. coiffeur-homme    (portrait, barbier homme)
+//   2. unsplash landscape
+//   3. cheveux-argentes  (portrait, couleur argent/violet)
+//   4. unsplash landscape
+//   5. mariage-chignon   (portrait, mariage)
+//   6. unsplash landscape
+//   7. unsplash portrait
+//   8. unsplash landscape
+//   9. unsplash portrait
 export const DEFAULT_GALLERY_IMAGES = [
+  '/_assets/gallery-defaults/coiffeur-homme.jpg',
   'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80',
+  '/_assets/gallery-defaults/cheveux-argentes.jpg',
   'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80',
-  'https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=800&q=80',
-  'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=800&q=80',
+  '/_assets/gallery-defaults/mariage-chignon.jpg',
   'https://images.unsplash.com/photo-1634449571010-02389ed0f9b0?w=800&q=80',
+  'https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=800&q=80',
   'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&q=80',
-  // 3 images supplémentaires pour rendre le bouton "Afficher plus" utile
-  'https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=800&q=80',
-  'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=800&q=80',
-  'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=800&q=80'
+  'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=800&q=80'
 ];
 
 export const DEFAULT_HERO_IMAGE = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1920&q=80';
@@ -136,7 +149,7 @@ export function buildDefaults(csvData) {
     },
     gallery: {
       title: 'Galerie',
-      layout: 'grid', // 'grid' | 'masonry'
+      layout: 'masonry', // 'grid' | 'masonry' — masonry = style Pinterest (default)
       images: DEFAULT_GALLERY_IMAGES.slice(),
       visibleCount: 6
     },

@@ -233,7 +233,7 @@
                 <div class="accordion-body">
                     <div class="layout-choice">
                         <label class="layout-option">
-                            <input type="radio" name="gallery-layout" value="grid" checked>
+                            <input type="radio" name="gallery-layout" value="grid">
                             <div class="layout-card">
                                 <div class="layout-mock layout-mock-grid">
                                     <span></span><span></span><span></span>
@@ -244,7 +244,7 @@
                             </div>
                         </label>
                         <label class="layout-option">
-                            <input type="radio" name="gallery-layout" value="masonry">
+                            <input type="radio" name="gallery-layout" value="masonry" checked>
                             <div class="layout-card">
                                 <div class="layout-mock layout-mock-masonry">
                                     <span style="height:30px"></span><span style="height:50px"></span>
@@ -265,7 +265,7 @@
                     <span class="accordion-title">Photos</span>
                 </summary>
                 <div class="accordion-body">
-                    <span class="edit-help">Cliquez sur le + pour ajouter. Vous pouvez supprimer chaque photo individuellement.</span>
+                    <span class="edit-help">Cliquez sur le <strong>+</strong> pour ajouter une photo, sur la <strong>×</strong> pour supprimer. <strong>Glissez-déposez</strong> les photos pour changer leur ordre (sur mobile : appuyez puis maintenez avant de glisser).</span>
                     <div class="gallery-images-list" id="gallery-images-list"></div>
                     <input type="file" id="gallery-file-input" accept="image/*" multiple hidden>
                     <div class="gallery-limit-warning" id="gallery-limit-warning" hidden>
@@ -421,6 +421,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="/edit-app/edit.js"></script>
 <script src="/edit-app/onboarding.js?v=5" defer></script>
 
