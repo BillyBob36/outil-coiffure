@@ -1,11 +1,9 @@
 /* =============================================================================
    Banner sticky "Mettez ce site en ligne" — script standalone
    Comportement :
-     - INVISIBLE tant que le coiffeur n'a pas scrollé d'au moins SCROLL_TRIGGER_PX
-       (= il a vraiment regardé le site, pas juste atterri)
-     - PAS de timer auto : le scroll déclenche, sinon rien
-     - Les scrolls déclenchés par l'onboarding (scrollIntoView en programmatique)
-       sont ignorés : on ne compte que les scrolls réels du user
+     - INVISIBLE tant que le user n'a pas atteint le bloc .intro ("Notre Histoire")
+     - Trigger : mouseenter (desktop) OU IntersectionObserver ≥ 30% (mobile + fallback)
+     - Si l'onboarding était actif au moment du trigger, on attend sa fermeture
      - Closeable. Re-apparaît après 5s.
      - N'apparaît PAS si :
          - URL contient ?nocapture=1 (Puppeteer screenshots)
@@ -30,7 +28,6 @@
     if (localStorage.getItem('mqs-banner-permadismissed') === '1') return;
   } catch (_) { /* pas de localStorage : on continue */ }
 
-  const SCROLL_TRIGGER_PX = 600;     // scroll utilisateur de 600px (~ 1 viewport mobile)
   const REAPPEAR_AFTER_MS = 5000;    // 5s après close (demande Johann)
 
   let appeared = false;
@@ -88,30 +85,61 @@
     });
   }
 
-  // Trigger : scroll utilisateur > SCROLL_TRIGGER_PX.
-  // Pour ignorer les scrolls programmatiques de l'onboarding (scrollIntoView),
-  // on regarde si l'overlay onboarding est présent dans le DOM. Tant qu'il
-  // est là, body est en overflow:hidden donc même les scrolls programmatiques
-  // sont bloqués → mais on garde la garde par sécurité.
+  // Trigger : 1ère interaction avec le bloc .intro ("Notre Histoire" — premier
+  // bloc après le hero). Marche en desktop (mouseenter) ET mobile/desktop
+  // (IntersectionObserver quand le bloc entre dans la viewport).
   function isOnboardingActive() {
     return !!document.querySelector('.mqs-pre-overlay, .mqs-onb-overlay');
   }
 
+  function tryShow() {
+    if (appeared) return;
+    if (isOnboardingActive()) return;
+    showBanner();
+  }
+
   function scheduleAppear() {
     if (appeared) return;
-    const tryShow = () => {
-      if (appeared) return;
-      if (isOnboardingActive()) return;
-      if (window.scrollY > SCROLL_TRIGGER_PX) {
-        window.removeEventListener('scroll', tryShow);
-        window.removeEventListener('mqs-onboarding-closed', tryShow);
-        showBanner();
+
+    // L'élément .intro peut ne pas être encore en DOM si le content est rendu async.
+    // On retry avec un petit polling jusqu'à 5s.
+    let attempts = 0;
+    const tryAttach = () => {
+      const intro = document.querySelector('.intro');
+      if (!intro) {
+        if (attempts++ < 50) return setTimeout(tryAttach, 100);
+        return; // élément jamais trouvé, abandon silencieux
+      }
+
+      // Desktop : 1er survol du bloc
+      intro.addEventListener('mouseenter', tryShow, { once: true });
+
+      // Mobile + fallback desktop : 1er fois que le bloc devient visible
+      // (au moins 30% dans la viewport).
+      if (typeof IntersectionObserver === 'function') {
+        const obs = new IntersectionObserver((entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting && entry.intersectionRatio >= 0.3) {
+              obs.disconnect();
+              tryShow();
+              break;
+            }
+          }
+        }, { threshold: [0, 0.3, 0.5, 1] });
+        obs.observe(intro);
       }
     };
-    window.addEventListener('scroll', tryShow, { passive: true });
-    // Si l'utilisateur a scrollé pendant l'onboarding, le scroll event a été
-    // ignoré. Quand l'onboarding ferme, on re-check les conditions.
-    window.addEventListener('mqs-onboarding-closed', tryShow);
+    tryAttach();
+
+    // Si l'onboarding cachait l'événement, on re-check à sa fermeture
+    window.addEventListener('mqs-onboarding-closed', () => {
+      // Si .intro est déjà visible quand l'onboarding ferme → afficher
+      const intro = document.querySelector('.intro');
+      if (!intro) return;
+      const rect = intro.getBoundingClientRect();
+      const visibleRatio = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0)) / Math.max(1, rect.height);
+      if (visibleRatio >= 0.3) tryShow();
+    });
   }
 
   // === Boot ===
