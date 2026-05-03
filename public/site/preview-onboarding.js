@@ -55,6 +55,22 @@
     return null;
   }
 
+  // Récupère le edit_token : priorité URL > sessionStorage.
+  // Si l'URL contient ?token=xxx, on le mémorise (sessionStorage) pour la durée
+  // de la session, et le bouton "Modifier mon site" l'utilise pour rediriger
+  // vers /admin/{slug}?token=xxx.
+  function getEditToken(slug) {
+    if (!slug) return null;
+    const skey = 'mqs_edit_token_' + slug;
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get('token');
+    if (fromUrl) {
+      try { sessionStorage.setItem(skey, fromUrl); } catch {}
+      return fromUrl;
+    }
+    try { return sessionStorage.getItem(skey); } catch { return null; }
+  }
+
   // Détecte si on arrive depuis l'écran de modification du salon
   // (referrer contient /admin/{slug} pour ce salon).
   function arrivingFromAdmin() {
@@ -89,7 +105,12 @@
       <span class="mqs-pre-edit-btn-label">Modifier mon site</span>
     `;
     btn.addEventListener('click', () => {
-      if (slug) window.location.href = `/admin/${encodeURIComponent(slug)}`;
+      if (!slug) return;
+      const token = getEditToken(slug);
+      const url = token
+        ? `/admin/${encodeURIComponent(slug)}?token=${encodeURIComponent(token)}`
+        : `/admin/${encodeURIComponent(slug)}`;
+      window.location.href = url;
     });
     document.body.appendChild(btn);
     state.editBtn = btn;
@@ -238,6 +259,9 @@
 
   function init() {
     if (!/^\/preview\//.test(window.location.pathname)) return;
+    // Capture early : si ?token=xxx dans l'URL, on le stocke en sessionStorage
+    const slug = getSlugFromUrl();
+    if (slug) getEditToken(slug);
     injectEditButton();
     // Visite rejouée à chaque chargement, SAUF si on arrive depuis l'admin
     if (!arrivingFromAdmin()) {
