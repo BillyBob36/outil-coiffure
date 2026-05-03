@@ -55,7 +55,6 @@
   function showBanner() {
     if (appeared) return;
     appeared = true;
-    if (timerAppear) { clearTimeout(timerAppear); timerAppear = null; }
 
     const banner = buildBanner();
     document.body.appendChild(banner);
