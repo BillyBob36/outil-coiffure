@@ -33,23 +33,43 @@ function buildShortName(nom) {
   return { main: words.slice(0, mid).join(' '), sub: words.slice(mid).join(' ') };
 }
 
+function humanizeHours(v) {
+  if (!v) return '';
+  let s = String(v);
+  // Format scrap.io : "9-am-5-pm" = 9h-17h, "1030-am-630-pm" = 10h30-18h30
+  if (/-am-?|-pm-?/.test(s)) {
+    // PM : ajoute 12h (sauf 12-pm = midi)
+    s = s.replace(/(\d+)-pm/g, (m, digits) => {
+      const isHHMM = digits.length >= 3;
+      const h = isHHMM ? parseInt(digits.slice(0, -2), 10) : parseInt(digits, 10);
+      const min = isHHMM ? digits.slice(-2) : '00';
+      const h24 = (h === 12 ? 12 : h + 12);
+      return min === '00' ? `${h24}h` : `${h24}h${min}`;
+    });
+    // AM : laisse tel quel (sauf 12-am = minuit)
+    s = s.replace(/(\d+)-am/g, (m, digits) => {
+      const isHHMM = digits.length >= 3;
+      const h = isHHMM ? parseInt(digits.slice(0, -2), 10) : parseInt(digits, 10);
+      const min = isHHMM ? digits.slice(-2) : '00';
+      const h24 = (h === 12 ? 0 : h);
+      return min === '00' ? `${h24}h` : `${h24}h${min}`;
+    });
+    return s.replace(/-/g, ' - ');
+  }
+  // Format propre (tapé par coiffeur ou DEFAULT_HOURS) : on affiche tel quel
+  return s;
+}
+
 function formatHours(json) {
   if (!json) return '<p>Sur rendez-vous</p>';
   const rows = [];
   for (const [k, label] of Object.entries(DAY_LABELS)) {
     const v = json[k];
     if (!v || v === 'closed' || v === null) {
+      // 'closed' = override explicite du coiffeur (le scrap est mergé en backend)
       rows.push(`<div class="day">${label}</div><div class="hours closed">Fermé</div>`);
     } else {
-      const human = String(v)
-        .replace(/-am-/g, ':00 - ')
-        .replace(/-am$/g, ':00')
-        .replace(/-pm-/g, ':00 - ')
-        .replace(/-pm$/g, ':00')
-        .replace(/^(\d+)(\d{2})/, '$1h$2')
-        .replace(/(\d+):00/g, '$1h')
-        .replace(/-/g, ' à ');
-      rows.push(`<div class="day">${label}</div><div class="hours">${human}</div>`);
+      rows.push(`<div class="day">${label}</div><div class="hours">${escapeHtml(humanizeHours(v))}</div>`);
     }
   }
   return `<div class="opening-hours-table">${rows.join('')}</div>`;

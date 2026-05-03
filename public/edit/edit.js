@@ -554,7 +554,7 @@ function renderContact(contact, socials) {
     if (!v || v === 'closed' || v === null) display = 'Fermé';
     else display = String(v).replace(/-am-/g, ':00 - ').replace(/-am$/g, ':00').replace(/-pm-/g, ':00 - ').replace(/-pm$/g, ':00').replace(/^(\d+)(\d{2})/, '$1h$2').replace(/(\d+):00/g, '$1h').replace(/-/g, ' à ');
     const row = document.createElement('label');
-    row.innerHTML = `<span class="day">${label}</span><input type="text" data-day="${k}" value="${escapeAttr(display)}" placeholder="Ex : 9h - 18h">`;
+    row.innerHTML = `<span class="day">${label}</span><input type="text" data-day="${k}" value="${escapeAttr(display)}" placeholder="9h - 18h ou 9h - 12h, 14h - 19h">`;
     hg.appendChild(row);
   }
 

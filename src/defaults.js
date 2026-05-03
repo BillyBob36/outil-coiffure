@@ -33,6 +33,38 @@ export const DEFAULT_TESTIMONIALS = [
 
 export const DEFAULT_INTRO_FALLBACK = 'Une equipe passionnee a votre ecoute pour des prestations de qualite, dans une ambiance conviviale.';
 
+// Horaires standards d'un salon de coiffure (utilises quand le scrap n'a pas
+// d'info, ou quand le scrap dit "closed" pour un jour). Le coiffeur peut
+// toujours forcer "closed" via l'admin (override) - on respecte ses overrides.
+// Décision business : pas de "Fermé" affiche par défaut, on suppose que tous
+// les jours sont ouverts pour rendre la fiche attractive.
+export const DEFAULT_HOURS = {
+  monday:    '9h - 19h',
+  tuesday:   '9h - 19h',
+  wednesday: '9h - 19h',
+  thursday:  '9h - 19h',
+  friday:    '9h - 19h',
+  saturday:  '9h - 18h',
+  sunday:    '10h - 16h'
+};
+
+// Merge horaires : override coiffeur > scrap (sauf 'closed' qui est remplace) > defaults.
+// `scraped` = objet { monday: "9-am-7-pm" | "closed" | null, ... }
+// Retourne un objet du même format avec, pour chaque jour, soit l'horaire scrappé
+// (s'il est valide et != "closed"), soit la valeur DEFAULT_HOURS.
+export function mergeHoursWithDefaults(scraped) {
+  const out = { ...DEFAULT_HOURS };
+  if (!scraped || typeof scraped !== 'object') return out;
+  for (const day of Object.keys(DEFAULT_HOURS)) {
+    const v = scraped[day];
+    if (v && v !== 'closed' && v !== null) {
+      out[day] = v;
+    }
+    // Sinon on garde le default (déjà mis dans `out` via spread)
+  }
+  return out;
+}
+
 // Detecte automatiquement une URL de reservation en ligne specifique au salon
 // dans les colonnes du CSV (Planity, Booksy, Reservio, Cituro, Settime, Treatwell)
 export function detectBookingUrl(rawUrl) {
@@ -115,7 +147,7 @@ export function buildDefaults(csvData) {
       addressLine2: csvData.code_postal && csvData.ville ? `${csvData.code_postal} ${csvData.ville}` : (csvData.code_postal || csvData.ville || ''),
       phone: csvData.telephone || '',
       email: csvData.email || '',
-      hours: csvData.heures_ouverture || null,
+      hours: mergeHoursWithDefaults(csvData.heures_ouverture),
       latitude: csvData.latitude,
       longitude: csvData.longitude,
       bookingUrl: detectBookingUrl(csvData.site_internet_original) || ''
