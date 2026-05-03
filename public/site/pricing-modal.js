@@ -168,7 +168,8 @@
     const hiddenCount = Math.max(0, state.suggestions.length - 6);
 
     let suggestionsHtml = '';
-    if (state.loading) {
+    if (state.loading && state.suggestions.length === 0) {
+      // Phase initiale, on n'a même pas le preview → skeleton blanc
       suggestionsHtml = renderSkeletonRows(6);
     } else if (state.suggestions.length === 0) {
       suggestionsHtml = `
@@ -176,6 +177,8 @@
           Aucune suggestion disponible pour le moment. Tape ton propre nom ci-dessous.
         </p>`;
     } else {
+      // On a au moins le preview (noms visibles, available=null → spinner par row)
+      // OU le résultat complet (available=true/false → badge réel)
       suggestionsHtml = visibleSuggestions.map(s => renderDomainRow(s, plan)).join('');
     }
 
@@ -232,11 +235,25 @@
 
   function renderDomainRow(s, plan) {
     const isSelected = state.selectedHostname === s.hostname;
-    const badge = s.isIncluded
-      ? `<span class="mqs-badge mqs-badge-offert">Offert</span>`
-      : `<span class="mqs-badge mqs-badge-supplement">+${formatEur(s.supplementEurTtc)} une seule fois</span>`;
+    const isPending = s.available === null || s.available === undefined;
+    const taken = s.available === false;
+    let badge;
+    if (isPending) {
+      badge = `<span class="mqs-badge mqs-badge-pending"><span class="mqs-mini-spinner"></span> Vérification…</span>`;
+    } else if (taken) {
+      badge = `<span class="mqs-badge mqs-badge-pris">Déjà pris</span>`;
+    } else {
+      badge = `<span class="mqs-badge mqs-badge-offert">Disponible · Offert</span>`;
+    }
+    const classes = ['mqs-domain-row'];
+    if (isSelected) classes.push('mqs-domain-selected');
+    if (taken) classes.push('mqs-domain-taken');
+    if (isPending) classes.push('mqs-domain-pending');
+    const interactive = (taken || isPending)
+      ? `aria-disabled="true"`
+      : `role="button" tabindex="0"`;
     return `
-      <div class="mqs-domain-row ${isSelected ? 'mqs-domain-selected' : ''}" data-hostname="${escapeHtml(s.hostname)}" role="button" tabindex="0">
+      <div class="${classes.join(' ')}" data-hostname="${escapeHtml(s.hostname)}" ${interactive}>
         <span class="mqs-domain-name">${escapeHtml(s.hostname)}</span>
         ${badge}
       </div>
@@ -383,6 +400,8 @@
         if (state.selectedHostname) goToStep('C');
       });
       m.querySelectorAll('.mqs-domain-row[data-hostname]').forEach(row => {
+        // Skip les rows "déjà pris" : non-cliquables
+        if (row.classList.contains('mqs-domain-taken') || row.getAttribute('aria-disabled') === 'true') return;
         row.addEventListener('click', () => selectDomain(row.dataset.hostname));
         row.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -444,12 +463,10 @@
     state.customResult = null;
     state.customError = null;
     state.loading = true;
+    state.suggestions = [];
     renderModal();
 
-    // Fetch /api/domain/suggestions/:slug?plan=KEY
-    if (!state.salonSlug) {
-      state.salonSlug = getSlugFromUrl();
-    }
+    if (!state.salonSlug) state.salonSlug = getSlugFromUrl();
     if (!state.salonSlug) {
       state.loading = false;
       state.customError = 'Erreur : impossible de détecter le salon depuis l\'URL.';
@@ -457,6 +474,19 @@
       return;
     }
 
+    // Étape 1 : preview INSTANTANÉ (juste les noms, pas de check OVH)
+    //          → permet d'afficher les domaines avec un spinner par ligne
+    try {
+      const preview = await fetch(`/api/domain/suggestions-preview/${encodeURIComponent(state.salonSlug)}`);
+      if (preview.ok) {
+        const data = await preview.json();
+        state.suggestions = data.suggestions || [];
+        // available reste null → frontend affichera spinner
+        renderModal();
+      }
+    } catch {} // best-effort, on tombe sur le call suivant si raté
+
+    // Étape 2 : full (avec check OVH, ~5-10s)
     try {
       const res = await fetch(`/api/domain/suggestions/${encodeURIComponent(state.salonSlug)}?plan=${encodeURIComponent(planKey)}`);
       if (!res.ok) {
@@ -470,12 +500,12 @@
       state.suggestions = data.suggestions || [];
       state.loading = false;
 
-      // Pré-sélection du 1er .fr offert (= pattern UX best-practice)
-      const firstFrIncluded = state.suggestions.find(s => s.tld === '.fr' && s.isIncluded);
-      const firstAny = firstFrIncluded || state.suggestions[0];
-      if (firstAny) {
-        state.selectedHostname = firstAny.hostname;
-        state.selectedHostnameInfo = firstAny;
+      // Pré-sélection du 1er .fr disponible (= pattern UX best-practice)
+      const firstFrAvail = state.suggestions.find(s => s.tld === '.fr' && s.available);
+      const firstAvail = firstFrAvail || state.suggestions.find(s => s.available);
+      if (firstAvail) {
+        state.selectedHostname = firstAvail.hostname;
+        state.selectedHostnameInfo = firstAvail;
       }
       renderModal();
     } catch (err) {
@@ -486,12 +516,14 @@
   }
 
   function selectDomain(hostname) {
-    state.selectedHostname = hostname;
     // Cherche les infos dans suggestions, sinon dans customResult
     let info = state.suggestions.find(s => s.hostname === hostname);
     if (!info && state.customResult && state.customResult.hostname === hostname) {
       info = state.customResult;
     }
+    // Refuse la sélection d'un domaine indisponible
+    if (info && info.available === false) return;
+    state.selectedHostname = hostname;
     state.selectedHostnameInfo = info || null;
     renderModal();
   }

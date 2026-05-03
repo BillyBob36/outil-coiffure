@@ -81,6 +81,43 @@ function setCached(key, data) {
 }
 
 // =============================================================================
+// GET /api/domain/suggestions-preview/:slug
+// Réponse INSTANTANÉE : juste la liste des candidats (nom × TLD), sans check OVH.
+// Permet au frontend d'afficher les noms tout de suite avec un spinner par ligne,
+// pendant que /api/domain/suggestions/:slug fait les vrais checks OVH (~5-10s).
+// =============================================================================
+router.get('/domain/suggestions-preview/:slug', (req, res) => {
+  const { slug } = req.params;
+  const row = db.prepare('SELECT slug, domain_suggestions_json FROM salons WHERE slug = ?').get(slug);
+  if (!row) return res.status(404).json({ error: 'Salon introuvable' });
+  if (!row.domain_suggestions_json) {
+    return res.status(409).json({
+      error: 'Aucune suggestion pré-générée pour ce salon',
+      hint: 'Lance la génération via Run actions → Suggérer noms de domaine (IA)',
+    });
+  }
+  let names;
+  try { names = JSON.parse(row.domain_suggestions_json); }
+  catch { return res.status(500).json({ error: 'JSON invalide en base' }); }
+
+  // Reconstruit la matrice nom × TLD dans le même ordre que /suggestions
+  const candidates = [];
+  for (const entry of names) {
+    for (const tld of TLD_PRIORITY) {
+      candidates.push({
+        name: entry.name,
+        tld,
+        hostname: `${entry.name}${tld}`,
+        rank: entry.rank,
+        available: null,           // pas encore checké
+        isIncluded: null,
+      });
+    }
+  }
+  res.json({ slug, suggestions: candidates });
+});
+
+// =============================================================================
 // GET /api/domain/suggestions/:slug
 // =============================================================================
 router.get('/domain/suggestions/:slug', async (req, res) => {
@@ -123,18 +160,13 @@ router.get('/domain/suggestions/:slug', async (req, res) => {
     return res.status(502).json({ error: 'Service OVH indisponible, réessayez dans 1 minute' });
   }
 
-  // Filtre :
-  //   - drops les indisponibles (vraiment indisponibles : transfer/restoration aussi)
-  //   - drops les domaines premium au-dessus de MAX_REASONABLE_DOMAIN_PRICE_TTC
-  //
-  // Décision business : on n'offre que .fr et .com classiques (TLD_PRIORITY),
-  // donc tout passe le filtre prix → tout est TOUJOURS "Offert" pour l'utilisateur.
-  // Pas de supplément affiché. Sur TWO_YEAR (9.90€/mo), la marge se construit à
-  // partir du mois 2 — accepté business.
+  // On garde TOUS les résultats : dispos ET pris.
+  // Le frontend affichera une pastille "Disponible" / "Pris" pour chacun.
+  // Seul filtre côté serveur : on enlève les domaines premium aberrants
+  // (priceEurTtc > MAX_REASONABLE_DOMAIN_PRICE_TTC, ex: salon32.com 2777€).
   let droppedPremium = 0;
   const enriched = results.map(r => {
-    if (!r.available) return null;
-    if (r.priceEurTtc != null && r.priceEurTtc > MAX_REASONABLE_DOMAIN_PRICE_TTC) {
+    if (r.available && r.priceEurTtc != null && r.priceEurTtc > MAX_REASONABLE_DOMAIN_PRICE_TTC) {
       droppedPremium++;
       return null;
     }
@@ -143,17 +175,19 @@ router.get('/domain/suggestions/:slug', async (req, res) => {
       name: r.name,
       tld: r.tld,
       rank: candidates.find(c => c.name === r.name && c.tld === r.tld)?.rank || 999,
-      available: true,
+      available: !!r.available,
+      reason: r.available ? null : (r.reason || 'unavailable'),
       priceEurHt: r.priceEurHt,
       priceEurTtc: r.priceEurTtc,
       isPremium: r.isPremium,
-      isIncluded: true,        // toujours offert
+      isIncluded: !!r.available,    // si dispo, toujours offert
       supplementEurTtc: 0,
     };
   }).filter(Boolean);
 
-  // Sort : rank GPT croissant, puis .fr en priorité (TLD_PRIORITY[0])
+  // Sort : disponibles en premier, puis rank GPT croissant, puis .fr en priorité
   enriched.sort((a, b) => {
+    if (a.available !== b.available) return a.available ? -1 : 1;
     if (a.rank !== b.rank) return a.rank - b.rank;
     const tldRank = (t) => TLD_PRIORITY.indexOf(t);
     return tldRank(a.tld) - tldRank(b.tld);
@@ -163,9 +197,9 @@ router.get('/domain/suggestions/:slug', async (req, res) => {
     slug,
     plan: { key: planKey, label: plan.label, monthlyPriceTtc: plan.monthlyPriceTtc },
     suggestions: enriched,
-    totalCheckedAvailable: enriched.length,
+    totalCheckedAvailable: enriched.filter(s => s.available).length,
     totalChecked: candidates.length,
-    droppedPremium, // domaines premium aberrants exclus de la liste
+    droppedPremium, // domaines premium aberrants exclus
     maxReasonablePriceTtc: MAX_REASONABLE_DOMAIN_PRICE_TTC,
   };
   setCached(cacheKey, payload);

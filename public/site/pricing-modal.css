@@ -403,6 +403,59 @@
     color: #92400e;
 }
 
+/* Domaine déjà pris (gris, non-cliquable) */
+.mqs-badge-pris {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+/* Domaine en cours de vérification (spinner + texte) */
+.mqs-badge-pending {
+    background: #f4f4f5;
+    color: #6b7280;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mqs-mini-spinner {
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid #d1d5db;
+    border-top-color: #6b7280;
+    border-radius: 50%;
+    animation: mqs-spin-mini 0.8s linear infinite;
+    display: inline-block;
+}
+
+@keyframes mqs-spin-mini {
+    to { transform: rotate(360deg); }
+}
+
+/* Row d'un domaine déjà pris : opacité réduite, non-cliquable */
+.mqs-domain-row.mqs-domain-taken {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #fafafa;
+}
+.mqs-domain-row.mqs-domain-taken:hover {
+    background: #fafafa;
+    border-color: var(--mqs-border, #e5e7eb);
+    transform: none;
+}
+.mqs-domain-row.mqs-domain-taken .mqs-domain-name {
+    text-decoration: line-through;
+    color: #9ca3af;
+}
+
+/* Row en attente du check OVH : visuel neutre */
+.mqs-domain-row.mqs-domain-pending {
+    cursor: progress;
+}
+.mqs-domain-row.mqs-domain-pending:hover {
+    transform: none;
+}
+
 /* === Skeleton loading rows === */
 .mqs-domain-row.mqs-skeleton {
     pointer-events: none;
