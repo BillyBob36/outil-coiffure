@@ -99,14 +99,19 @@
 
   function scheduleAppear() {
     if (appeared) return;
-    const onScroll = () => {
+    const tryShow = () => {
+      if (appeared) return;
       if (isOnboardingActive()) return;
       if (window.scrollY > SCROLL_TRIGGER_PX) {
-        window.removeEventListener('scroll', onScroll);
+        window.removeEventListener('scroll', tryShow);
+        window.removeEventListener('mqs-onboarding-closed', tryShow);
         showBanner();
       }
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('scroll', tryShow, { passive: true });
+    // Si l'utilisateur a scrollé pendant l'onboarding, le scroll event a été
+    // ignoré. Quand l'onboarding ferme, on re-check les conditions.
+    window.addEventListener('mqs-onboarding-closed', tryShow);
   }
 
   // === Boot ===

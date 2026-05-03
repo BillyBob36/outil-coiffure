@@ -152,6 +152,9 @@
     document.body.style.overflow = '';
     if (state.onResize) window.removeEventListener('resize', state.onResize);
     if (state.onScroll) window.removeEventListener('scroll', state.onScroll, true);
+    // Notifie les autres scripts (ex: banner.js) que l'onboarding est terminé
+    // → permet au banner de re-check ses conditions d'affichage immédiatement
+    try { window.dispatchEvent(new CustomEvent('mqs-onboarding-closed')); } catch {}
   }
 
   function finish() { close(); }
