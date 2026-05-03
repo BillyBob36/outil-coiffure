@@ -468,12 +468,15 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     padding: 10px 12px;
     text-align: left;
     border-bottom: 1px solid var(--border);
-    /* Par défaut, les cellules sont compactes : nowrap + ellipsis */
+    vertical-align: top;
+}
+/* Par défaut, les CELLULES (td) sont compactes : nowrap + ellipsis */
+.salons-table td {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    vertical-align: top;
 }
+/* Les EN-TÊTES (th) wrappent toujours : on doit voir le titre en entier */
 .salons-table th {
     background: var(--bg);
     font-weight: 600;
@@ -481,8 +484,11 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     font-size: 0.82rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    cursor: pointer; /* indique que le header est cliquable pour expand */
+    cursor: pointer;
     user-select: none;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.25;
 }
 .salons-table th[data-col-idx]:hover {
     background: rgba(201, 169, 110, 0.10);
