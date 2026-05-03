@@ -461,12 +461,18 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     width: 100%;
     border-collapse: collapse;
     font-size: 0.92rem;
+    table-layout: fixed; /* permet aux <col> de définir des largeurs fixes ; expandable via .col-expanded */
 }
 .salons-table th,
 .salons-table td {
     padding: 10px 12px;
     text-align: left;
     border-bottom: 1px solid var(--border);
+    /* Par défaut, les cellules sont compactes : nowrap + ellipsis */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: top;
 }
 .salons-table th {
     background: var(--bg);
@@ -475,9 +481,50 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     font-size: 0.82rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    cursor: pointer; /* indique que le header est cliquable pour expand */
+    user-select: none;
+}
+.salons-table th[data-col-idx]:hover {
+    background: rgba(201, 169, 110, 0.10);
+}
+.salons-table th.col-expanded {
+    background: rgba(201, 169, 110, 0.18);
+    color: var(--accent-dark);
+}
+.salons-table th.col-expanded::after {
+    content: ' ✕';
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-left: 4px;
 }
 .salons-table tbody tr:hover { background: rgba(201, 169, 110, 0.05); }
-.salons-table .url-cell { font-family: ui-monospace, monospace; font-size: 0.82rem; max-width: 280px; }
+.salons-table .url-cell { font-family: ui-monospace, monospace; font-size: 0.82rem; }
+
+/* === Largeurs par colonne (table-layout: fixed) ===
+   Chaque colonne est dimensionnée pour n'afficher que son titre par défaut.
+   .col-expanded sur un <col> applique width: auto → grab du reste de la place. */
+colgroup .colg-checkbox      { width: 36px; }
+colgroup .colg-nom-scrappe   { width: 11ch; }
+colgroup .colg-nom-final     { width: 14ch; }
+colgroup .colg-presentation-scr  { width: 16ch; }
+colgroup .colg-presentation-corr { width: 18ch; }
+colgroup .colg-domains       { width: 16ch; }
+colgroup .colg-ville         { width: 8ch; }
+colgroup .colg-url-landing   { width: 11ch; }
+colgroup .colg-url-edition   { width: 10ch; }
+colgroup .colg-capture       { width: 8ch; }
+
+/* Quand un <col> est expanded, il prend toute la place restante */
+colgroup col.col-expanded { width: auto; }
+
+/* Cellules de la colonne expandée : on autorise le wrap du contenu */
+.salons-table td.col-expanded,
+.salons-table th.col-expanded {
+    white-space: normal;
+    word-break: break-word;
+    overflow: visible;
+    text-overflow: clip;
+}
 .url-with-copy {
     display: inline-flex;
     align-items: center;
@@ -606,7 +653,8 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     display: flex;
     align-items: center;
     gap: 6px;
-    min-width: 200px;
+    min-width: 0; /* permet au flex de respecter la largeur de colonne (table-layout: fixed) */
+    max-width: 100%;
 }
 .nom-final-input {
     flex: 1;
@@ -657,8 +705,15 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     justify-content: center;
     align-items: center;
     gap: 12px;
-    margin-top: 16px;
     flex-wrap: wrap;
+}
+.pagination-top {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed var(--border);
+}
+.pagination-bottom {
+    margin-top: 16px;
 }
 
 .page-size-wrap {
@@ -1032,7 +1087,6 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-run:disabled { opacity: 0.4; cursor: not-allowed; background: var(--muted); }
 
 /* Colonnes presentation : compactes avec preview, click pour ouvrir modale */
-.col-presentation { max-width: 180px; }
 .salons-table .col-presentation .open-presentation {
     cursor: pointer;
     padding: 4px 6px;
@@ -1043,25 +1097,49 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     background: rgba(201,169,110,0.1);
 }
 .presentation-cell {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
     line-height: 1.3;
     font-size: 0.85rem;
     color: var(--text);
 }
+.salons-table td.col-expanded .presentation-cell {
+    /* Quand la colonne est expandée, on retire le clamp pour voir tout */
+    display: block;
+    white-space: normal;
+}
 .presentation-cell.empty { color: var(--muted); font-style: italic; }
 .presentation-cell.modified { color: var(--accent-dark); font-weight: 500; }
 
-/* Colonnes URL compactes */
-.salons-table .col-url-compact { max-width: 90px; }
+/* URLs : pas besoin de width forcée, le col-* s'en charge */
 .salons-table .col-url-compact .url-link {
-    max-width: 60px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     display: inline-block;
+    max-width: 100%;
+}
+
+/* Colonne domaines suggérés */
+.salons-table .col-domains .domains-cell {
+    display: inline-block;
+    font-size: 0.85rem;
+    color: var(--text);
+}
+.salons-table .col-domains .domains-cell.empty {
+    color: var(--muted);
+    font-style: italic;
+    font-size: 0.8rem;
+}
+.salons-table .col-domains .domains-more {
+    display: inline-block;
+    background: rgba(201, 169, 110, 0.18);
+    color: var(--accent-dark);
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-left: 4px;
+}
+.salons-table td.col-expanded .domains-cell {
+    white-space: normal;
 }
 
 /* Modale presentation */

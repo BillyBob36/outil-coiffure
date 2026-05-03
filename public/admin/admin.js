@@ -9,7 +9,8 @@ const state = {
   groups: [],
   orphanCount: 0,
   total: 0,
-  selectedSlugs: new Set()  // slugs des lignes cochees (persiste entre pages)
+  selectedSlugs: new Set(),  // slugs des lignes cochees (persiste entre pages)
+  expandedCol: null,         // index 0-based de la colonne actuellement expandée (null = aucune)
 };
 
 // Persistance du groupe actif (utile pour reprendre apres reload)
@@ -86,10 +87,61 @@ async function loadSalons() {
   const tbody = $('salons-tbody');
   tbody.innerHTML = data.rows.map(salonRow).join('');
   bindRowActions();
-  $('page-info').textContent = `${data.offset + 1}-${Math.min(data.offset + data.rows.length, data.total)} / ${data.total}`;
-  $('prev-page').disabled = state.page === 0;
-  $('next-page').disabled = (state.page + 1) * state.pageSize >= state.total;
+  // Met à jour TOUTES les paginations (haut + bas)
+  updateAllPaginations(data);
+  // Re-applique l'éventuelle colonne expandée après re-render
+  if (state.expandedCol != null) applyExpandedColumn(state.expandedCol);
   updateBulkActionsBar();
+}
+
+function updateAllPaginations(data) {
+  const total = data.total;
+  const offset = data.offset;
+  const rowCount = data.rows.length;
+  const infoText = `${offset + 1}-${Math.min(offset + rowCount, total)} / ${total}`;
+  document.querySelectorAll('[data-pagination]').forEach(pg => {
+    pg.querySelector('.page-info').textContent = infoText;
+    pg.querySelector('.pagination-prev').disabled = state.page === 0;
+    pg.querySelector('.pagination-next').disabled = (state.page + 1) * state.pageSize >= total;
+    const sel = pg.querySelector('.page-size-select');
+    if (sel && parseInt(sel.value) !== state.pageSize) sel.value = String(state.pageSize);
+  });
+}
+
+// Active la colonne d'index donné (0-based parmi les data-col-idx) — réduit toutes les autres
+function applyExpandedColumn(colIdx) {
+  state.expandedCol = colIdx;
+  const table = document.querySelector('.salons-table');
+  if (!table) return;
+  // Reset toutes les classes col-expanded
+  table.querySelectorAll('.col-expanded').forEach(el => el.classList.remove('col-expanded'));
+  // colgroup : on cible le col à l'index correspondant (offset +1 car colgroup commence à 0 = checkbox)
+  // data-col-idx démarre à 1 (nom_scrappe), donc l'index colgroup = colIdx + 1
+  // Mais le 1er <col> est le checkbox (jamais expandable), donc on offset selon ce qu'on a déclaré
+  // Les data-col-idx du HTML : 1=nom_scrappe, 2=nom_final, ..., 9=capture
+  // colgroup : col[0]=checkbox, col[1]=nom_scrappe (= data-col-idx 1), ..., col[9]=capture (= data-col-idx 9)
+  if (colIdx == null) return;
+  const colgroup = table.querySelector('colgroup');
+  if (colgroup) {
+    const cols = colgroup.querySelectorAll('col');
+    if (cols[colIdx]) cols[colIdx].classList.add('col-expanded');
+  }
+  // En-tête + cellules : nth-child se base sur la position dans la ligne, donc colIdx + 1 (CSS commence à 1)
+  const ths = table.querySelectorAll('thead th');
+  if (ths[colIdx]) ths[colIdx].classList.add('col-expanded');
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    const tds = tr.querySelectorAll('td');
+    if (tds[colIdx]) tds[colIdx].classList.add('col-expanded');
+  });
+  table.dataset.expandedCol = String(colIdx);
+}
+
+function clearExpandedColumn() {
+  state.expandedCol = null;
+  const table = document.querySelector('.salons-table');
+  if (!table) return;
+  table.querySelectorAll('.col-expanded').forEach(el => el.classList.remove('col-expanded'));
+  delete table.dataset.expandedCol;
 }
 
 function escapeHtml(s) {
@@ -170,6 +222,18 @@ function salonRow(r) {
 
   const checked = state.selectedSlugs.has(r.slug) ? 'checked' : '';
 
+  // Domaines suggérés (array de strings, ex: ["32lesalon", "lesalon32", ...])
+  const domains = Array.isArray(r.domain_suggestions) ? r.domain_suggestions : [];
+  let domainsCell;
+  if (domains.length === 0) {
+    domainsCell = `<span class="domains-cell empty">${escapeHtml(t('cell.no_domain_suggestions'))}</span>`;
+  } else {
+    const tooltip = domains.join(', ');
+    const previewList = domains.slice(0, 3).map(d => escapeHtml(d)).join(', ');
+    const more = domains.length > 3 ? ` <span class="domains-more">+${domains.length - 3}</span>` : '';
+    domainsCell = `<span class="domains-cell" title="${escapeAttr(tooltip)}">${previewList}${more}</span>`;
+  }
+
   return `<tr data-slug="${escapeHtml(r.slug)}" class="${checked ? 'row-selected' : ''}">
     <td class="col-checkbox">
       <input type="checkbox" class="row-checkbox" ${checked} aria-label="Sélectionner ${escapeHtml(r.slug)}">
@@ -178,6 +242,7 @@ function salonRow(r) {
     <td>${nomFinalCell}</td>
     <td class="col-presentation"><div class="open-presentation" data-slug="${escapeHtml(r.slug)}">${presScrappeeCell}</div></td>
     <td class="col-presentation"><div class="open-presentation" data-slug="${escapeHtml(r.slug)}">${presCorrigeeCell}</div></td>
+    <td class="col-domains">${domainsCell}</td>
     <td>${escapeHtml(r.ville || '')}</td>
     <td class="url-cell col-url-compact">${urlCell(landingDisplay, fullLanding, landingUrl)}</td>
     <td class="url-cell col-url-compact">${editDisplay ? urlCell(editDisplay, fullEdit, editUrl) : '<span class="no-screenshot">—</span>'}</td>
@@ -435,22 +500,51 @@ $('refresh-btn').addEventListener('click', () => {
   loadSalons();
 });
 
-$('prev-page').addEventListener('click', () => { state.page = Math.max(0, state.page - 1); loadSalons(); });
-$('next-page').addEventListener('click', () => { state.page++; loadSalons(); });
+// Pagination : on délègue à TOUTES les instances .pagination[data-pagination] (haut + bas)
+document.querySelectorAll('[data-pagination]').forEach(pg => {
+  const prev = pg.querySelector('.pagination-prev');
+  const next = pg.querySelector('.pagination-next');
+  const sel = pg.querySelector('.page-size-select');
+  if (prev) prev.addEventListener('click', () => { state.page = Math.max(0, state.page - 1); loadSalons(); });
+  if (next) next.addEventListener('click', () => { state.page++; loadSalons(); });
+  if (sel) {
+    sel.value = String(state.pageSize);
+    sel.addEventListener('change', () => {
+      const v = parseInt(sel.value, 10);
+      if (!ALLOWED_PAGE_SIZES.includes(v)) return;
+      state.pageSize = v;
+      localStorage.setItem(PAGE_SIZE_KEY, String(v));
+      state.page = 0;
+      loadSalons();
+    });
+  }
+});
 
-// Selecteur de taille de page (50 / 100 / 500 / 1000 / 10000)
-const pageSizeSelect = $('page-size-select');
-if (pageSizeSelect) {
-  pageSizeSelect.value = String(state.pageSize);
-  pageSizeSelect.addEventListener('change', () => {
-    const v = parseInt(pageSizeSelect.value, 10);
-    if (!ALLOWED_PAGE_SIZES.includes(v)) return;
-    state.pageSize = v;
-    localStorage.setItem(PAGE_SIZE_KEY, String(v));
-    state.page = 0;
-    loadSalons();
-  });
-}
+// Click-to-expand sur une colonne : un seul header expanded à la fois.
+// Click sur le header → toggle (re-click = collapse). Click sur une cellule → expand sa colonne.
+document.addEventListener('click', (e) => {
+  // 1) Click sur un th avec data-col-idx (skip checkbox)
+  const th = e.target.closest('.salons-table thead th[data-col-idx]');
+  if (th) {
+    const idx = parseInt(th.dataset.colIdx, 10);
+    if (state.expandedCol === idx) {
+      clearExpandedColumn();
+    } else {
+      applyExpandedColumn(idx);
+    }
+    return;
+  }
+  // 2) Click sur une cellule td (sauf checkbox, sauf inputs/buttons interactifs où on ne veut pas hijacker)
+  const td = e.target.closest('.salons-table tbody td');
+  if (td && !td.classList.contains('col-checkbox')) {
+    // Si l'utilisateur clique sur un input, un bouton, un lien, un thumb : ne pas expand
+    if (e.target.closest('input, button, a, .screenshot-thumb, .open-presentation, .copy-btn')) return;
+    const tr = td.parentElement;
+    const allTds = Array.from(tr.children);
+    const idx = allTds.indexOf(td);
+    if (idx > 0) applyExpandedColumn(idx);
+  }
+});
 
 $('logout-btn').addEventListener('click', async () => {
   await fetch('/admin/logout', { method: 'POST', credentials: 'same-origin' });

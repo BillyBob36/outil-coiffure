@@ -40,14 +40,14 @@ router.get('/salons', (req, res) => {
            meta_description, overrides_json, data_json,
            screenshot_path, screenshot_generated_at, csv_source, edit_token,
            overrides_json IS NOT NULL AS has_overrides, overrides_updated_at,
-           nom_clean_at, created_at
+           nom_clean_at, created_at, domain_suggestions_json, domain_suggestions_at
     FROM salons
     WHERE ${where}
     ORDER BY id DESC
     LIMIT @limit OFFSET @offset
   `).all({ ...params, limit, offset });
 
-  // Enrichir : extraire presentation_scrappee et presentation_corrigee
+  // Enrichir : extraire presentation_scrappee, presentation_corrigee, domain_suggestions
   const enrichedRows = rows.map(r => {
     let presentationScrappee = r.meta_description || '';
     if (!presentationScrappee && r.data_json) {
@@ -63,9 +63,28 @@ router.get('/salons', (req, res) => {
         presentationCorrigee = overrides?.intro?.description || '';
       } catch {}
     }
+    // Parse domain suggestions (JSON array [{name, rank}]) → array de noms triés par rank
+    let domainSuggestions = [];
+    if (r.domain_suggestions_json) {
+      try {
+        const arr = JSON.parse(r.domain_suggestions_json);
+        if (Array.isArray(arr)) {
+          domainSuggestions = arr
+            .slice()
+            .sort((a, b) => (a.rank || 999) - (b.rank || 999))
+            .map(x => x.name)
+            .filter(Boolean);
+        }
+      } catch {}
+    }
     // On retire les colonnes brutes pour reduire la taille de la reponse
-    const { meta_description, overrides_json, data_json, ...rest } = r;
-    return { ...rest, presentation_scrappee: presentationScrappee, presentation_corrigee: presentationCorrigee };
+    const { meta_description, overrides_json, data_json, domain_suggestions_json, ...rest } = r;
+    return {
+      ...rest,
+      presentation_scrappee: presentationScrappee,
+      presentation_corrigee: presentationCorrigee,
+      domain_suggestions: domainSuggestions,
+    };
   });
 
   res.json({ total, limit, offset, rows: enrichedRows });

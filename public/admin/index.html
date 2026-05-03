@@ -135,33 +135,65 @@
                 <button class="btn-link-light cross-pages-action" id="cross-pages-action" type="button"></button>
             </div>
 
+            <!-- Pagination du haut (dupliquée du bas) -->
+            <div class="pagination pagination-top" data-pagination>
+                <button class="pagination-prev" data-i18n="page.previous">←</button>
+                <span class="page-info">—</span>
+                <button class="pagination-next" data-i18n="page.next">→</button>
+                <div class="page-size-wrap">
+                    <label data-i18n="table.page_size_label">Par page :</label>
+                    <select class="page-size-select">
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="500">500</option>
+                        <option value="1000">1 000</option>
+                        <option value="10000">10 000</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="table-wrap">
                 <table class="salons-table">
+                    <colgroup>
+                        <col class="colg-checkbox">
+                        <col class="colg-nom-scrappe">
+                        <col class="colg-nom-final">
+                        <col class="colg-presentation-scr">
+                        <col class="colg-presentation-corr">
+                        <col class="colg-domains">
+                        <col class="colg-ville">
+                        <col class="colg-url-landing">
+                        <col class="colg-url-edition">
+                        <col class="colg-capture">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th class="col-checkbox">
                                 <input type="checkbox" id="select-all-checkbox" aria-label="Tout sélectionner">
                             </th>
-                            <th data-i18n="col.nom_scrappe">Nom scrappé</th>
-                            <th><span data-i18n="col.nom_final">Nom final</span> <span class="th-hint" data-i18n="col.editable_hint">(éditable)</span></th>
-                            <th class="col-presentation" data-i18n="col.presentation_scrappee">Présentation scrappée</th>
-                            <th class="col-presentation"><span data-i18n="col.presentation_corrigee">Présentation corrigée</span> <span class="th-hint" data-i18n="col.editable_hint">(éditable)</span></th>
-                            <th data-i18n="col.ville">Ville</th>
-                            <th class="col-url-compact" data-i18n="col.url_landing">URL Landing</th>
-                            <th class="col-url-compact" data-i18n="col.url_edition">URL Édition</th>
-                            <th data-i18n="col.capture">Capture</th>
+                            <th data-col-idx="1" data-i18n="col.nom_scrappe">Nom scrappé</th>
+                            <th data-col-idx="2"><span data-i18n="col.nom_final">Nom final</span> <span class="th-hint" data-i18n="col.editable_hint">(éditable)</span></th>
+                            <th data-col-idx="3" class="col-presentation" data-i18n="col.presentation_scrappee">Présentation scrappée</th>
+                            <th data-col-idx="4" class="col-presentation"><span data-i18n="col.presentation_corrigee">Présentation corrigée</span> <span class="th-hint" data-i18n="col.editable_hint">(éditable)</span></th>
+                            <th data-col-idx="5" data-i18n="col.domain_suggestions">Domaines suggérés</th>
+                            <th data-col-idx="6" data-i18n="col.ville">Ville</th>
+                            <th data-col-idx="7" class="col-url-compact" data-i18n="col.url_landing">URL Landing</th>
+                            <th data-col-idx="8" class="col-url-compact" data-i18n="col.url_edition">URL Édition</th>
+                            <th data-col-idx="9" data-i18n="col.capture">Capture</th>
                         </tr>
                     </thead>
                     <tbody id="salons-tbody"></tbody>
                 </table>
             </div>
-            <div class="pagination">
-                <button id="prev-page" data-i18n="page.previous">←</button>
-                <span id="page-info">—</span>
-                <button id="next-page" data-i18n="page.next">→</button>
+
+            <!-- Pagination du bas -->
+            <div class="pagination pagination-bottom" data-pagination>
+                <button class="pagination-prev" data-i18n="page.previous">←</button>
+                <span class="page-info">—</span>
+                <button class="pagination-next" data-i18n="page.next">→</button>
                 <div class="page-size-wrap">
-                    <label for="page-size-select" data-i18n="table.page_size_label">Par page :</label>
-                    <select id="page-size-select">
+                    <label data-i18n="table.page_size_label">Par page :</label>
+                    <select class="page-size-select">
                         <option value="50">50</option>
                         <option value="100">100</option>
                         <option value="500">500</option>
