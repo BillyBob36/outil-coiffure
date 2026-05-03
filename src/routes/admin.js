@@ -11,6 +11,7 @@ import { startCleanNames, getCleanJob } from '../name-cleaner.js';
 import { startCorrectPresentation, getPresentationJob } from '../presentation-cleaner.js';
 import { startDomainSuggestions, getDomainSuggestionsJob } from '../domain-suggester.js';
 import { captureBatchParallel } from '../screenshot-worker.js';
+import { startProvisioning, getProvisioningStatus } from '../provisioning-worker.js';
 
 const router = express.Router();
 const UPLOAD_DIR = './data/csv-uploads';
@@ -683,6 +684,72 @@ router.delete('/csv-source/:name', (req, res) => {
   const result = db.prepare('DELETE FROM salons WHERE csv_source = ?').run(req.params.name);
   db.prepare('DELETE FROM csv_imports WHERE filename = ?').run(req.params.name);
   res.json({ ok: true, deleted: result.changes });
+});
+
+// =====================================================================
+// Provisioning : retry manuel pour les salons en error
+// POST /admin/retry-provisioning/:slug
+// Relance startProvisioning sur un salon dont la subscription_status est
+// 'error' ou 'past_due'. Utile quand OVH/CF a planté en cours de route.
+// =====================================================================
+router.post('/retry-provisioning/:slug', (req, res) => {
+  const slug = req.params.slug;
+  const salon = db.prepare(`
+    SELECT slug, subscription_status, live_hostname, plan, owner_email,
+           stripe_customer_id, stripe_subscription_id
+    FROM salons WHERE slug = ?
+  `).get(slug);
+  if (!salon) return res.status(404).json({ error: 'Salon introuvable' });
+  if (!salon.live_hostname || !salon.plan) {
+    return res.status(409).json({ error: 'Salon sans live_hostname/plan : pas de checkout valide' });
+  }
+  if (!['error', 'past_due', 'pending', 'provisioning'].includes(salon.subscription_status || '')) {
+    return res.status(409).json({
+      error: `subscription_status='${salon.subscription_status}' : retry non applicable`
+    });
+  }
+
+  // Reset le status à 'provisioning' avant de relancer le worker
+  db.prepare(`
+    UPDATE salons SET subscription_status='provisioning', updated_at=datetime('now') WHERE slug=?
+  `).run(slug);
+
+  startProvisioning({
+    slug,
+    hostname: salon.live_hostname,
+    planKey: salon.plan,
+    customerEmail: salon.owner_email,
+    stripeCustomerId: salon.stripe_customer_id,
+    stripeSubscriptionId: salon.stripe_subscription_id,
+  }).catch(err => {
+    console.error('[admin/retry-provisioning] failed:', err);
+    db.prepare(`UPDATE salons SET subscription_status='error', updated_at=datetime('now') WHERE slug=?`).run(slug);
+  });
+
+  res.json({ ok: true, slug, hostname: salon.live_hostname, plan: salon.plan });
+});
+
+// GET /admin/provisioning-status/:slug — état runtime du job (en mémoire)
+router.get('/provisioning-status/:slug', (req, res) => {
+  const slug = req.params.slug;
+  const job = getProvisioningStatus(slug);
+  const dbRow = db.prepare(`
+    SELECT subscription_status, live_hostname, signed_up_at, signup_session_id
+    FROM salons WHERE slug = ?
+  `).get(slug);
+  if (!dbRow) return res.status(404).json({ error: 'Salon introuvable' });
+  res.json({
+    slug,
+    db: dbRow,
+    runtime: job ? {
+      state: job.state,
+      step: job.step,
+      error: job.error,
+      startedAt: job.startedAt,
+      finishedAt: job.finishedAt,
+      durationMs: job.finishedAt ? job.finishedAt - job.startedAt : null,
+    } : null,
+  });
 });
 
 export default router;
