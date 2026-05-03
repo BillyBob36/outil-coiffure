@@ -33,7 +33,9 @@
     },
     {
       id: 'save',
-      target: '.btn-save:not([hidden])',
+      // resolveVisible() retourne le 1er .btn-save dans la section active
+      // (les sections inactives ont display:none → offsetParent null)
+      target: '.btn-save',
       title: 'Pensez à enregistrer',
       text: "Quand vous faites une modification, n'oubliez pas de cliquer sur Enregistrer en bas de chaque section.",
       next: 'Suivant →',
@@ -184,7 +186,9 @@
     }
 
     state.spotlight.classList.remove('mqs-onb-center');
-    const el = document.querySelector(s.target);
+    // target peut être une string (sélecteur) ou une fonction (résolution dynamique).
+    // Utile quand l'élément cible dépend de l'état UI (ex: bouton Enregistrer de l'onglet actif).
+    const el = typeof s.target === 'function' ? s.target() : resolveVisible(s.target);
     if (!el) {
       // Cible introuvable → on saute en mode centré
       state.spotlight.classList.add('mqs-onb-center');
@@ -248,6 +252,15 @@
     return s == null ? '' : String(s).replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[c]));
+  }
+
+  // Retourne le 1er élément matchant ET réellement visible à l'écran (pas display:none, etc.)
+  function resolveVisible(selector) {
+    const all = document.querySelectorAll(selector);
+    for (const el of all) {
+      if (el.offsetParent !== null && el.getBoundingClientRect().width > 0) return el;
+    }
+    return null;
   }
 
   // === Bootstrap ===
