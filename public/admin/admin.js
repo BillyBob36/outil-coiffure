@@ -179,7 +179,13 @@ function publicBaseFromHost() {
 
 function salonRow(r) {
   const publicBase = publicBaseFromHost();
-  const landingUrl = `${publicBase}/preview/${r.slug}`;
+  // URL Landing avec token = lien que le coiffeur reçoit par email :
+  //   /preview/{slug}?token=xxx → onboarding visite + bouton "Modifier mon site"
+  //   redirige correctement vers /admin/{slug}?token=xxx
+  // Sans edit_token (rare), on retombe sur /preview/{slug} simple (mode visiteur).
+  const landingUrl = r.edit_token
+    ? `${publicBase}/preview/${r.slug}?token=${r.edit_token}`
+    : `${publicBase}/preview/${r.slug}`;
   const editUrl = r.edit_token ? `${publicBase}/admin/${r.slug}?token=${r.edit_token}` : null;
   const fullLanding = landingUrl;
   const fullEdit = editUrl;
