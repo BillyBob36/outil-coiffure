@@ -11,6 +11,7 @@ import apiRouter from './src/routes/api.js';
 import adminRouter from './src/routes/admin.js';
 import editRouter from './src/routes/edit.js';
 import checkoutRouter from './src/routes/checkout.js';
+import stripeWebhookRouter from './src/routes/stripe-webhook.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -59,6 +60,10 @@ app.use(session({
 }));
 
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
+
+// Stripe webhook : DOIT recevoir le body brut (pas parsé en JSON) pour valider
+// la signature. Monté ici pour être avant tout middleware json éventuel.
+app.use('/webhook', stripeWebhookRouter);
 
 // ====================================================================
 // HOSTNAME-AWARE ROUTING (monsitehq.com architecture)

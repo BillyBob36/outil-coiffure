@@ -109,6 +109,9 @@ export function initSchema() {
   if (!cols.includes('domain_suggestions_json')) db.exec("ALTER TABLE salons ADD COLUMN domain_suggestions_json TEXT");
   if (!cols.includes('domain_suggestions_at')) db.exec("ALTER TABLE salons ADD COLUMN domain_suggestions_at TEXT");
 
+  // Lien Cloudflare for SaaS : custom_hostname id retourné par CF API
+  if (!cols.includes('cloudflare_hostname_id')) db.exec("ALTER TABLE salons ADD COLUMN cloudflare_hostname_id TEXT");
+
   // Idempotency : table des Stripe events deja traites (evite double-deploiement
   // si Stripe retry le webhook).
   db.exec(`

@@ -48,6 +48,12 @@ const PLANS = {
 // === TLDs candidats : ordre = priorité (le 1er disponible est sélectionné par défaut) ===
 const TLD_PRIORITY = ['.fr', '.com'];
 
+// === Seuil au-dessus duquel un domaine est considéré "premium aberrant" et
+// caché des suggestions auto. Calibré sur les standards FR : .fr (~6€), .com
+// (~10€), .com rare (~30€). Au-dessus de 50€ TTC/an = domaine de marque ou
+// short-name premium, pas pertinent pour un coiffeur. ===
+const MAX_REASONABLE_DOMAIN_PRICE_TTC = parseFloat(process.env.MAX_DOMAIN_PRICE_TTC_YR || '50');
+
 // === Cache mémoire des résultats /api/domain/suggestions (TTL 5 min) ===
 const suggestionsCache = new Map(); // key=`${slug}:${plan}` → { data, expireAt }
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -111,8 +117,17 @@ router.get('/domain/suggestions/:slug', async (req, res) => {
   }
 
   // Enrichi avec isIncluded + supplementEurTtc
+  // Filtre :
+  //   - drops les indisponibles
+  //   - drops les domaines au-dessus de MAX_REASONABLE_DOMAIN_PRICE_TTC (premium
+  //     aberrant non pertinent pour un coiffeur)
+  let droppedPremium = 0;
   const enriched = results.map(r => {
-    if (!r.available) return null; // on filtre les indispos
+    if (!r.available) return null;
+    if (r.priceEurTtc != null && r.priceEurTtc > MAX_REASONABLE_DOMAIN_PRICE_TTC) {
+      droppedPremium++;
+      return null;
+    }
     const isIncluded = r.priceEurTtc != null && r.priceEurTtc <= plan.monthlyPriceTtc;
     const supplementEurTtc = isIncluded ? 0 : Math.max(0, Math.round((r.priceEurTtc - plan.monthlyPriceTtc) * 100) / 100);
     return {
@@ -146,6 +161,8 @@ router.get('/domain/suggestions/:slug', async (req, res) => {
     suggestions: enriched,
     totalCheckedAvailable: enriched.length,
     totalChecked: candidates.length,
+    droppedPremium, // domaines premium aberrants exclus de la liste
+    maxReasonablePriceTtc: MAX_REASONABLE_DOMAIN_PRICE_TTC,
   };
   setCached(cacheKey, payload);
   res.json(payload);

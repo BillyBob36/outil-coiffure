@@ -331,3 +331,366 @@
     color: #4b5563;
     font-weight: 600;
 }
+
+/* =============================================================================
+   STEP B — Choix du domaine (suggestions list + custom input + footer)
+   ============================================================================= */
+
+.mqs-domain-list {
+    margin: 0 0 14px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mqs-domain-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 18px;
+    background: #ffffff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.mqs-domain-row:hover {
+    border-color: #c5c7cc;
+    background: #fafafa;
+}
+
+.mqs-domain-row.mqs-domain-selected {
+    border-color: #0a0a0a;
+    border-width: 2px;
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    padding: 13px 17px; /* compense la border 2px */
+}
+
+.mqs-domain-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #0a0a0a;
+    letter-spacing: -0.01em;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mqs-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.mqs-badge-offert {
+    background: #dcfce7;
+    color: #14532d;
+}
+
+.mqs-badge-supplement {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* === Skeleton loading rows === */
+.mqs-domain-row.mqs-skeleton {
+    pointer-events: none;
+    cursor: default;
+    background: #f9fafb;
+    border-color: #f3f4f6;
+}
+
+.mqs-skel-text, .mqs-skel-badge {
+    background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+    background-size: 200% 100%;
+    animation: mqs-skeleton-pulse 1.5s ease-in-out infinite;
+    border-radius: 6px;
+}
+.mqs-skel-text { height: 14px; width: 60%; }
+.mqs-skel-badge { height: 22px; width: 70px; border-radius: 999px; }
+
+@keyframes mqs-skeleton-pulse {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* === "Voir 4 autres" button === */
+.mqs-expand-btn {
+    background: transparent;
+    border: 0;
+    color: #4b5563;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 10px 0 4px;
+    text-align: center;
+    transition: color 0.15s ease;
+    width: 100%;
+}
+
+.mqs-expand-btn:hover {
+    color: #0a0a0a;
+}
+
+/* === Divider "ou" === */
+.mqs-domain-divider {
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.78rem;
+    margin: 16px 0;
+    position: relative;
+}
+
+.mqs-domain-divider::before,
+.mqs-domain-divider::after {
+    content: '';
+    display: inline-block;
+    width: 38%;
+    height: 1px;
+    background: #e5e7eb;
+    vertical-align: middle;
+    margin: 0 12px;
+}
+
+/* === Custom input block === */
+.mqs-custom-block {
+    margin-bottom: 18px;
+}
+
+.mqs-custom-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #4b5563;
+    margin-bottom: 8px;
+    letter-spacing: -0.005em;
+}
+
+.mqs-custom-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.mqs-custom-input {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    background: #ffffff;
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: #0a0a0a;
+    letter-spacing: -0.01em;
+    transition: border-color 0.15s ease;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.mqs-custom-input:focus {
+    outline: 0;
+    border-color: #0a0a0a;
+}
+
+.mqs-custom-tld {
+    padding: 12px 12px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    background: #ffffff;
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: #0a0a0a;
+    cursor: pointer;
+}
+
+.mqs-btn-check {
+    background: #ffffff;
+    color: #0a0a0a;
+    border: 1.5px solid #0a0a0a;
+    padding: 12px 18px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease;
+}
+
+.mqs-btn-check:hover {
+    background: #f3f4f6;
+}
+
+.mqs-btn-check:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+.mqs-custom-result {
+    margin-top: 10px;
+}
+
+.mqs-custom-error {
+    color: #dc2626;
+    font-size: 0.82rem;
+    margin: 0;
+}
+
+.mqs-empty-state {
+    color: #6b7280;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 30px 12px;
+    margin: 0;
+}
+
+/* === Footer Step B / Step C : back + continue === */
+.mqs-footer-stepb,
+.mqs-footer-stepc {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 8px;
+    margin-bottom: 12px;
+}
+
+.mqs-btn-back {
+    background: transparent;
+    border: 0;
+    color: #6b7280;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 12px 14px;
+    border-radius: 999px;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.mqs-btn-back:hover {
+    color: #0a0a0a;
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.mqs-btn-continue {
+    background: #0a0a0a;
+    color: #ffffff;
+    border: 0;
+    padding: 13px 28px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+.mqs-btn-continue:hover:not(:disabled) {
+    background: #1a1a1a;
+    transform: translateY(-1px);
+}
+
+.mqs-btn-continue:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+    .mqs-footer-stepb,
+    .mqs-footer-stepc {
+        flex-direction: column-reverse;
+        gap: 8px;
+    }
+    .mqs-btn-continue {
+        width: 100%;
+    }
+    .mqs-btn-back {
+        width: 100%;
+    }
+    .mqs-custom-input-row {
+        flex-wrap: wrap;
+    }
+    .mqs-custom-input {
+        flex-basis: calc(70% - 4px);
+    }
+    .mqs-custom-tld {
+        flex-basis: calc(30% - 4px);
+    }
+    .mqs-btn-check {
+        flex-basis: 100%;
+        order: 3;
+    }
+}
+
+/* =============================================================================
+   STEP C — Email + résumé + paiement
+   ============================================================================= */
+
+.mqs-summary {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+}
+
+.mqs-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 6px 0;
+}
+
+.mqs-summary-row + .mqs-summary-row {
+    border-top: 1px solid #f3f4f6;
+}
+
+.mqs-summary-label {
+    font-size: 0.78rem;
+    color: #6b7280;
+    letter-spacing: -0.005em;
+    flex-shrink: 0;
+}
+
+.mqs-summary-value {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #0a0a0a;
+    text-align: right;
+    letter-spacing: -0.01em;
+}
+
+.mqs-summary-note {
+    border-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.mqs-summary-sub {
+    font-size: 0.74rem;
+    color: #9ca3af;
+    text-align: right;
+    line-height: 1.4;
+}
+
+.mqs-email-block {
+    margin-bottom: 18px;
+}
+
+.mqs-email-input {
+    width: 100%;
+}
