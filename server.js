@@ -8,10 +8,28 @@ import { dirname } from 'path';
 import { existsSync, readFileSync } from 'fs';
 import db from './src/db.js';
 import apiRouter from './src/routes/api.js';
-import adminRouter from './src/routes/admin.js';
 import editRouter from './src/routes/edit.js';
-import checkoutRouter from './src/routes/checkout.js';
-import stripeWebhookRouter from './src/routes/stripe-webhook.js';
+
+// === TENANT_ONLY mode ===
+// Sur Falkenstein (= sites coiffeurs payants) on désactive :
+//   - admin agence (/admin), Stripe webhook, signup flow (/api/checkout, /api/domain),
+//     captures Puppeteer, IA workers, CSV import.
+// On garde uniquement : preview, admin coiffeur tokenisé, /api/edit, /api/salon,
+// et un endpoint /api/sync pour recevoir les data depuis Helsinki au moment du paiement.
+const TENANT_ONLY = process.env.TENANT_ONLY === '1' || process.env.TENANT_ONLY === 'true';
+
+// Routes désactivées en mode TENANT_ONLY (chargées dynamiquement plus bas)
+let adminRouter = null;
+let checkoutRouter = null;
+let stripeWebhookRouter = null;
+let syncRouter = null;
+if (!TENANT_ONLY) {
+  ({ default: adminRouter } = await import('./src/routes/admin.js'));
+  ({ default: checkoutRouter } = await import('./src/routes/checkout.js'));
+  ({ default: stripeWebhookRouter } = await import('./src/routes/stripe-webhook.js'));
+} else {
+  ({ default: syncRouter } = await import('./src/routes/sync.js'));
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -46,7 +64,9 @@ async function ensureAdminUser() {
   db.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)').run(email, hash);
 }
 
-await ensureAdminUser();
+if (!TENANT_ONLY) {
+  await ensureAdminUser();
+}
 
 const app = express();
 app.set('trust proxy', 1);
@@ -63,11 +83,18 @@ app.use(session({
   }
 }));
 
-app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now(), mode: TENANT_ONLY ? 'tenant' : 'tools' }));
 
-// Stripe webhook : DOIT recevoir le body brut (pas parsé en JSON) pour valider
-// la signature. Monté ici pour être avant tout middleware json éventuel.
-app.use('/webhook', stripeWebhookRouter);
+// Stripe webhook : uniquement sur Helsinki (la signup vit là)
+if (!TENANT_ONLY) {
+  app.use('/webhook', stripeWebhookRouter);
+}
+
+// Sync endpoint : uniquement sur Falkenstein (= reçoit les data depuis Helsinki
+// au moment où un coiffeur passe LIVE). Auth par bearer token partagé.
+if (TENANT_ONLY) {
+  app.use('/api', syncRouter); // expose POST /api/sync/:slug
+}
 
 // ====================================================================
 // HOSTNAME-AWARE ROUTING (monsitehq.com architecture)
@@ -108,7 +135,11 @@ app.use('/screenshots', express.static(SCREENSHOTS_DIR, { maxAge: '1h' }));
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '1h' }));
 app.use('/api', apiRouter);
 app.use('/api', editRouter); // expose /api/edit/:slug
-app.use('/api', checkoutRouter); // expose /api/domain/* + /api/checkout/*
+
+// Routes signup/checkout : uniquement sur Helsinki
+if (!TENANT_ONLY) {
+  app.use('/api', checkoutRouter); // expose /api/domain/* + /api/checkout/*
+}
 
 const RESERVED_ADMIN_PATHS = new Set([
   'login', 'logout', 'me', 'index.html', 'login.html',
@@ -148,43 +179,78 @@ app.use('/admin', (req, res, next) => {
 
 // Salon edit page : /admin/:slug (auth par token URL, pas par session)
 // Defini AVANT le static admin et le adminRouter pour gerer en priorite les slugs.
+//
+// Sur Helsinki (TOOLS), si le salon a un live_hostname (= déjà payé/migré sur
+// Falkenstein), on redirige vers le custom hostname pour que le coiffeur édite
+// la version Falkenstein (= source de vérité post-paiement).
 app.get('/admin/:slug', (req, res, next) => {
   const slug = req.params.slug;
   if (RESERVED_ADMIN_PATHS.has(slug)) return next();
   if (req.routingMode === 'admin') return next();
+  if (!TENANT_ONLY) {
+    try {
+      const r = db.prepare('SELECT live_hostname, subscription_status FROM salons WHERE slug = ?').get(slug);
+      if (r && r.live_hostname && (r.subscription_status === 'live' || r.subscription_status === 'active')) {
+        const token = req.query.token ? `?token=${encodeURIComponent(req.query.token)}` : '';
+        return res.redirect(302, `https://${r.live_hostname}/admin/${encodeURIComponent(slug)}${token}`);
+      }
+    } catch {}
+  }
   res.sendFile(join(__dirname, 'public/edit/index.html'));
 });
 
-// Agency admin assets (CSS, JS, login.html, etc.) — uniquement utilises sur outil.monsitehq.com
-app.use('/admin', express.static(join(__dirname, 'public/admin')));
+// === Routes admin agence : uniquement sur Helsinki ===
+if (!TENANT_ONLY) {
+  // Agency admin assets (CSS, JS, login.html, etc.) — uniquement utilises sur outil.monsitehq.com
+  app.use('/admin', express.static(join(__dirname, 'public/admin')));
 
-// Agency admin login page
-app.get('/admin/login', (req, res) => {
-  res.sendFile(join(__dirname, 'public/admin/login.html'));
-});
+  // Agency admin login page
+  app.get('/admin/login', (req, res) => {
+    res.sendFile(join(__dirname, 'public/admin/login.html'));
+  });
 
-// Agency admin dashboard root /admin
-app.get('/admin', (req, res) => {
-  if (req.session && req.session.userId) {
-    res.sendFile(join(__dirname, 'public/admin/index.html'));
-  } else {
-    res.redirect('/admin/login');
-  }
-});
+  // Agency admin dashboard root /admin
+  app.get('/admin', (req, res) => {
+    if (req.session && req.session.userId) {
+      res.sendFile(join(__dirname, 'public/admin/index.html'));
+    } else {
+      res.redirect('/admin/login');
+    }
+  });
 
-// Agency admin auth-protected API routes (login, upload-csv, screenshot, groups, etc.)
-app.use('/admin', adminRouter);
+  // Agency admin auth-protected API routes (login, upload-csv, screenshot, groups, etc.)
+  app.use('/admin', adminRouter);
+}
 
 // Site assets (CSS, JS for the public landing)
 app.use('/_assets', express.static(SITE_DIR, { maxAge: '1d' }));
 
 // Public preview : /preview/:slug
+// Sur Helsinki, si salon LIVE → redirect vers le custom hostname (= site servi par Falkenstein).
 app.get('/preview/:slug', (req, res) => {
   const slug = req.params.slug;
   if (RESERVED_PATHS.has(slug)) return res.status(404).sendFile(join(SITE_DIR, '404.html'));
-  // We don't validate the slug here — the JS will fetch /api/salon/:slug and handle 404
+  if (!TENANT_ONLY) {
+    try {
+      const r = db.prepare('SELECT live_hostname, subscription_status FROM salons WHERE slug = ?').get(slug);
+      if (r && r.live_hostname && (r.subscription_status === 'live' || r.subscription_status === 'active')) {
+        return res.redirect(302, `https://${r.live_hostname}/`);
+      }
+    } catch {}
+  }
   res.sendFile(join(SITE_DIR, 'index.html'));
 });
+
+// Sur Falkenstein (TENANT_ONLY), la racine d'un custom hostname (salon-jean.fr/)
+// redirige vers /preview/{slug} pour réutiliser le frontend existant.
+if (TENANT_ONLY) {
+  app.get('/', (req, res) => {
+    const host = req.hostname;
+    const r = db.prepare('SELECT slug FROM salons WHERE live_hostname = ?').get(host);
+    if (r && r.slug) return res.redirect(302, `/preview/${encodeURIComponent(r.slug)}`);
+    res.status(404).send('Aucun salon associé à ' + host);
+  });
+}
 
 // Root
 app.get('/', (req, res) => {
@@ -202,7 +268,10 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   console.log(`outil-coiffure listening on http://localhost:${PORT}`);
+  console.log(`  Mode           : ${TENANT_ONLY ? 'TENANT (Falkenstein)' : 'TOOLS (Helsinki)'}`);
   console.log(`  Public preview : http://localhost:${PORT}/preview/{slug}`);
   console.log(`  Salon admin    : http://localhost:${PORT}/admin/{slug}?token=...`);
-  console.log(`  Agency admin   : http://localhost:${PORT}/admin (login)`);
+  if (!TENANT_ONLY) {
+    console.log(`  Agency admin   : http://localhost:${PORT}/admin (login)`);
+  }
 });

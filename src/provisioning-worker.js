@@ -131,6 +131,9 @@ async function runProvisioning(job, params) {
       WHERE slug=?
     `).run(hostname, slug);
 
+    // Sync vers Falkenstein (le site sera servi depuis là)
+    await syncSalonToFalkenstein(slug);
+
     // Email confirmation (no-op gracieux si RESEND_API_KEY absent)
     await sendSignupConfirmation(slug, hostname);
 
@@ -180,6 +183,11 @@ async function runProvisioning(job, params) {
     WHERE slug=?
   `).run(hostname, slug);
 
+  // Étape 7 : sync vers Falkenstein (le site sera servi depuis là)
+  job.step = 'sync_falkenstein';
+  await syncSalonToFalkenstein(slug);
+  console.log(`[provisioning] ${slug} synced to Falkenstein`);
+
   // Email confirmation (no-op gracieux si RESEND_API_KEY absent)
   await sendSignupConfirmation(slug, hostname);
 
@@ -187,6 +195,46 @@ async function runProvisioning(job, params) {
   job.finishedAt = Date.now();
   job.step = 'done';
   console.log(`[provisioning] ${slug} DONE in ${(job.finishedAt - job.startedAt) / 1000}s`);
+}
+
+/**
+ * Sync le row d'un salon vers Falkenstein (= POST /api/sync/{slug} avec auth bearer).
+ * Appelé après le passage LIVE pour que Falkenstein puisse servir ce site.
+ * Idempotent : peut être rappelé sans souci (INSERT OR REPLACE côté Falkenstein).
+ * En DRY_RUN : skip silencieusement si pas configuré.
+ */
+async function syncSalonToFalkenstein(slug) {
+  const FALKENSTEIN_URL = process.env.FALKENSTEIN_BASE_URL || 'https://customers.monsitehq.com';
+  const SYNC_TOKEN = process.env.SYNC_BEARER_TOKEN;
+  if (!SYNC_TOKEN) {
+    console.warn(`[provisioning] ${slug} SYNC_BEARER_TOKEN absent → skip sync Falkenstein`);
+    return;
+  }
+  const row = db.prepare('SELECT * FROM salons WHERE slug = ?').get(slug);
+  if (!row) {
+    console.warn(`[provisioning] ${slug} salon introuvable, skip sync`);
+    return;
+  }
+  try {
+    const res = await fetch(`${FALKENSTEIN_URL}/api/sync/${encodeURIComponent(slug)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SYNC_TOKEN}`,
+      },
+      body: JSON.stringify({ row }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`[provisioning] ${slug} sync Falkenstein failed (${res.status}): ${text.slice(0, 200)}`);
+      // Non-fatal : on log mais on ne fait pas tomber la transaction
+      return;
+    }
+    const data = await res.json();
+    console.log(`[provisioning] ${slug} sync Falkenstein OK (${data.action || 'ok'})`);
+  } catch (err) {
+    console.error(`[provisioning] ${slug} sync Falkenstein network error:`, err.message);
+  }
 }
 
 /**

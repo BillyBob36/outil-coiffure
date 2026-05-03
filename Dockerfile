@@ -36,7 +36,11 @@ RUN npm install --omit=dev
 
 COPY . .
 
-RUN mkdir -p /data/screenshots && chmod -R 755 /data
+RUN mkdir -p /data/screenshots /data/uploads && chmod -R 755 /data
+
+# Volume persistant pour la DB SQLite + screenshots + fallback uploads.
+# Coolify Helsinki et Falkenstein créent leur propre volume nommé sur ce mount point.
+VOLUME ["/data"]
 
 ENV NODE_ENV=production
 ENV PORT=3000
