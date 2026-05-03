@@ -1,13 +1,16 @@
 /* =============================================================================
    Banner sticky "Mettez ce site en ligne" — script standalone
    Comportement :
-     - Apparaît après 10s ou au premier scroll de 200px (whichever first)
-     - Closeable. Re-apparaît après 30s.
+     - INVISIBLE tant que le coiffeur n'a pas scrollé d'au moins SCROLL_TRIGGER_PX
+       (= il a vraiment regardé le site, pas juste atterri)
+     - PAS de timer auto : le scroll déclenche, sinon rien
+     - Les scrolls déclenchés par l'onboarding (scrollIntoView en programmatique)
+       sont ignorés : on ne compte que les scrolls réels du user
+     - Closeable. Re-apparaît après 5s.
      - N'apparaît PAS si :
          - URL contient ?nocapture=1 (Puppeteer screenshots)
          - URL contient ?banner=off (dev)
-         - localStorage 'mqs-banner-permadismissed' = '1' (dismissed for good — pas
-           encore implémenté côté UI, garde l'option pour V2)
+         - localStorage 'mqs-banner-permadismissed' = '1' (V2)
      - Click sur CTA → ouvre modal pricing (modal.js)
    ============================================================================= */
 
@@ -23,17 +26,14 @@
     // On affiche le banner uniquement sur les pages /preview/{slug}
     return;
   }
-  // Permadismiss (rarement utilisé, prévu pour V2 si on offre un opt-out durable)
   try {
     if (localStorage.getItem('mqs-banner-permadismissed') === '1') return;
   } catch (_) { /* pas de localStorage : on continue */ }
 
-  const APPEAR_DELAY_MS = 10000;     // 10s
-  const SCROLL_TRIGGER_PX = 200;     // ou scroll > 200px (whichever first)
-  const REAPPEAR_AFTER_MS = 30000;   // 30s après close
+  const SCROLL_TRIGGER_PX = 600;     // scroll utilisateur de 600px (~ 1 viewport mobile)
+  const REAPPEAR_AFTER_MS = 5000;    // 5s après close (demande Johann)
 
   let appeared = false;
-  let timerAppear = null;
 
   function buildBanner() {
     const div = document.createElement('div');
@@ -81,21 +81,32 @@
     // Close → cache le banner et re-affiche après REAPPEAR_AFTER_MS
     document.getElementById('mqs-banner-close').addEventListener('click', () => {
       banner.classList.remove('mqs-show');
-      // Cleanup DOM après la transition
       setTimeout(() => banner.remove(), 500);
       appeared = false;
-      // Programme la réapparition
-      setTimeout(scheduleAppear, REAPPEAR_AFTER_MS);
+      // Réapparition garantie après 5s, peu importe le scroll
+      setTimeout(showBanner, REAPPEAR_AFTER_MS);
     });
   }
 
+  // Trigger uniquement par scroll utilisateur réel — on ignore les scrolls
+  // déclenchés en programmatique (par ex. scrollIntoView de l'onboarding).
+  // Détection : on suit l'événement 'wheel' / 'touchmove' / 'keydown(↓)' qui
+  // sont des intentions humaines, plutôt que l'event 'scroll' (qui peut être
+  // déclenché par scrollIntoView sans interaction).
   function scheduleAppear() {
     if (appeared) return;
-    if (timerAppear) clearTimeout(timerAppear);
-    // Timer de 10s
-    timerAppear = setTimeout(showBanner, APPEAR_DELAY_MS);
-    // OU scroll > 200px (whichever first)
+    let userInteracted = false;
+    const markInteraction = () => { userInteracted = true; };
+    window.addEventListener('wheel', markInteraction, { passive: true, once: true });
+    window.addEventListener('touchmove', markInteraction, { passive: true, once: true });
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'End', 'Home'].includes(e.key)) {
+        markInteraction();
+      }
+    }, { once: true });
+
     const onScroll = () => {
+      if (!userInteracted) return; // scroll programmatique → ignore
       if (window.scrollY > SCROLL_TRIGGER_PX) {
         window.removeEventListener('scroll', onScroll);
         showBanner();
@@ -104,7 +115,7 @@
     window.addEventListener('scroll', onScroll, { passive: true });
   }
 
-  // === Boot : démarre la planification après que le DOM soit prêt ===
+  // === Boot ===
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', scheduleAppear, { once: true });
   } else {

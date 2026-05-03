@@ -189,7 +189,10 @@ async function compressImageFile(file, maxDim = 1600, quality = 0.82) {
 function renderAll() {
   const c = state.draft;
   $('edit-brand-name').textContent = state.view.nom || c.hero.title || 'Mon salon';
-  $('preview-link').href = `${getPublicBaseUrl()}/preview/${state.slug}`;
+  // On propage le token via l'URL → permet au coiffeur de revenir vers
+  // /admin/{slug} via le bouton "Modifier mon site" même après navigation
+  // aller-retour (sinon sessionStorage perdu si onglet rouvert).
+  $('preview-link').href = `${getPublicBaseUrl()}/preview/${state.slug}?token=${encodeURIComponent(state.token)}`;
 
   renderHero(c.hero);
   renderIntro(c.intro);

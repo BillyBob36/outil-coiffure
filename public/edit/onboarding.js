@@ -254,11 +254,14 @@
     }[c]));
   }
 
-  // Retourne le 1er élément matchant ET réellement visible à l'écran (pas display:none, etc.)
+  // Retourne le 1er élément matchant ET réellement visible à l'écran.
+  // Note : on ne peut pas utiliser offsetParent (null pour les éléments
+  // position: fixed). On vérifie juste la taille via getBoundingClientRect.
   function resolveVisible(selector) {
     const all = document.querySelectorAll(selector);
     for (const el of all) {
-      if (el.offsetParent !== null && el.getBoundingClientRect().width > 0) return el;
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) return el;
     }
     return null;
   }
