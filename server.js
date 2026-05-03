@@ -16,7 +16,11 @@ import stripeWebhookRouter from './src/routes/stripe-webhook.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR || join(__dirname, 'public/screenshots');
-const UPLOADS_DIR = process.env.UPLOADS_DIR || join(__dirname, 'data/uploads');
+// IMPORTANT : UPLOADS_DIR doit utiliser la même logique que src/routes/edit.js
+// (sinon Express sert depuis un dossier alors que les uploads sont écrits ailleurs).
+// Fallback : à côté de SCREENSHOTS_DIR (= sur le volume persistant en prod).
+const UPLOADS_DIR = process.env.UPLOADS_DIR
+  || join(process.env.SCREENSHOTS_DIR ? dirname(process.env.SCREENSHOTS_DIR) : join(__dirname, 'data'), 'uploads');
 
 const ADMIN_BASE_URL = process.env.ADMIN_BASE_URL || '';
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';

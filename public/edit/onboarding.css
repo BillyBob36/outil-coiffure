@@ -1,0 +1,158 @@
+/* =============================================================================
+   Onboarding visite guidée (4 étapes) — admin coiffeur
+   ============================================================================= */
+
+/* Overlay assombri full-screen */
+.mqs-onb-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    pointer-events: auto;
+}
+
+/* La "fenêtre" qui crée le spotlight via box-shadow géant */
+.mqs-onb-spotlight {
+    position: absolute;
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(10, 10, 10, 0.65);
+    transition: top 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.4s ease;
+    pointer-events: none;
+    /* Petit halo doré */
+    outline: 2px solid rgba(201, 169, 110, 0.7);
+    outline-offset: 4px;
+}
+
+/* Spotlight "centre écran" pour l'étape 1 (pas d'élément ciblé) */
+.mqs-onb-spotlight.mqs-onb-center {
+    width: 0;
+    height: 0;
+    box-shadow: 0 0 0 9999px rgba(10, 10, 10, 0.78);
+    outline: none;
+}
+
+/* La bulle d'info (popup) */
+.mqs-onb-popup {
+    position: absolute;
+    z-index: 10001;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    padding: 22px 24px 18px;
+    max-width: 360px;
+    min-width: 280px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #0a0a0a;
+    transition: top 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mqs-onb-popup-step {
+    font-size: 0.72rem;
+    color: #c9a96e;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    margin: 0 0 8px;
+}
+
+.mqs-onb-popup-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 8px;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+}
+
+.mqs-onb-popup-text {
+    font-size: 0.92rem;
+    color: #4b5563;
+    line-height: 1.5;
+    margin: 0 0 18px;
+}
+
+.mqs-onb-popup-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.mqs-onb-skip {
+    background: none;
+    border: 0;
+    color: #9ca3af;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 6px 4px;
+    font-family: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.mqs-onb-skip:hover { color: #4b5563; }
+
+.mqs-onb-next {
+    background: #0a0a0a;
+    color: white;
+    border: 0;
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: -0.01em;
+    transition: background 0.15s, transform 0.15s;
+}
+.mqs-onb-next:hover {
+    background: #1a1a1a;
+    transform: translateY(-1px);
+}
+
+/* Petit indicateur de progression (1/4 etc.) */
+.mqs-onb-progress {
+    font-size: 0.78rem;
+    color: #9ca3af;
+    margin: 0;
+}
+
+/* Bouton "?" persistant pour rejouer la visite */
+.mqs-onb-help-btn {
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #0a0a0a;
+    color: white;
+    border: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+    z-index: 9000;
+    transition: transform 0.15s, background 0.15s;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.mqs-onb-help-btn:hover {
+    transform: translateY(-2px);
+    background: #c9a96e;
+}
+
+@media (max-width: 600px) {
+    .mqs-onb-popup {
+        max-width: calc(100vw - 32px);
+        min-width: 0;
+        left: 16px !important;
+        right: 16px;
+        width: auto;
+    }
+    .mqs-onb-help-btn {
+        bottom: 16px;
+        right: 16px;
+    }
+}

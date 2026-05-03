@@ -7,7 +7,11 @@ export const DEFAULT_GALLERY_IMAGES = [
   'https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=800&q=80',
   'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=800&q=80',
   'https://images.unsplash.com/photo-1634449571010-02389ed0f9b0?w=800&q=80',
-  'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&q=80'
+  'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&q=80',
+  // 3 images supplémentaires pour rendre le bouton "Afficher plus" utile
+  'https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=800&q=80',
+  'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=800&q=80',
+  'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=800&q=80'
 ];
 
 export const DEFAULT_HERO_IMAGE = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1920&q=80';
