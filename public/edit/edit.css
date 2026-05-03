@@ -719,7 +719,22 @@ button {
     cursor: grab;
     user-select: none;
     -webkit-user-select: none;
-    touch-action: manipulation; /* Permet tap rapide, mais long-press = drag (delay 150ms) */
+    -ms-user-select: none;
+    /* Bloque le menu contextuel iOS Safari (apparait au long-press) */
+    -webkit-touch-callout: none;
+    /* Empêche les actions par défaut du browser sur touch (preview image, etc.)
+       sans bloquer le scroll vertical du parent (touch-action: pan-y) */
+    touch-action: pan-y;
+}
+/* L'image elle-même : pas d'interaction directe (pas de drag natif HTML5,
+   pas de menu "Ouvrir l'image dans un nouvel onglet", etc.). Le drag se fait
+   sur la tile entière via SortableJS. */
+.gallery-image-tile.sortable-tile img {
+    pointer-events: none;
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 .gallery-image-tile.sortable-tile:active {
     cursor: grabbing;
