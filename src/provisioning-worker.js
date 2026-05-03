@@ -26,6 +26,7 @@
 
 import db from './db.js';
 import { ovhFetch } from './ovh-client.js';
+import { sendSignupSuccessEmail, sendProvisioningErrorEmail } from './email-sender.js';
 
 const CLOUDFLARE_API = 'https://api.cloudflare.com/client/v4';
 const CLOUDFLARE_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
@@ -83,6 +84,8 @@ export async function startProvisioning(params) {
     db.prepare(`
       UPDATE salons SET subscription_status='error', updated_at=datetime('now') WHERE slug=?
     `).run(slug);
+    // Alerte l'admin par email (no-op si Resend pas configuré)
+    notifyAdminOfError(slug, params.hostname, err.message);
   });
 
   return job;
@@ -124,6 +127,9 @@ async function runProvisioning(job, params) {
           updated_at=datetime('now')
       WHERE slug=?
     `).run(hostname, slug);
+
+    // Email confirmation (no-op gracieux si RESEND_API_KEY absent)
+    await sendSignupConfirmation(slug, hostname);
 
     job.state = 'done';
     job.finishedAt = Date.now();
@@ -171,10 +177,64 @@ async function runProvisioning(job, params) {
     WHERE slug=?
   `).run(hostname, slug);
 
+  // Email confirmation (no-op gracieux si RESEND_API_KEY absent)
+  await sendSignupConfirmation(slug, hostname);
+
   job.state = 'done';
   job.finishedAt = Date.now();
   job.step = 'done';
   console.log(`[provisioning] ${slug} DONE in ${(job.finishedAt - job.startedAt) / 1000}s`);
+}
+
+/**
+ * Envoie l'email de confirmation au coiffeur après que le site est LIVE.
+ * No-op gracieux si RESEND_API_KEY n'est pas configuré.
+ */
+/**
+ * Notifie l'admin (johann) d'une erreur de provisioning.
+ * No-op gracieux si Resend pas configuré.
+ */
+async function notifyAdminOfError(slug, hostname, errorMessage) {
+  try {
+    const adminEmail = process.env.RESEND_REPLY_TO || process.env.ADMIN_EMAIL;
+    if (!adminEmail) return;
+    const row = db.prepare('SELECT nom_clean, nom FROM salons WHERE slug = ?').get(slug);
+    await sendProvisioningErrorEmail({
+      adminEmail,
+      salonName: row?.nom_clean || row?.nom || slug,
+      slug,
+      hostname,
+      errorMessage: errorMessage || 'unknown',
+    });
+  } catch (err) {
+    console.error(`[provisioning] ${slug} admin alert failed (non-fatal):`, err.message);
+  }
+}
+
+async function sendSignupConfirmation(slug, hostname) {
+  try {
+    const row = db.prepare(`
+      SELECT slug, nom_clean, nom, owner_email, plan
+      FROM salons WHERE slug = ?
+    `).get(slug);
+    if (!row || !row.owner_email) {
+      console.log(`[provisioning] ${slug} pas d'owner_email, skip email`);
+      return;
+    }
+    const result = await sendSignupSuccessEmail({
+      to: row.owner_email,
+      salonName: row.nom_clean || row.nom || 'votre salon',
+      liveHostname: hostname,
+      plan: row.plan,
+      slug,
+    });
+    if (result.ok) {
+      console.log(`[provisioning] ${slug} confirmation email sent → ${row.owner_email}`);
+    }
+  } catch (err) {
+    // Email failure is non-fatal — le site est LIVE
+    console.error(`[provisioning] ${slug} email failed (non-fatal):`, err.message);
+  }
 }
 
 // =============================================================================
