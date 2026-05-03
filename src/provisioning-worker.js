@@ -32,6 +32,12 @@ const CLOUDFLARE_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const CLOUDFLARE_ZONE_ID = process.env.CLOUDFLARE_ZONE_ID;
 const FALLBACK_ORIGIN = process.env.FALLBACK_INTERNAL_HOSTNAME || 'customers.monsitehq.com';
 
+// Mode DRY_RUN : simule sans appeler vraiment OVH (achat domaine = vrai €).
+// Activé par défaut tant que PROVISIONING_DRY_RUN n'est pas explicitement = '0'
+// ou tant que STRIPE_SECRET_KEY commence par 'sk_test_' (mode test Stripe).
+const DRY_RUN = process.env.PROVISIONING_DRY_RUN === '1'
+  || (process.env.PROVISIONING_DRY_RUN !== '0' && (process.env.STRIPE_SECRET_KEY || '').startsWith('sk_test_'));
+
 // =============================================================================
 // Public API
 // =============================================================================
@@ -89,8 +95,44 @@ export async function startProvisioning(params) {
 async function runProvisioning(job, params) {
   const { slug, hostname, planKey } = params;
 
-  console.log(`[provisioning] ${slug} → ${hostname} (plan=${planKey}) START`);
+  console.log(`[provisioning] ${slug} → ${hostname} (plan=${planKey}) START${DRY_RUN ? ' (DRY_RUN)' : ''}`);
 
+  if (DRY_RUN) {
+    // === DRY RUN : simule chaque étape avec un délai sans appeler OVH/CF ===
+    job.step = 'ovh_register';
+    await new Promise(r => setTimeout(r, 8000));
+    console.log(`[provisioning] ${slug} [DRY] OVH register simulé`);
+
+    job.step = 'ovh_poll';
+    await new Promise(r => setTimeout(r, 12000));
+    console.log(`[provisioning] ${slug} [DRY] OVH domain READY simulé`);
+
+    job.step = 'ovh_dns';
+    await new Promise(r => setTimeout(r, 6000));
+    console.log(`[provisioning] ${slug} [DRY] OVH DNS CNAME simulé`);
+
+    job.step = 'cloudflare_add';
+    await new Promise(r => setTimeout(r, 8000));
+    console.log(`[provisioning] ${slug} [DRY] CF custom_hostname simulé`);
+
+    job.step = 'cloudflare_poll';
+    await new Promise(r => setTimeout(r, 15000));
+    console.log(`[provisioning] ${slug} [DRY] CF active simulé`);
+
+    db.prepare(`
+      UPDATE salons SET subscription_status='live', live_hostname=?, signed_up_at=COALESCE(signed_up_at, datetime('now')),
+          updated_at=datetime('now')
+      WHERE slug=?
+    `).run(hostname, slug);
+
+    job.state = 'done';
+    job.finishedAt = Date.now();
+    job.step = 'done';
+    console.log(`[provisioning] ${slug} DRY_RUN DONE in ${(job.finishedAt - job.startedAt) / 1000}s`);
+    return;
+  }
+
+  // === PRODUCTION FLOW (réel) ===
   // Étape 1 : OVH register
   job.step = 'ovh_register';
   const orderInfo = await ovhRegisterDomain(hostname);
