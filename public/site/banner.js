@@ -88,25 +88,19 @@
     });
   }
 
-  // Trigger uniquement par scroll utilisateur réel — on ignore les scrolls
-  // déclenchés en programmatique (par ex. scrollIntoView de l'onboarding).
-  // Détection : on suit l'événement 'wheel' / 'touchmove' / 'keydown(↓)' qui
-  // sont des intentions humaines, plutôt que l'event 'scroll' (qui peut être
-  // déclenché par scrollIntoView sans interaction).
+  // Trigger : scroll utilisateur > SCROLL_TRIGGER_PX.
+  // Pour ignorer les scrolls programmatiques de l'onboarding (scrollIntoView),
+  // on regarde si l'overlay onboarding est présent dans le DOM. Tant qu'il
+  // est là, body est en overflow:hidden donc même les scrolls programmatiques
+  // sont bloqués → mais on garde la garde par sécurité.
+  function isOnboardingActive() {
+    return !!document.querySelector('.mqs-pre-overlay, .mqs-onb-overlay');
+  }
+
   function scheduleAppear() {
     if (appeared) return;
-    let userInteracted = false;
-    const markInteraction = () => { userInteracted = true; };
-    window.addEventListener('wheel', markInteraction, { passive: true, once: true });
-    window.addEventListener('touchmove', markInteraction, { passive: true, once: true });
-    window.addEventListener('keydown', (e) => {
-      if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'End', 'Home'].includes(e.key)) {
-        markInteraction();
-      }
-    }, { once: true });
-
     const onScroll = () => {
-      if (!userInteracted) return; // scroll programmatique → ignore
+      if (isOnboardingActive()) return;
       if (window.scrollY > SCROLL_TRIGGER_PX) {
         window.removeEventListener('scroll', onScroll);
         showBanner();
