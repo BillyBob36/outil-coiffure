@@ -228,10 +228,15 @@ function salonRow(r) {
   if (domains.length === 0) {
     domainsCell = `<span class="domains-cell empty">${escapeHtml(t('cell.no_domain_suggestions'))}</span>`;
   } else {
+    // 2 vues : preview (3 premiers + badge +N) en mode compact, full (tous, badges) en mode expanded
     const tooltip = domains.join(', ');
     const previewList = domains.slice(0, 3).map(d => escapeHtml(d)).join(', ');
-    const more = domains.length > 3 ? ` <span class="domains-more">+${domains.length - 3}</span>` : '';
-    domainsCell = `<span class="domains-cell" title="${escapeAttr(tooltip)}">${previewList}${more}</span>`;
+    const previewMore = domains.length > 3 ? ` <span class="domains-more">+${domains.length - 3}</span>` : '';
+    const fullList = domains.map(d => `<span class="domain-chip">${escapeHtml(d)}</span>`).join('');
+    domainsCell = `
+      <span class="domains-cell domains-cell-preview" title="${escapeAttr(tooltip)}">${previewList}${previewMore}</span>
+      <span class="domains-cell-full">${fullList}</span>
+    `;
   }
 
   return `<tr data-slug="${escapeHtml(r.slug)}" class="${checked ? 'row-selected' : ''}">

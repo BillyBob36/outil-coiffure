@@ -1124,7 +1124,7 @@ colgroup col.col-expanded { width: auto; }
     max-width: 100%;
 }
 
-/* Colonne domaines suggérés */
+/* Colonne domaines suggérés — 2 vues : preview (3 premiers + badge) / full (chips) */
 .salons-table .col-domains .domains-cell {
     display: inline-block;
     font-size: 0.85rem;
@@ -1144,8 +1144,31 @@ colgroup col.col-expanded { width: auto; }
     font-size: 0.75rem;
     margin-left: 4px;
 }
-.salons-table td.col-expanded .domains-cell {
+
+/* Liste full = cachée par défaut */
+.salons-table .col-domains .domains-cell-full {
+    display: none;
+}
+.salons-table .col-domains .domain-chip {
+    display: inline-block;
+    background: rgba(201, 169, 110, 0.10);
+    color: var(--accent-dark);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    margin: 2px 4px 2px 0;
+    font-family: ui-monospace, monospace;
+    border: 1px solid rgba(201, 169, 110, 0.25);
+}
+
+/* Mode expanded : preview cachée, full visible */
+.salons-table td.col-expanded .domains-cell-preview {
+    display: none;
+}
+.salons-table td.col-expanded .domains-cell-full {
+    display: block;
     white-space: normal;
+    line-height: 1.6;
 }
 
 /* Modale presentation */
