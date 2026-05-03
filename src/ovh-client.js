@@ -123,37 +123,53 @@ async function ensureCart() {
 export async function checkDomainAvailability(hostname) {
   const cartId = await ensureCart();
   // POST /order/cart/{cartId}/domain accepte un body { domain, duration?, offerId? }
-  // Si dispo : retourne { itemId, prices: [{label, price}], settings }
-  // Si pas dispo : 4xx avec un message
+  // Si dispo : retourne { itemId, prices: [{label, price}], settings: {pricingMode: 'create-default', ...} }
+  // Si DÉJÀ PRIS : OVH retourne 200 quand même mais avec pricingMode: 'transfer-default'
+  //   ou 'restoration-default' (= il propose le transfer/restore depuis l'autre registrar).
+  //   Pour notre signup flow, "déjà pris" = NON disponible, peu importe l'option transfer.
+  // Si invalide (TLD inexistant, syntaxe...) : 4xx
   try {
     const item = await ovhFetch('POST', `/order/cart/${cartId}/domain`, {
       domain: hostname,
       duration: 'P1Y',
     });
-    // Récupérer le prix avec et sans TVA
-    const priceItem = (item.prices || []).find(p => p.label === 'TOTAL') || (item.prices || [])[0];
-    const priceEurHt = priceItem ? priceItem.price.value : null;
-    // En FR la TVA est 20% sur les services SaaS, OVH renvoie les 2 si "TOTAL_TAX_INCLUSIVE" exists
-    const totalTtc = (item.prices || []).find(p => p.label === 'TOTAL_TAX_INCLUSIVE');
-    const priceEurTtc = totalTtc ? totalTtc.price.value : (priceEurHt != null ? priceEurHt * 1.2 : null);
-    // Detect premium : prix > 30€ HT/an = probablement premium-priced par registry
-    const isPremium = priceEurHt != null && priceEurHt > 30;
 
+    const pricingMode = item.settings?.pricingMode || '';
     // Cleanup l'item du cart pour pas qu'il s'accumule (cart limit 50 items)
     if (item.itemId) {
       ovhFetch('DELETE', `/order/cart/${cartId}/item/${item.itemId}`).catch(() => {});
     }
+
+    // Le domaine est RÉELLEMENT disponible uniquement si pricingMode contient 'create'.
+    // Les autres modes (transfer-default, restoration-default, ...) indiquent que le
+    // domaine est déjà enregistré ailleurs, on ne peut pas le créer fresh.
+    if (!pricingMode.startsWith('create')) {
+      return {
+        available: false,
+        reason: pricingMode || 'unavailable',
+        pricingMode,
+      };
+    }
+
+    // Récupérer le prix avec et sans TVA
+    const priceItem = (item.prices || []).find(p => p.label === 'TOTAL') || (item.prices || [])[0];
+    const priceEurHt = priceItem ? priceItem.price.value : null;
+    const totalTtc = (item.prices || []).find(p => p.label === 'TOTAL_TAX_INCLUSIVE');
+    const priceEurTtc = totalTtc ? totalTtc.price.value : (priceEurHt != null ? priceEurHt * 1.2 : null);
+    // Detect premium : prix > 30€ HT/an = probablement premium-priced par registry
+    const isPremium = priceEurHt != null && priceEurHt > 30;
 
     return {
       available: true,
       priceEurHt: priceEurHt != null ? Math.round(priceEurHt * 100) / 100 : null,
       priceEurTtc: priceEurTtc != null ? Math.round(priceEurTtc * 100) / 100 : null,
       isPremium,
+      pricingMode,
     };
   } catch (err) {
-    // OVH retourne typiquement 400 ou 404 si le domain est pas disponible/invalide
+    // OVH retourne 400 ou 404 si le domain est invalide (TLD inconnu, syntaxe...)
     if (err.status === 400 || err.status === 404) {
-      return { available: false, reason: 'unavailable', message: err.body?.slice(0, 200) };
+      return { available: false, reason: 'invalid', message: err.body?.slice(0, 200) };
     }
     // Autre erreur (réseau, auth, etc.) → propager
     throw err;

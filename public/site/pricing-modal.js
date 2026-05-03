@@ -18,10 +18,9 @@
       description: 'Le meilleur tarif sur 24 mois.',
       cta: 'Choisir',
       isPopular: false,
-      domainYears: 2,
       features: [
         'Site 100 % personnalisable',
-        'Domaine .fr ou .com inclus 2 ans',
+        'Domaine .fr ou .com offert',
         'Hebergement haute performance',
       ],
     },
@@ -32,10 +31,9 @@
       description: 'Engagement 12 mois, le bon compromis.',
       cta: 'Choisir',
       isPopular: true,
-      domainYears: 1,
       features: [
         'Site 100 % personnalisable',
-        'Domaine .fr ou .com inclus 1 an',
+        'Domaine .fr ou .com offert',
         'Hebergement haute performance',
       ],
     },
@@ -46,10 +44,9 @@
       description: 'Resiliable a tout moment.',
       cta: 'Choisir',
       isPopular: false,
-      domainYears: 1,
       features: [
         'Site 100 % personnalisable',
-        'Domaine .fr ou .com inclus 1 an',
+        'Domaine .fr ou .com offert',
         'Hebergement haute performance',
       ],
     },
@@ -216,7 +213,7 @@
       </div>
 
       <p class="mqs-trust">
-        🔒 ${plan.domainYears === 2 ? 'Domaine inclus 2 ans' : 'Domaine inclus 1 an'} · Renouvelable · Hébergé en Europe
+        🔒 Domaine offert · Renouvelable · Hébergé en Europe
       </p>
     `;
   }
@@ -253,12 +250,16 @@
     } else if (state.customResult) {
       const r = state.customResult;
       if (!r.available) {
-        resultHtml = `<p class="mqs-custom-error">❌ Ce nom n'est pas disponible. Essayez-en un autre.</p>`;
+        // Erreur spécifique selon la raison
+        let msg = '❌ Ce nom n\'est pas disponible. Essayez-en un autre.';
+        if (r.reason === 'tld_not_allowed') msg = '❌ Seules les extensions .fr et .com sont supportées.';
+        else if (r.reason === 'price_too_high') msg = '❌ Ce domaine est en tarif premium. Choisissez-en un autre ou contactez-nous.';
+        else if (r.reason && r.reason.startsWith('transfer')) msg = '❌ Ce domaine est déjà enregistré. Choisissez-en un autre.';
+        resultHtml = `<p class="mqs-custom-error">${escapeHtml(msg)}</p>`;
       } else {
         const isSelected = state.selectedHostname === r.hostname;
-        const badge = r.isIncluded
-          ? `<span class="mqs-badge mqs-badge-offert">Offert</span>`
-          : `<span class="mqs-badge mqs-badge-supplement">+${formatEur(r.supplementEurTtc)} une seule fois</span>`;
+        // Tout domaine accepté est offert
+        const badge = `<span class="mqs-badge mqs-badge-offert">Offert</span>`;
         resultHtml = `
           <div class="mqs-domain-row ${isSelected ? 'mqs-domain-selected' : ''}" data-hostname="${escapeHtml(r.hostname)}" role="button" tabindex="0">
             <span class="mqs-domain-name">${escapeHtml(r.hostname)}</span>
@@ -296,10 +297,7 @@
     const plan = planByKey(state.selectedPlan);
     const hostname = state.selectedHostname;
     const info = state.selectedHostnameInfo;
-    const yearsLabel = plan.domainYears === 2 ? '2 ans' : '1 an';
-    const supplementLabel = (info && !info.isIncluded)
-      ? `+ ${formatEur(info.supplementEurTtc)} de supplément domaine premium (charge unique sur la 1ère facture)`
-      : `Domaine inclus ${yearsLabel}`;
+    const supplementLabel = 'Domaine offert';
 
     const submitDisabled = (state.submitting || !state.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email)) ? 'disabled' : '';
 

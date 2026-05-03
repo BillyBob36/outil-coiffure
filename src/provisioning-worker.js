@@ -97,10 +97,11 @@ export async function startProvisioning(params) {
 
 async function runProvisioning(job, params) {
   const { slug, hostname, planKey } = params;
-  // domainYears : 1 par défaut (compat ancien). Pour TWO_YEAR on passe 2.
-  const domainYears = Number.isFinite(params.domainYears) && params.domainYears >= 1 ? params.domainYears : 1;
+  // Domaine toujours acheté 1 an chez OVH, peu importe la durée d'engagement client.
+  // Renouvellement annuel pris en charge par notre subscription Stripe (à intégrer en V2).
+  const domainYears = 1;
 
-  console.log(`[provisioning] ${slug} → ${hostname} (plan=${planKey}, ${domainYears}an${domainYears > 1 ? 's' : ''}) START${DRY_RUN ? ' (DRY_RUN)' : ''}`);
+  console.log(`[provisioning] ${slug} → ${hostname} (plan=${planKey}) START${DRY_RUN ? ' (DRY_RUN)' : ''}`);
 
   if (DRY_RUN) {
     // === DRY RUN : simule chaque étape avec un délai sans appeler OVH/CF ===
@@ -141,10 +142,10 @@ async function runProvisioning(job, params) {
   }
 
   // === PRODUCTION FLOW (réel) ===
-  // Étape 1 : OVH register
+  // Étape 1 : OVH register (toujours 1 an = P1Y)
   job.step = 'ovh_register';
-  const orderInfo = await ovhRegisterDomain(hostname, domainYears);
-  console.log(`[provisioning] ${slug} OVH order ${orderInfo.orderId} placed (${orderInfo.duration})`);
+  const orderInfo = await ovhRegisterDomain(hostname, 1);
+  console.log(`[provisioning] ${slug} OVH order ${orderInfo.orderId} placed (P1Y)`);
 
   // Étape 2 : poll OVH task domain jusqu'à "done"
   job.step = 'ovh_poll';
