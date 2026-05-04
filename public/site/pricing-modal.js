@@ -95,10 +95,12 @@
   }
 
   function getSlugFromUrl() {
+    // Match /preview/{slug} (site public) ET /admin/{slug} (menu d'édition coiffeur).
+    // Le slug est toujours le 2ème segment de l'URL dans les deux cas.
     const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
     if (!path) return null;
     const parts = path.split('/');
-    if (parts[0] === 'preview' && parts[1]) return parts[1];
+    if ((parts[0] === 'preview' || parts[0] === 'admin') && parts[1]) return parts[1];
     return null;
   }
 

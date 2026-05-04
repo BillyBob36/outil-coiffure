@@ -1,10 +1,13 @@
 /* =============================================================================
    Banner sticky "Mettez ce site en ligne" — script standalone
    Comportement :
-     - INVISIBLE tant que le user n'a pas atteint le bloc .intro ("Notre Histoire")
-     - Trigger : mouseenter (desktop) OU IntersectionObserver ≥ 30% (mobile + fallback)
-     - Si l'onboarding était actif au moment du trigger, on attend sa fermeture
-     - Closeable. Re-apparaît après 5s.
+     - Sur /preview/{slug} (= site visible par tous) :
+         INVISIBLE tant que le user n'a pas atteint le bloc .intro ("Notre Histoire")
+         Trigger : mouseenter (desktop) OU IntersectionObserver ≥ 30% (mobile + fallback)
+         Si l'onboarding était actif au moment du trigger, on attend sa fermeture
+     - Sur /admin/{slug} (= menu d'édition pour le coiffeur) :
+         VISIBLE dès l'ouverture du menu (pas de trigger scroll, pas d'onboarding)
+     - Closeable. Re-apparaît après 5s (peu importe le contexte).
      - N'apparaît PAS si :
          - URL contient ?nocapture=1 (Puppeteer screenshots)
          - URL contient ?banner=off (dev)
@@ -20,9 +23,21 @@
   if (params.has('nocapture') || params.get('banner') === 'off') {
     return;
   }
-  if (window.location.pathname.indexOf('/preview/') !== 0) {
-    // On affiche le banner uniquement sur les pages /preview/{slug}
+  const path = window.location.pathname;
+  const isPreview = path.indexOf('/preview/') === 0;
+  const isAdmin = path.indexOf('/admin/') === 0;
+  if (!isPreview && !isAdmin) {
+    // On affiche le banner uniquement sur /preview/{slug} et /admin/{slug}
     return;
+  }
+  // Sur /admin/{slug} : afficher UNIQUEMENT sur le menu d'édition d'un salon
+  // demo (= Helsinki, hostname monsitehq.com). Sur Falkenstein (customers.* ou
+  // custom hostname coiffeur), le coiffeur a déjà payé → pas de bannière de
+  // vente. (Note : sur preview, le redirect serveur se charge déjà du cas)
+  if (isAdmin) {
+    const host = window.location.hostname;
+    const isDemoHost = host === 'monsitehq.com' || host === 'localhost' || host === '127.0.0.1';
+    if (!isDemoHost) return;
   }
   try {
     if (localStorage.getItem('mqs-banner-permadismissed') === '1') return;
@@ -100,6 +115,17 @@
   function scheduleAppear() {
     if (appeared) return;
 
+    // === Mode ADMIN (menu d'édition coiffeur) ===
+    // Le coiffeur est déjà dans son espace d'édition : on ne joue pas le jeu du
+    // teasing scroll, on affiche tout de suite (mais on garde le close + 5s reappear).
+    if (isAdmin) {
+      // Petit délai (300ms) pour laisser l'app d'édition se monter avant
+      // d'attirer l'œil du coiffeur sur l'offre commerciale.
+      setTimeout(tryShow, 300);
+      return;
+    }
+
+    // === Mode PREVIEW (site public visible par tous) ===
     // L'élément .intro peut ne pas être encore en DOM si le content est rendu async.
     // On retry avec un petit polling jusqu'à 5s.
     let attempts = 0;

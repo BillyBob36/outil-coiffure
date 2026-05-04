@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
     <link rel="stylesheet" href="/edit-app/edit.css">
     <link rel="stylesheet" href="/edit-app/onboarding.css?v=2">
+    <!-- Bannière promo + modal pricing (réutilisées depuis /preview/{slug}) -->
+    <link rel="stylesheet" href="/_assets/banner.css?v=3">
+    <link rel="stylesheet" href="/_assets/pricing-modal.css?v=8">
 </head>
 <body>
 
@@ -424,6 +427,11 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="/edit-app/edit.js"></script>
 <script src="/edit-app/onboarding.js?v=5" defer></script>
+<!-- Bannière commerciale (s'affiche dès l'ouverture du menu d'édition, mêmes
+     règles close/reappear qu'en /preview). La modal pricing est chargée en
+     premier pour que window.MqsPricingModal soit dispo au click CTA. -->
+<script src="/_assets/pricing-modal.js?v=9"></script>
+<script src="/_assets/banner.js?v=9"></script>
 
 </body>
 </html>
