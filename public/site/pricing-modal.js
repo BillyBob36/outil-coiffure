@@ -52,6 +52,18 @@
     },
   ];
 
+  // === Version des CGV en cours ===
+  // Bumper cette version à chaque modification substantielle des CGV pour forcer
+  // une nouvelle acceptation explicite (et tracer l'historique en base).
+  const CGV_VERSION = '1.0';
+
+  // === Mapping plan → fichier CGV ===
+  const CGV_FILES = {
+    TWO_YEAR: '/legal/cgv-2y.html',
+    ONE_YEAR: '/legal/cgv-1y.html',
+    FLEX: '/legal/cgv-flex.html',
+  };
+
   // === Etat de la modal ===
   const state = {
     modalEl: null,
@@ -65,6 +77,7 @@
     customError: null,
     loading: false,
     email: '',
+    cgvAccepted: false,       // case CGV cochée
     submitting: false,
     salonSlug: null,
   };
@@ -315,8 +328,15 @@
     const hostname = state.selectedHostname;
     const info = state.selectedHostnameInfo;
     const supplementLabel = 'Domaine offert';
+    const cgvUrl = CGV_FILES[state.selectedPlan] || '/legal/cgv-flex.html';
+    const cgvLabel = state.selectedPlan === 'TWO_YEAR'
+      ? 'Conditions Générales de Vente (engagement 2 ans)'
+      : state.selectedPlan === 'ONE_YEAR'
+        ? 'Conditions Générales de Vente (engagement 1 an)'
+        : 'Conditions Générales de Vente (sans engagement)';
 
-    const submitDisabled = (state.submitting || !state.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email)) ? 'disabled' : '';
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email);
+    const submitDisabled = (state.submitting || !emailValid || !state.cgvAccepted) ? 'disabled' : '';
 
     return `
       <div class="mqs-step-header">
@@ -355,6 +375,21 @@
         />
       </div>
 
+      <div class="mqs-cgv-block">
+        <label class="mqs-cgv-label" for="mqs-cgv-checkbox">
+          <input
+            type="checkbox"
+            id="mqs-cgv-checkbox"
+            class="mqs-cgv-checkbox"
+            ${state.cgvAccepted ? 'checked' : ''}
+          />
+          <span class="mqs-cgv-text">
+            J'ai lu et j'accepte les
+            <a href="${cgvUrl}" target="_blank" rel="noopener" class="mqs-cgv-link">${escapeHtml(cgvLabel)}</a>.
+          </span>
+        </label>
+      </div>
+
       <div class="mqs-modal-footer mqs-footer-stepc">
         <button class="mqs-btn-back" type="button" id="mqs-back-btn">← Retour</button>
         <button class="mqs-btn-continue" type="button" id="mqs-submit-btn" ${submitDisabled}>
@@ -363,7 +398,7 @@
       </div>
 
       <p class="mqs-trust">
-        🔒 Paiement sécurisé Stripe · TVA incluse · Annulable selon CGV
+        🔒 Paiement sécurisé Stripe · TVA incluse · Conformité RGPD
       </p>
     `;
   }
@@ -425,19 +460,33 @@
 
     if (state.step === 'C') {
       m.querySelector('#mqs-back-btn')?.addEventListener('click', () => goToStep('B'));
+
+      // Helper : recompute enable/disable du bouton "Procéder au paiement"
+      // (utilisé à la fois par l'event email et par l'event CGV checkbox).
+      const refreshSubmitState = () => {
+        const btn = m.querySelector('#mqs-submit-btn');
+        if (!btn) return;
+        const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email);
+        btn.disabled = !emailOk || !state.cgvAccepted || state.submitting;
+      };
+
       const emailInput = m.querySelector('#mqs-email-input');
       if (emailInput) {
         emailInput.addEventListener('input', () => {
           state.email = emailInput.value;
           // Ne pas re-render à chaque keystroke (on garde le focus + cursor)
-          // Juste activer/désactiver le bouton via class
-          const btn = m.querySelector('#mqs-submit-btn');
-          if (btn) {
-            const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email);
-            btn.disabled = !ok || state.submitting;
-          }
+          refreshSubmitState();
         });
       }
+
+      const cgvCheckbox = m.querySelector('#mqs-cgv-checkbox');
+      if (cgvCheckbox) {
+        cgvCheckbox.addEventListener('change', () => {
+          state.cgvAccepted = cgvCheckbox.checked;
+          refreshSubmitState();
+        });
+      }
+
       m.querySelector('#mqs-submit-btn')?.addEventListener('click', onSubmitCheckout);
     }
 
@@ -464,6 +513,9 @@
     state.customError = null;
     state.loading = true;
     state.suggestions = [];
+    // Si l'utilisateur revient en arrière et change de plan, l'acceptation des CGV
+    // précédentes ne s'applique plus (chaque plan a un contrat distinct).
+    state.cgvAccepted = false;
     renderModal();
 
     if (!state.salonSlug) state.salonSlug = getSlugFromUrl();
@@ -476,11 +528,17 @@
 
     // Étape 1 : preview INSTANTANÉ (juste les noms, pas de check OVH)
     //          → permet d'afficher les domaines avec un spinner par ligne
+    //          + pré-remplir l'email du salon (scrappé du CSV) si dispo
     try {
       const preview = await fetch(`/api/domain/suggestions-preview/${encodeURIComponent(state.salonSlug)}`);
       if (preview.ok) {
         const data = await preview.json();
         state.suggestions = data.suggestions || [];
+        // Pré-remplit l'email seulement si l'utilisateur n'a pas déjà tapé qqch.
+        // (évite d'écraser une saisie en cours s'il revient en arrière depuis Step C).
+        if (!state.email && data.salonEmail) {
+          state.email = data.salonEmail;
+        }
         // available reste null → frontend affichera spinner
         renderModal();
       }
@@ -581,6 +639,7 @@
   async function onSubmitCheckout() {
     if (state.submitting) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email)) return;
+    if (!state.cgvAccepted) return;
     state.submitting = true;
     renderModal();
 
@@ -593,6 +652,8 @@
           plan: state.selectedPlan,
           hostname: state.selectedHostname,
           email: state.email,
+          cgv_accepted: true,
+          cgv_version: CGV_VERSION,
         }),
       });
       const data = await res.json();
@@ -633,6 +694,7 @@
     state.customError = null;
     state.loading = false;
     state.email = '';
+    state.cgvAccepted = false;
     state.submitting = false;
     state.salonSlug = getSlugFromUrl();
 

@@ -203,7 +203,7 @@ async function runProvisioning(job, params) {
  * Idempotent : peut être rappelé sans souci (INSERT OR REPLACE côté Falkenstein).
  * En DRY_RUN : skip silencieusement si pas configuré.
  */
-async function syncSalonToFalkenstein(slug) {
+export async function syncSalonToFalkenstein(slug) {
   const FALKENSTEIN_URL = process.env.FALKENSTEIN_BASE_URL || 'https://customers.monsitehq.com';
   const SYNC_TOKEN = process.env.SYNC_BEARER_TOKEN;
   if (!SYNC_TOKEN) {

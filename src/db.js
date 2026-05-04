@@ -104,6 +104,20 @@ export function initSchema() {
   if (!cols.includes('signed_up_at')) db.exec("ALTER TABLE salons ADD COLUMN signed_up_at TEXT");
   if (!cols.includes('cancelled_at')) db.exec("ALTER TABLE salons ADD COLUMN cancelled_at TEXT");
 
+  // === Acceptation des CGV (preuve horodatée — exigence légale FR/RGPD) ===
+  // cgv_accepted_at : ISO datetime UTC de la coche utilisateur
+  // cgv_version     : version textuelle du contrat accepté (ex: '1.0')
+  // cgv_accepted_ip : IP du client au moment de l'acceptation (preuve forensique)
+  if (!cols.includes('cgv_accepted_at')) db.exec("ALTER TABLE salons ADD COLUMN cgv_accepted_at TEXT");
+  if (!cols.includes('cgv_version')) db.exec("ALTER TABLE salons ADD COLUMN cgv_version TEXT");
+  if (!cols.includes('cgv_accepted_ip')) db.exec("ALTER TABLE salons ADD COLUMN cgv_accepted_ip TEXT");
+
+  // === Suspension automatique pour défaut de paiement / annulation ===
+  // suspended_at  : ISO datetime UTC où on a basculé en mode suspendu
+  // suspended_reason : 'payment_failed' | 'cancelled' | 'manual' | null
+  if (!cols.includes('suspended_at')) db.exec("ALTER TABLE salons ADD COLUMN suspended_at TEXT");
+  if (!cols.includes('suspended_reason')) db.exec("ALTER TABLE salons ADD COLUMN suspended_reason TEXT");
+
   // === Domain suggestions (pré-générées par GPT, sans extension TLD) ===
   // Format JSON : [{"name":"salonjean","rank":1}, ...] (10 entries)
   if (!cols.includes('domain_suggestions_json')) db.exec("ALTER TABLE salons ADD COLUMN domain_suggestions_json TEXT");

@@ -40,8 +40,8 @@
     div.innerHTML = `
       <div id="mqs-banner-inner">
         <div id="mqs-banner-text">
-          <p id="mqs-banner-text-line1">✨ Vous aimez ce site&nbsp;? Mettez-le en ligne en 5 minutes.</p>
-          <p id="mqs-banner-text-line2">À partir de 9,90&nbsp;€/mois (engagement 24 mois) — sans frais de mise en place, ou 29&nbsp;€/mois sans engagement.</p>
+          <p id="mqs-banner-text-line1">Vous aimez ce site&nbsp;? Mettez-le en ligne en 5 minutes.</p>
+          <p id="mqs-banner-text-line2">À partir de 9,90&nbsp;€/mois — sans frais de mise en place, ou 29&nbsp;€/mois sans engagement.</p>
         </div>
         <button id="mqs-banner-cta" type="button">Choisir mon offre →</button>
         <button id="mqs-banner-close" type="button" aria-label="Fermer">

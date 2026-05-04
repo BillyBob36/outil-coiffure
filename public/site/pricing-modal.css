@@ -741,9 +741,53 @@
 }
 
 .mqs-email-block {
-    margin-bottom: 18px;
+    margin-bottom: 14px;
 }
 
 .mqs-email-input {
     width: 100%;
+}
+
+/* === CGV checkbox block === */
+.mqs-cgv-block {
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    background: #fafafa;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+}
+
+.mqs-cgv-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.mqs-cgv-checkbox {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin: 1px 0 0 0;
+    cursor: pointer;
+    accent-color: #0a0a0a;
+}
+
+.mqs-cgv-text {
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: #4b5563;
+    letter-spacing: -0.005em;
+}
+
+.mqs-cgv-link {
+    color: #0a0a0a;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: 500;
+}
+
+.mqs-cgv-link:hover {
+    color: #1a1a1a;
 }

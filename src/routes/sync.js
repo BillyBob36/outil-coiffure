@@ -56,6 +56,8 @@ router.post('/sync/:slug', express.json({ limit: '2mb' }), requireSyncAuth, (req
     'subscription_status', 'live_hostname', 'cloudflare_hostname_id',
     'signup_session_id', 'signed_up_at', 'cancelled_at',
     'domain_suggestions_json', 'domain_suggestions_at',
+    'cgv_accepted_at', 'cgv_version', 'cgv_accepted_ip',
+    'suspended_at', 'suspended_reason',
     'created_at', 'updated_at',
   ];
 

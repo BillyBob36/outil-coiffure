@@ -88,7 +88,9 @@ function setCached(key, data) {
 // =============================================================================
 router.get('/domain/suggestions-preview/:slug', (req, res) => {
   const { slug } = req.params;
-  const row = db.prepare('SELECT slug, domain_suggestions_json FROM salons WHERE slug = ?').get(slug);
+  // On récupère aussi l'email scrappé du salon → pré-remplissage du Step C
+  // (l'utilisateur peut toujours le modifier mais ça raccourcit le funnel).
+  const row = db.prepare('SELECT slug, domain_suggestions_json, email FROM salons WHERE slug = ?').get(slug);
   if (!row) return res.status(404).json({ error: 'Salon introuvable' });
   if (!row.domain_suggestions_json) {
     return res.status(409).json({
@@ -114,7 +116,15 @@ router.get('/domain/suggestions-preview/:slug', (req, res) => {
       });
     }
   }
-  res.json({ slug, suggestions: candidates });
+  // Validation simple de l'email scrappé : on ne renvoie que si ça ressemble vraiment à un email.
+  // Évite de pré-remplir avec des trucs cassés du CSV (ex: "voir site internet", null, etc.).
+  const rawEmail = (row.email || '').trim();
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail);
+  res.json({
+    slug,
+    suggestions: candidates,
+    salonEmail: emailValid ? rawEmail : null,
+  });
 });
 
 // =============================================================================
@@ -264,9 +274,16 @@ router.post('/domain/check-custom', express.json(), async (req, res) => {
 // POST /api/checkout/create-session
 // =============================================================================
 router.post('/checkout/create-session', express.json(), async (req, res) => {
-  const { slug, plan: planKey, hostname, email } = req.body || {};
+  const { slug, plan: planKey, hostname, email, cgv_accepted, cgv_version } = req.body || {};
   if (!slug || !planKey || !hostname || !email) {
     return res.status(400).json({ error: 'slug, plan, hostname, email requis' });
+  }
+  // Acceptation CGV obligatoire (preuve horodatée de consentement contractuel)
+  if (cgv_accepted !== true) {
+    return res.status(400).json({ error: 'Vous devez accepter les CGV pour continuer.' });
+  }
+  if (!cgv_version || typeof cgv_version !== 'string') {
+    return res.status(400).json({ error: 'Version des CGV manquante.' });
   }
   const plan = PLANS[String(planKey).toUpperCase()];
   if (!plan) return res.status(400).json({ error: 'plan invalide' });
@@ -330,13 +347,20 @@ router.post('/checkout/create-session', express.json(), async (req, res) => {
     return res.status(500).json({ error: 'Erreur de création de session de paiement: ' + err.message });
   }
 
+  // Capture l'IP client (preuve d'acceptation forensique)
+  // Avec trust proxy = 1, req.ip retourne la vraie IP via X-Forwarded-For
+  const clientIp = (req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress || '').toString().split(',')[0].trim();
+
   // On stocke la signup_session_id sur le salon pour pouvoir tracker
+  // + on horodate l'acceptation des CGV (preuve : qui, quand, quelle version, quelle IP)
   db.prepare(`
     UPDATE salons
     SET signup_session_id = ?, owner_email = ?, plan = ?, live_hostname = ?,
-        commitment_months = ?, subscription_status = 'pending', updated_at = datetime('now')
+        commitment_months = ?, subscription_status = 'pending',
+        cgv_accepted_at = datetime('now'), cgv_version = ?, cgv_accepted_ip = ?,
+        updated_at = datetime('now')
     WHERE slug = ?
-  `).run(session.id, email, planKey, hostname, plan.commitmentMonths, slug);
+  `).run(session.id, email, planKey, hostname, plan.commitmentMonths, cgv_version, clientIp, slug);
 
   res.json({ url: session.url, sessionId: session.id });
 });

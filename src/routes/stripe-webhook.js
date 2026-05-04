@@ -12,9 +12,12 @@
 import express from 'express';
 import Stripe from 'stripe';
 import db from '../db.js';
-import { startProvisioning } from '../provisioning-worker.js';
+import { startProvisioning, syncSalonToFalkenstein } from '../provisioning-worker.js';
 
 const router = express.Router();
+
+// Statuts Stripe considérés "actifs" (= site doit rester accessible)
+const ACTIVE_STRIPE_STATUSES = new Set(['active', 'trialing']);
 
 router.post('/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
@@ -118,11 +121,52 @@ async function onSubscriptionUpdate(sub) {
   // sub.metadata = { slug, hostname, plan, commitment_months }
   const slug = sub.metadata?.slug;
   if (!slug) return;
-  const status = sub.status; // 'active' | 'trialing' | 'past_due' | 'canceled' | ...
-  db.prepare(`
-    UPDATE salons SET subscription_status = ?, stripe_subscription_id = ?, updated_at = datetime('now')
-    WHERE slug = ?
-  `).run(status === 'active' || status === 'trialing' ? 'active' : status, sub.id, slug);
+
+  // Statut Stripe → statut interne
+  // - active / trialing → 'active' (= live actif)
+  // - past_due / unpaid → 'past_due' (= site suspendu pour défaut de paiement)
+  // - canceled         → 'cancelled' (= annulation effective de l'abonnement)
+  // - incomplete / incomplete_expired → 'pending' (= attend paiement initial)
+  const stripeStatus = sub.status;
+  const internalStatus = ACTIVE_STRIPE_STATUSES.has(stripeStatus) ? 'active' : stripeStatus;
+
+  // Track suspension : si on bascule en non-actif on horodate, sinon on clear.
+  const isActive = ACTIVE_STRIPE_STATUSES.has(stripeStatus);
+  const current = db.prepare('SELECT subscription_status, suspended_at FROM salons WHERE slug = ?').get(slug);
+  const wasActive = current && (current.subscription_status === 'active' || current.subscription_status === 'live' || current.subscription_status === 'trialing');
+
+  if (isActive) {
+    // Réactivation : on clear la suspension
+    db.prepare(`
+      UPDATE salons SET subscription_status = ?, stripe_subscription_id = ?,
+          suspended_at = NULL, suspended_reason = NULL,
+          updated_at = datetime('now')
+      WHERE slug = ?
+    `).run(internalStatus, sub.id, slug);
+    if (!wasActive) {
+      console.log(`[stripe-webhook] ${slug} REACTIVATED (status=${stripeStatus})`);
+    }
+  } else {
+    // Suspension : on horodate uniquement si on n'avait pas déjà suspended_at
+    const reason = stripeStatus === 'canceled' ? 'cancelled'
+                 : (stripeStatus === 'past_due' || stripeStatus === 'unpaid') ? 'payment_failed'
+                 : 'inactive';
+    db.prepare(`
+      UPDATE salons SET subscription_status = ?, stripe_subscription_id = ?,
+          suspended_at = COALESCE(suspended_at, datetime('now')),
+          suspended_reason = COALESCE(suspended_reason, ?),
+          updated_at = datetime('now')
+      WHERE slug = ?
+    `).run(internalStatus, sub.id, reason, slug);
+    if (wasActive) {
+      console.log(`[stripe-webhook] ${slug} SUSPENDED (status=${stripeStatus}, reason=${reason})`);
+    }
+  }
+
+  // Propage vers Falkenstein pour que le site se mette à jour (suspended.html ou redev. live)
+  await syncSalonToFalkenstein(slug).catch(err => {
+    console.error(`[stripe-webhook] ${slug} sync Falkenstein failed:`, err.message);
+  });
 }
 
 async function onSubscriptionDeleted(sub) {
@@ -130,19 +174,43 @@ async function onSubscriptionDeleted(sub) {
   if (!slug) return;
   db.prepare(`
     UPDATE salons
-    SET subscription_status = 'cancelled', cancelled_at = datetime('now'), updated_at = datetime('now')
+    SET subscription_status = 'cancelled',
+        cancelled_at = datetime('now'),
+        suspended_at = COALESCE(suspended_at, datetime('now')),
+        suspended_reason = COALESCE(suspended_reason, 'cancelled'),
+        updated_at = datetime('now')
     WHERE slug = ?
   `).run(slug);
+  console.log(`[stripe-webhook] ${slug} CANCELLED (subscription deleted)`);
+
+  // Propage vers Falkenstein
+  await syncSalonToFalkenstein(slug).catch(err => {
+    console.error(`[stripe-webhook] ${slug} sync Falkenstein failed:`, err.message);
+  });
 }
 
 async function onPaymentFailed(invoice) {
-  // invoice.subscription_details?.metadata may have slug
+  // invoice.subscription est le subscription_id; on remonte au salon par cette clé
   const subId = invoice.subscription;
   if (!subId) return;
+  const row = db.prepare('SELECT slug FROM salons WHERE stripe_subscription_id = ?').get(subId);
+  if (!row) {
+    console.warn('[stripe-webhook] payment_failed pour subscription inconnu:', subId);
+    return;
+  }
   db.prepare(`
-    UPDATE salons SET subscription_status = 'past_due', updated_at = datetime('now')
+    UPDATE salons SET subscription_status = 'past_due',
+        suspended_at = COALESCE(suspended_at, datetime('now')),
+        suspended_reason = COALESCE(suspended_reason, 'payment_failed'),
+        updated_at = datetime('now')
     WHERE stripe_subscription_id = ?
   `).run(subId);
+  console.log(`[stripe-webhook] ${row.slug} PAYMENT_FAILED → suspended`);
+
+  // Propage vers Falkenstein
+  await syncSalonToFalkenstein(row.slug).catch(err => {
+    console.error(`[stripe-webhook] ${row.slug} sync Falkenstein failed:`, err.message);
+  });
 }
 
 export default router;

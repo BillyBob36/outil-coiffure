@@ -39,6 +39,7 @@ const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR || join(__dirname, 'public/s
 // Fallback : à côté de SCREENSHOTS_DIR (= sur le volume persistant en prod).
 const UPLOADS_DIR = process.env.UPLOADS_DIR
   || join(process.env.SCREENSHOTS_DIR ? dirname(process.env.SCREENSHOTS_DIR) : join(__dirname, 'data'), 'uploads');
+const SITE_DIR = join(__dirname, 'public/site');
 
 const ADMIN_BASE_URL = process.env.ADMIN_BASE_URL || '';
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';
@@ -84,6 +85,90 @@ app.use(session({
 }));
 
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now(), mode: TENANT_ONLY ? 'tenant' : 'tools' }));
+
+// =============================================================================
+// SUSPENSION GATE (Falkenstein only)
+// =============================================================================
+// Si un salon a un subscription_status qui n'est pas dans { live, active }
+// (= défaut de paiement, annulation, suspension manuelle), on intercepte les
+// routes publiques (preview + admin coiffeur) et on renvoie suspended.html.
+// Les données restent en base — réactivation transparente quand le webhook
+// customer.subscription.updated repasse en active (cf. stripe-webhook.js).
+//
+// Statuts considérés "actifs" :
+//   - 'live'                       → site provisionné et facturé
+//   - 'active'                     → abonnement Stripe actif
+//   - 'trialing'                   → période d'essai (devrait pas arriver mais safe)
+// Tous les autres (past_due, unpaid, canceled, incomplete, suspended, ...) → page 'site suspendu'.
+// =============================================================================
+const ACTIVE_STATUSES = new Set(['live', 'active', 'trialing']);
+
+function lookupSalonByHost(req) {
+  // Ordre de résolution :
+  //   1. live_hostname EXACT match (ex: salon-jean.fr)
+  //   2. fallback : si pas trouvé, on retourne null → 404 ailleurs
+  try {
+    const host = (req.hostname || '').toLowerCase();
+    if (!host) return null;
+    return db.prepare(
+      'SELECT slug, subscription_status, suspended_at, suspended_reason, live_hostname FROM salons WHERE live_hostname = ?'
+    ).get(host);
+  } catch {
+    return null;
+  }
+}
+
+function lookupSalonBySlug(slug) {
+  try {
+    return db.prepare(
+      'SELECT slug, subscription_status, suspended_at, suspended_reason, live_hostname FROM salons WHERE slug = ?'
+    ).get(slug);
+  } catch {
+    return null;
+  }
+}
+
+function isSuspended(salon) {
+  if (!salon) return false;
+  return !ACTIVE_STATUSES.has(salon.subscription_status || '');
+}
+
+function serveSuspendedPage(res) {
+  // 402 Payment Required (sémantiquement adapté au défaut de paiement)
+  return res.status(402).sendFile(join(SITE_DIR, 'legal', 'suspended.html'));
+}
+
+// Middleware qui intercepte tout sur Falkenstein si le salon hôte est suspendu.
+// On laisse passer :
+//   - /legal/*    → page suspended.html + CGV servies en lecture publique
+//   - /_assets/*  → CSS/JS pour rendre la page suspendue
+//   - /health     → monitoring
+if (TENANT_ONLY) {
+  app.use((req, res, next) => {
+    // Whitelist : on ne bloque jamais ces routes
+    if (req.path.startsWith('/legal/')) return next();
+    if (req.path.startsWith('/_assets/')) return next();
+    if (req.path === '/health') return next();
+    if (req.path.startsWith('/screenshots/')) return next();
+    if (req.path.startsWith('/uploads/')) return next();
+    // /api/sync : auth bearer-protected, garde toujours actif (sinon Helsinki ne peut plus pousser de réactivation)
+    if (req.path.startsWith('/api/sync')) return next();
+
+    // Lookup par hostname custom
+    const salon = lookupSalonByHost(req);
+    if (salon && isSuspended(salon)) return serveSuspendedPage(res);
+
+    // Lookup par slug pour les routes /preview/:slug et /admin/:slug
+    const m = req.path.match(/^\/(preview|admin)\/([^/]+)/);
+    if (m) {
+      const slug = m[2];
+      const sBySlug = lookupSalonBySlug(slug);
+      if (sBySlug && isSuspended(sBySlug)) return serveSuspendedPage(res);
+    }
+
+    next();
+  });
+}
 
 // Stripe webhook : uniquement sur Helsinki (la signup vit là)
 if (!TENANT_ONLY) {
@@ -133,6 +218,10 @@ app.use((req, res, next) => {
 // Routes always available regardless of host
 app.use('/screenshots', express.static(SCREENSHOTS_DIR, { maxAge: '1h' }));
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '1h' }));
+// Pages légales (CGV par plan + page de site suspendu) — accessibles publiquement
+// sur les deux hôtes (Helsinki + Falkenstein) pour qu'on puisse linker /legal/cgv-2y.html
+// depuis la modale pricing ET les afficher sur les sites coiffeurs suspendus.
+app.use('/legal', express.static(join(SITE_DIR, 'legal'), { maxAge: '1h' }));
 app.use('/api', apiRouter);
 app.use('/api', editRouter); // expose /api/edit/:slug
 
@@ -150,7 +239,7 @@ const RESERVED_ADMIN_PATHS = new Set([
 ]);
 
 const RESERVED_PATHS = new Set(['favicon.ico', 'robots.txt', 'sitemap.xml']);
-const SITE_DIR = join(__dirname, 'public/site');
+// SITE_DIR is hoisted near the top of this file so the suspension gate (TENANT_ONLY) can use it before route declarations.
 
 // Edit page assets (cropper.js etc.)
 app.use('/edit-app', express.static(join(__dirname, 'public/edit')));
