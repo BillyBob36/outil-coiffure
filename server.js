@@ -220,6 +220,14 @@ app.use((req, res, next) => {
 // Routes always available regardless of host
 app.use('/screenshots', express.static(SCREENSHOTS_DIR, { maxAge: '1h' }));
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '1h' }));
+// Normalisation : /legal/privacy.html/  →  redirige 301 vers /legal/privacy.html
+// (sécurise les liens partagés ou collés avec un slash final, par ex. dans Stripe).
+app.use('/legal', (req, res, next) => {
+  if (/\.html\/$/.test(req.path)) {
+    return res.redirect(301, req.path.slice(0, -1) + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''));
+  }
+  next();
+});
 // Pages légales (CGV par plan + page de site suspendu) — accessibles publiquement
 // sur les deux hôtes (Helsinki + Falkenstein) pour qu'on puisse linker /legal/cgv-2y.html
 // depuis la modale pricing ET les afficher sur les sites coiffeurs suspendus.
