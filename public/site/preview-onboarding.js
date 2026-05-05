@@ -265,10 +265,29 @@
     // Capture early : si ?token=xxx dans l'URL, on le stocke en sessionStorage
     const slug = getSlugFromUrl();
     if (slug) getEditToken(slug);
-    injectEditButton();
-    // Visite rejouée à chaque chargement, SAUF si on arrive depuis l'admin
-    if (!arrivingFromAdmin()) {
-      setTimeout(start, 800);
+
+    // Sur les sites coiffeurs LIVE (custom hostname / Falkenstein), on
+    // n'affiche le bouton flottant "Modifier mon site" QUE si le coiffeur a
+    // un token valide (sessionStorage rempli car il vient de son admin ou
+    // d'un email de récupération). Les visiteurs publics du salon ne doivent
+    // pas voir ce bouton (UX confuse + risque de redirection vers /admin).
+    const host = window.location.hostname;
+    const isDemoHost = host === 'monsitehq.com' || host === 'localhost' || host === '127.0.0.1';
+
+    if (isDemoHost) {
+      // Site demo Helsinki → comportement actuel : bouton + onboarding tour
+      injectEditButton();
+      if (!arrivingFromAdmin()) {
+        setTimeout(start, 800);
+      }
+    } else {
+      // Site live custom hostname → bouton uniquement si coiffeur authentifié
+      const hasToken = !!(slug && getEditToken(slug));
+      if (hasToken) {
+        injectEditButton();
+        // Pas d'onboarding tour sur live (le coiffeur a déjà fait le tour
+        // sur son site demo avant de payer).
+      }
     }
   }
 

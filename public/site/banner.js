@@ -30,15 +30,13 @@
     // On affiche le banner uniquement sur /preview/{slug} et /admin/{slug}
     return;
   }
-  // Sur /admin/{slug} : afficher UNIQUEMENT sur le menu d'édition d'un salon
-  // demo (= Helsinki, hostname monsitehq.com). Sur Falkenstein (customers.* ou
-  // custom hostname coiffeur), le coiffeur a déjà payé → pas de bannière de
-  // vente. (Note : sur preview, le redirect serveur se charge déjà du cas)
-  if (isAdmin) {
-    const host = window.location.hostname;
-    const isDemoHost = host === 'monsitehq.com' || host === 'localhost' || host === '127.0.0.1';
-    if (!isDemoHost) return;
-  }
+  // Bannière de vente affichée UNIQUEMENT sur les sites demo Helsinki
+  // (hostname monsitehq.com). Sur Falkenstein (customers.* ou custom hostname
+  // coiffeur), le coiffeur a déjà payé → pas de bannière "9,90 €/mois" qui
+  // s'afficherait à ses propres clients. S'applique aussi bien à /preview qu'à /admin.
+  const host = window.location.hostname;
+  const isDemoHost = host === 'monsitehq.com' || host === 'localhost' || host === '127.0.0.1';
+  if (!isDemoHost) return;
   try {
     if (localStorage.getItem('mqs-banner-permadismissed') === '1') return;
   } catch (_) { /* pas de localStorage : on continue */ }
