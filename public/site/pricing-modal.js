@@ -115,6 +115,15 @@
     if (!state.modalEl) return;
     const inner = state.modalEl.querySelector('#mqs-modal');
     if (!inner) return;
+
+    // Préserve le scroll de la liste de domaines (Step B) à travers les
+    // re-renders. Sans ça, cliquer pour sélectionner un domaine après scroll
+    // remettait l'utilisateur tout en haut de la liste — il perdait de vue
+    // le domaine qu'il venait de choisir.
+    const prevList = inner.querySelector('.mqs-domain-list');
+    const savedListScrollTop = prevList ? prevList.scrollTop : 0;
+    const wasOnStepB = !!prevList;
+
     inner.innerHTML = `
       <button id="mqs-modal-close" type="button" aria-label="Fermer">
         <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -124,6 +133,13 @@
       ${state.step === 'C' ? renderStepC() : ''}
     `;
     bindStepEvents();
+
+    // Restore scroll uniquement si on était ET qu'on reste sur Step B
+    // (transitions A→B / B→C / B→A : on veut scrollTop=0 = comportement par défaut)
+    if (wasOnStepB && state.step === 'B' && savedListScrollTop > 0) {
+      const newList = inner.querySelector('.mqs-domain-list');
+      if (newList) newList.scrollTop = savedListScrollTop;
+    }
   }
 
   // ---------- STEP A : choix du plan ----------
