@@ -337,10 +337,36 @@
    ============================================================================= */
 
 .mqs-domain-list {
+    /* Fenêtre scrollable interne : ~4 rows visibles max, scroll vertical
+       pour le reste. Évite la croissance verticale de la modale (= plus de
+       scroll global, le bouton "Continuer" reste visible sans avoir à
+       scroller la modale entière). */
+    --mqs-domain-row-h: 50px;       /* hauteur approx d'1 row (padding 14×2 + texte) */
+    --mqs-domain-list-gap: 6px;
+    max-height: calc(var(--mqs-domain-row-h) * 4 + var(--mqs-domain-list-gap) * 3);
+    overflow-y: auto;
+    overflow-x: hidden;
     margin: 0 0 14px 0;
+    padding-right: 4px;             /* léger espace pour la scrollbar custom */
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--mqs-domain-list-gap);
+    /* Scrollbar discrète (Chromium/Edge/Safari) */
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db transparent;
+}
+.mqs-domain-list::-webkit-scrollbar {
+    width: 6px;
+}
+.mqs-domain-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+.mqs-domain-list::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 999px;
+}
+.mqs-domain-list::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
 }
 
 .mqs-domain-row {
@@ -476,24 +502,6 @@
 @keyframes mqs-skeleton-pulse {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
-}
-
-/* === "Voir 4 autres" button === */
-.mqs-expand-btn {
-    background: transparent;
-    border: 0;
-    color: #4b5563;
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    padding: 10px 0 4px;
-    text-align: center;
-    transition: color 0.15s ease;
-    width: 100%;
-}
-
-.mqs-expand-btn:hover {
-    color: #0a0a0a;
 }
 
 /* === Divider "ou" === */

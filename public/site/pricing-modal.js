@@ -72,7 +72,6 @@
     selectedHostname: null,   // ex 'salonjean.fr'
     selectedHostnameInfo: null, // { hostname, priceEurTtc, isIncluded, supplementEurTtc }
     suggestions: [],          // resultats /api/domain/suggestions/:slug
-    suggestionsExpanded: false,
     customResult: null,       // dernier resultat /api/domain/check-custom
     customError: null,
     loading: false,
@@ -177,15 +176,14 @@
     const plan = planByKey(state.selectedPlan);
     if (!plan) return '<p>Erreur : plan non sélectionné.</p>';
 
-    const visibleSuggestions = state.suggestionsExpanded
-      ? state.suggestions
-      : state.suggestions.slice(0, 6);
-    const hiddenCount = Math.max(0, state.suggestions.length - 6);
-
+    // Toutes les suggestions sont rendues — l'affichage est limité à 4 rows
+    // visibles via CSS (max-height + overflow-y auto), pour que la modale ne
+    // grandisse pas verticalement et reste tenable sans scroll global.
     let suggestionsHtml = '';
     if (state.loading && state.suggestions.length === 0) {
-      // Phase initiale, on n'a même pas le preview → skeleton blanc
-      suggestionsHtml = renderSkeletonRows(6);
+      // Phase initiale, on n'a même pas le preview → skeleton (4 rows pour
+      // matcher la fenêtre visible)
+      suggestionsHtml = renderSkeletonRows(4);
     } else if (state.suggestions.length === 0) {
       suggestionsHtml = `
         <p class="mqs-empty-state">
@@ -194,13 +192,8 @@
     } else {
       // On a au moins le preview (noms visibles, available=null → spinner par row)
       // OU le résultat complet (available=true/false → badge réel)
-      suggestionsHtml = visibleSuggestions.map(s => renderDomainRow(s, plan)).join('');
+      suggestionsHtml = state.suggestions.map(s => renderDomainRow(s, plan)).join('');
     }
-
-    const expandBtn = (!state.suggestionsExpanded && hiddenCount > 0)
-      ? `<button class="mqs-expand-btn" type="button" id="mqs-expand-btn">
-           ▾ Voir ${hiddenCount} autres suggestions
-         </button>` : '';
 
     const customRow = renderCustomRow(plan);
     const continueDisabled = state.selectedHostname ? '' : 'disabled';
@@ -216,7 +209,6 @@
 
       <div class="mqs-domain-list">
         ${suggestionsHtml}
-        ${expandBtn}
       </div>
 
       <div class="mqs-domain-divider">ou</div>
@@ -447,10 +439,6 @@
           }
         });
       });
-      m.querySelector('#mqs-expand-btn')?.addEventListener('click', () => {
-        state.suggestionsExpanded = true;
-        renderModal();
-      });
       m.querySelector('#mqs-custom-check-btn')?.addEventListener('click', onCustomCheck);
       m.querySelector('#mqs-custom-input')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -510,7 +498,6 @@
     state.suggestions = [];
     state.selectedHostname = null;
     state.selectedHostnameInfo = null;
-    state.suggestionsExpanded = false;
     state.customResult = null;
     state.customError = null;
     state.loading = true;
@@ -691,7 +678,6 @@
     state.selectedHostname = null;
     state.selectedHostnameInfo = null;
     state.suggestions = [];
-    state.suggestionsExpanded = false;
     state.customResult = null;
     state.customError = null;
     state.loading = false;
