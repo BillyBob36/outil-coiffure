@@ -1,11 +1,12 @@
 // Valeurs par defaut + services standards de coiffure
 // Tout est ecrasable par les overrides du coiffeur
 
-// Galerie par défaut : 9 images triées pour un layout Pinterest (masonry)
-// optimal — alternance portrait/paysage à chaque position. Les 3 portraits
-// "humains" (barbier, mariage, couleur argent) sont en positions accrocheuses
-// (1, 3, 5) car ils créent une connexion émotionnelle plus forte que les
-// images de produits/textures.
+// Galerie par défaut : 9 images triées pour rester homogène en mode "grid"
+// (vignettes carrées, défaut). L'alternance portrait/paysage et les 3 portraits
+// "humains" (barbier, mariage, couleur argent) en positions accrocheuses
+// (1, 3, 5) créent une connexion émotionnelle plus forte que les images de
+// produits/textures, et ce choix marche aussi bien en mode "masonry" (Pinterest)
+// si le coiffeur l'active dans l'admin.
 //   1. coiffeur-homme    (portrait, barbier homme)
 //   2. unsplash landscape
 //   3. cheveux-argentes  (portrait, couleur argent/violet)
@@ -149,7 +150,7 @@ export function buildDefaults(csvData) {
     },
     gallery: {
       title: 'Galerie',
-      layout: 'masonry', // 'grid' | 'masonry' — masonry = style Pinterest (default)
+      layout: 'grid', // 'grid' (vignettes carrées, défaut) | 'masonry' (style Pinterest)
       images: DEFAULT_GALLERY_IMAGES.slice(),
       visibleCount: 6
     },

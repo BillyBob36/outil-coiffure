@@ -418,7 +418,7 @@ function collectServices() {
 // ----- GALLERY -----
 function renderGallery(gallery) {
   // Layout
-  $$('input[name="gallery-layout"]').forEach(r => r.checked = (r.value === (gallery.layout || 'masonry')));
+  $$('input[name="gallery-layout"]').forEach(r => r.checked = (r.value === (gallery.layout || 'grid')));
   state.galleryImages = (gallery.images || []).slice();
   rebuildGalleryTiles();
 }
