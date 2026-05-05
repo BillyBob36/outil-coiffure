@@ -262,6 +262,16 @@
 
   function init() {
     if (!/^\/preview\//.test(window.location.pathname)) return;
+
+    // === Mode capture (Puppeteer screenshots) : skip toute l'UI d'onboarding ===
+    // Le screenshot-worker passe ?nocapture=1 à la page : pas de modale tour,
+    // pas de bouton flottant "Modifier mon site", pas de bannière. Comme ça
+    // le rendu capturé reflète le vrai site comme un visiteur lambda.
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('nocapture') || params.get('onboarding') === 'off') {
+      return;
+    }
+
     // Capture early : si ?token=xxx dans l'URL, on le stocke en sessionStorage
     const slug = getSlugFromUrl();
     if (slug) getEditToken(slug);
