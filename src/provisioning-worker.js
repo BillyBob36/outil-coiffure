@@ -265,7 +265,7 @@ async function notifyAdminOfError(slug, hostname, errorMessage) {
 async function sendSignupConfirmation(slug, hostname) {
   try {
     const row = db.prepare(`
-      SELECT slug, nom_clean, nom, owner_email, plan
+      SELECT slug, nom_clean, nom, owner_email, plan, edit_token
       FROM salons WHERE slug = ?
     `).get(slug);
     if (!row || !row.owner_email) {
@@ -278,6 +278,7 @@ async function sendSignupConfirmation(slug, hostname) {
       liveHostname: hostname,
       plan: row.plan,
       slug,
+      editToken: row.edit_token,
     });
     if (result.ok) {
       console.log(`[provisioning] ${slug} confirmation email sent → ${row.owner_email}`);

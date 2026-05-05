@@ -78,48 +78,144 @@ function escapeHtml(s) {
 
 /**
  * Email envoyé après que le site est passé LIVE (provisioning OK).
+ *
+ * IMPORTANT : l'admin URL contient le edit_token (clé privée du coiffeur).
+ * Cet email est la SEULE manière dont le coiffeur reçoit son token la première fois.
+ * Si l'email est perdu, il peut le récupérer via la page /recover (magic link).
  */
-export async function sendSignupSuccessEmail({ to, salonName, liveHostname, plan, slug }) {
-  const planLabels = { TWO_YEAR: '9,90 € TTC/mois (24 mois)', ONE_YEAR: '17,90 € TTC/mois (12 mois)', FLEX: '29 € TTC/mois (sans engagement)' };
+export async function sendSignupSuccessEmail({ to, salonName, liveHostname, plan, slug, editToken }) {
+  const planLabels = { TWO_YEAR: '9,90 € TTC/mois (engagement 24 mois)', ONE_YEAR: '17,90 € TTC/mois (engagement 12 mois)', FLEX: '29 € TTC/mois (sans engagement)' };
   const planLabel = planLabels[plan] || plan;
   const liveUrl = `https://${liveHostname}`;
-  const adminUrl = `https://monsitehq.com/admin/${slug}`;
+  // Admin URL pointe directement sur le custom hostname avec le token.
+  // Helsinki redirige automatiquement /admin/{slug} → custom hostname,
+  // mais on évite le hop intermédiaire en linkant directement.
+  const adminUrl = editToken
+    ? `https://${liveHostname}/admin/${encodeURIComponent(slug)}?token=${encodeURIComponent(editToken)}`
+    : `https://${liveHostname}/admin/${encodeURIComponent(slug)}`;
+  const recoverUrl = `https://monsitehq.com/recover`;
 
-  const subject = `${salonName} — votre site est en ligne sur ${liveHostname} 🎉`;
+  const subject = `${salonName} — votre site est en ligne sur ${liveHostname}`;
 
   const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 30px; color: #1a1a1a;">
+<html lang="fr"><head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 30px; color: #1a1a1a; background: #ffffff;">
   <h1 style="font-size: 24px; margin: 0 0 16px;">Bonjour ${escapeHtml(salonName)},</h1>
   <p style="font-size: 16px; line-height: 1.5; color: #4b5563;">
-    Votre site est maintenant <strong>en ligne</strong> à l'adresse :
+    Votre site est maintenant <strong>en ligne</strong>. Bienvenue sur MONSITEHQ.
   </p>
-  <p style="margin: 24px 0; text-align: center;">
-    <a href="${liveUrl}" style="display: inline-block; background: #0a0a0a; color: white; padding: 12px 28px; text-decoration: none; border-radius: 999px; font-weight: 600;">Voir mon site →</a>
-  </p>
-  <p style="font-size: 14px; color: #6b7280;">
-    URL : <a href="${liveUrl}" style="color: #0a0a0a;">${escapeHtml(liveHostname)}</a><br>
+
+  <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 24px 0;">
+    <p style="margin: 0 0 8px; font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">L'adresse de votre site</p>
+    <p style="margin: 0 0 16px; font-size: 18px; font-weight: 600;">
+      <a href="${liveUrl}" style="color: #0a0a0a; text-decoration: none;">${escapeHtml(liveHostname)}</a>
+    </p>
+    <a href="${liveUrl}" style="display: inline-block; background: #0a0a0a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 14px;">Voir mon site →</a>
+  </div>
+
+  <div style="background: #fff7e6; border-left: 4px solid #c9a96e; border-radius: 0 8px 8px 0; padding: 18px 20px; margin: 24px 0;">
+    <p style="margin: 0 0 8px; font-size: 13px; color: #92400e; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Modifier votre site</p>
+    <p style="margin: 0 0 12px; font-size: 14px; color: #4b5563; line-height: 1.5;">
+      Cliquez sur le bouton ci-dessous pour accéder à votre espace de modification (textes, photos, prestations, horaires…).
+    </p>
+    <a href="${adminUrl}" style="display: inline-block; background: #0a0a0a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 14px;">Modifier mon site →</a>
+    <p style="margin: 12px 0 0; font-size: 12px; color: #92400e;">
+      <strong>Important :</strong> ce lien contient votre clé d'accès personnelle. Conservez cet email.
+    </p>
+  </div>
+
+  <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">
+    <strong>Récapitulatif :</strong><br>
     Plan : ${escapeHtml(planLabel)}<br>
-    Modifier le contenu : <a href="${adminUrl}" style="color: #0a0a0a;">Espace admin</a>
+    Domaine : <a href="${liveUrl}" style="color: #0a0a0a;">${escapeHtml(liveHostname)}</a> (offert pour 1 an)<br>
+    Hébergement : Hetzner (Allemagne, UE)
   </p>
-  <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 32px 0;">
-  <p style="font-size: 13px; color: #9ca3af; line-height: 1.5;">
-    Une question ? Répondez à cet email.<br>
-    L'équipe MonQuickSite
+
+  <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 28px 0;">
+
+  <p style="font-size: 13px; color: #6b7280; line-height: 1.5;">
+    <strong>Vous avez perdu cet email ?</strong><br>
+    Pas de panique. Allez sur <a href="${recoverUrl}" style="color: #0a0a0a;">${recoverUrl}</a>, entrez l'adresse e-mail avec laquelle vous vous êtes inscrit, vous recevrez un nouveau lien.
+  </p>
+
+  <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 28px 0;">
+
+  <p style="font-size: 12px; color: #9ca3af; line-height: 1.5; margin: 0;">
+    Une question ? Répondez à cet email ou écrivez à <a href="mailto:contact@monsitehq.com" style="color: #6b7280;">contact@monsitehq.com</a>.<br>
+    MONSITEHQ — KAISER CO · KAISER JOHANN, Entrepreneur individuel · SIREN 791 069 610 · 61 rue de Lyon, 75012 Paris<br>
+    <a href="https://monsitehq.com/legal/cgv.html" style="color: #9ca3af;">CGV</a> ·
+    <a href="https://monsitehq.com/legal/mentions-legales.html" style="color: #9ca3af;">Mentions légales</a> ·
+    <a href="https://monsitehq.com/legal/privacy.html" style="color: #9ca3af;">Confidentialité</a>
   </p>
 </body></html>`;
 
   const text = `Bonjour ${salonName},
 
-Votre site est maintenant en ligne à l'adresse :
-  ${liveUrl}
+Votre site est maintenant en ligne. Bienvenue sur MONSITEHQ.
 
+ADRESSE DE VOTRE SITE
+${liveUrl}
+
+MODIFIER VOTRE SITE (lien personnel — conservez cet email)
+${adminUrl}
+
+RÉCAPITULATIF
 Plan : ${planLabel}
-Modifier le contenu : ${adminUrl}
+Domaine : ${liveHostname} (offert pour 1 an)
+Hébergement : Hetzner (Allemagne, UE)
 
-Une question ? Répondez à cet email.
-L'équipe MonQuickSite`;
+VOUS AVEZ PERDU CET EMAIL ?
+Allez sur ${recoverUrl}, entrez votre adresse e-mail d'inscription, vous recevrez un nouveau lien.
 
+Une question ? Répondez à cet email ou écrivez à contact@monsitehq.com
+
+MONSITEHQ — KAISER CO · KAISER JOHANN, Entrepreneur individuel · SIREN 791 069 610
+CGV : https://monsitehq.com/legal/cgv.html
+Mentions légales : https://monsitehq.com/legal/mentions-legales.html
+Confidentialité : https://monsitehq.com/legal/privacy.html`;
+
+  return sendRaw({ to, subject, html, text });
+}
+
+/**
+ * Email magic-link de récupération d'accès admin (déclenché par /recover).
+ * Le coiffeur entre son email sur monsitehq.com/recover, on lui envoie un
+ * lien valable 10 minutes vers son admin avec son token.
+ */
+export async function sendRecoveryEmail({ to, salonName, recoverConfirmUrl }) {
+  const subject = `Votre lien d'accès à MONSITEHQ`;
+  const html = `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 30px; color: #1a1a1a; background: #ffffff;">
+  <h1 style="font-size: 22px; margin: 0 0 16px;">Bonjour${salonName ? ' ' + escapeHtml(salonName) : ''},</h1>
+  <p style="font-size: 15px; line-height: 1.5; color: #4b5563;">
+    Vous avez demandé à récupérer l'accès à l'espace de modification de votre site MONSITEHQ.
+    Cliquez sur le bouton ci-dessous pour vous y connecter automatiquement&nbsp;:
+  </p>
+  <p style="margin: 28px 0; text-align: center;">
+    <a href="${recoverConfirmUrl}" style="display: inline-block; background: #0a0a0a; color: white; padding: 14px 32px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 15px;">Accéder à mon espace →</a>
+  </p>
+  <p style="font-size: 13px; color: #6b7280; line-height: 1.5;">
+    Ce lien est valable <strong>10 minutes</strong> et ne peut être utilisé qu'une seule fois.
+    Si vous n'avez pas demandé cet email, vous pouvez l'ignorer en toute sécurité.
+  </p>
+  <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 28px 0;">
+  <p style="font-size: 12px; color: #9ca3af; line-height: 1.5; margin: 0;">
+    MONSITEHQ — KAISER CO · contact@monsitehq.com<br>
+    <a href="https://monsitehq.com/legal/privacy.html" style="color: #9ca3af;">Politique de confidentialité</a>
+  </p>
+</body></html>`;
+  const text = `Bonjour${salonName ? ' ' + salonName : ''},
+
+Vous avez demandé à récupérer l'accès à l'espace de modification de votre site MONSITEHQ.
+Cliquez sur le lien ci-dessous pour vous y connecter automatiquement :
+
+${recoverConfirmUrl}
+
+Ce lien est valable 10 minutes et ne peut être utilisé qu'une seule fois.
+Si vous n'avez pas demandé cet email, ignorez-le.
+
+MONSITEHQ — contact@monsitehq.com`;
   return sendRaw({ to, subject, html, text });
 }
 
@@ -146,4 +242,5 @@ export default {
   isEnabled,
   sendSignupSuccessEmail,
   sendProvisioningErrorEmail,
+  sendRecoveryEmail,
 };

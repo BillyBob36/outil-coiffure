@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Récupérer l'accès à mon site — MONSITEHQ</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/legal/legal.css">
+<style>
+  body { background: #f9f9f9; }
+  main { max-width: 480px; padding: 40px 48px; }
+  .recover-form {
+    display: flex; flex-direction: column; gap: 16px; margin: 24px 0 0;
+  }
+  .recover-form label {
+    font-size: 0.85rem; color: #4b5563; font-weight: 500;
+  }
+  .recover-form input[type="email"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: #0a0a0a;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .recover-form input[type="email"]:focus {
+    outline: 0; border-color: #0a0a0a;
+  }
+  .recover-form button {
+    background: #0a0a0a;
+    color: white;
+    border: 0;
+    padding: 14px 28px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.15s ease, opacity 0.15s ease;
+  }
+  .recover-form button:hover:not(:disabled) { background: #1a1a1a; }
+  .recover-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .recover-message {
+    margin-top: 20px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .recover-message.success {
+    background: #dcfce7; color: #14532d; border: 1px solid #86efac;
+  }
+  .recover-message.error {
+    background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5;
+  }
+  .recover-help {
+    font-size: 0.85rem;
+    color: #6b7280;
+    line-height: 1.5;
+    margin: 24px 0 0;
+    padding: 16px;
+    background: #fafafa;
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+<main>
+<header class="legal-header">
+  <h1>Récupérer l'accès à mon site</h1>
+  <p style="margin: 4px 0 0; color: #6b7280; font-size: 0.95rem;">Vous avez perdu le lien d'accès à votre espace de modification ? Pas de panique.</p>
+</header>
+
+<p>Entrez l'adresse e-mail avec laquelle vous vous êtes inscrit. Nous vous enverrons un lien de connexion <strong>valable 10 minutes</strong>.</p>
+
+<form class="recover-form" id="recover-form">
+  <label for="recover-email">Votre adresse e-mail</label>
+  <input
+    type="email"
+    id="recover-email"
+    name="email"
+    placeholder="vous@example.com"
+    autocomplete="email"
+    required
+  />
+  <button type="submit" id="recover-submit">Recevoir mon lien d'accès →</button>
+</form>
+
+<div id="recover-message" class="recover-message" style="display:none;"></div>
+
+<p class="recover-help">
+  <strong>Comment ça marche :</strong> nous identifions votre site grâce à votre e-mail d'inscription. Si vous avez bien un site actif chez nous, vous recevrez en quelques secondes un email avec un bouton pour vous reconnecter. Le lien expire après 10 minutes pour votre sécurité.
+</p>
+<p class="recover-help" style="background: #fff7e6;">
+  <strong>Vous n'avez pas reçu d'email ?</strong> Vérifiez vos spams. Si vous ne trouvez toujours rien, contactez-nous à <a href="mailto:contact@monsitehq.com">contact@monsitehq.com</a> avec votre nom de salon et votre adresse de site.
+</p>
+
+<footer class="legal-footer">
+  <a href="/legal/cgv.html">CGV</a> ·
+  <a href="/legal/mentions-legales.html">Mentions légales</a> ·
+  <a href="/legal/privacy.html">Politique de confidentialité</a>
+</footer>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  const form = document.getElementById('recover-form');
+  const input = document.getElementById('recover-email');
+  const button = document.getElementById('recover-submit');
+  const messageEl = document.getElementById('recover-message');
+
+  function showMessage(text, type) {
+    messageEl.textContent = text;
+    messageEl.className = 'recover-message ' + (type || 'success');
+    messageEl.style.display = 'block';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = (input.value || '').trim();
+    if (!email) return;
+
+    button.disabled = true;
+    button.textContent = '...envoi en cours';
+    messageEl.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/recover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
+        showMessage(
+          data.message || 'Si cet email correspond à un compte actif, un lien de récupération vient d’être envoyé. Vérifiez votre boîte mail (et vos spams).',
+          'success'
+        );
+        // On ne réactive PAS le bouton pour éviter le spam-clic
+        button.textContent = 'Email envoyé';
+      } else {
+        showMessage(data.error || 'Une erreur est survenue. Réessayez dans quelques minutes.', 'error');
+        button.disabled = false;
+        button.textContent = 'Recevoir mon lien d’accès →';
+      }
+    } catch (err) {
+      showMessage('Erreur réseau. Vérifiez votre connexion et réessayez.', 'error');
+      button.disabled = false;
+      button.textContent = 'Recevoir mon lien d’accès →';
+    }
+  });
+})();
+</script>
+</body>
+</html>

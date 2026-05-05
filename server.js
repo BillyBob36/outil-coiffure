@@ -22,11 +22,13 @@ const TENANT_ONLY = process.env.TENANT_ONLY === '1' || process.env.TENANT_ONLY =
 let adminRouter = null;
 let checkoutRouter = null;
 let stripeWebhookRouter = null;
+let recoverRouter = null;
 let syncRouter = null;
 if (!TENANT_ONLY) {
   ({ default: adminRouter } = await import('./src/routes/admin.js'));
   ({ default: checkoutRouter } = await import('./src/routes/checkout.js'));
   ({ default: stripeWebhookRouter } = await import('./src/routes/stripe-webhook.js'));
+  ({ default: recoverRouter } = await import('./src/routes/recover.js'));
 } else {
   ({ default: syncRouter } = await import('./src/routes/sync.js'));
 }
@@ -228,6 +230,9 @@ app.use('/api', editRouter); // expose /api/edit/:slug
 // Routes signup/checkout : uniquement sur Helsinki
 if (!TENANT_ONLY) {
   app.use('/api', checkoutRouter); // expose /api/domain/* + /api/checkout/*
+  app.use('/', recoverRouter);     // expose POST /api/recover + GET /recover/confirm
+  // Page HTML statique du formulaire de récupération (Helsinki uniquement)
+  app.get('/recover', (req, res) => res.sendFile(join(SITE_DIR, 'recover.html')));
 }
 
 const RESERVED_ADMIN_PATHS = new Set([
