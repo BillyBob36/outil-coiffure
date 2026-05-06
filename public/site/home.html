@@ -1,28 +1,374 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <title>Coiffure — landings preview</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
-    <style>
-        body { margin: 0; font-family: 'Montserrat', sans-serif; background: #f8f5f0; color: #1a1a1a; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .box { text-align: center; max-width: 600px; }
-        h1 { font-family: 'Cormorant Garamond', serif; font-size: 3rem; margin: 0 0 24px; color: #c9a96e; }
-        p { color: #6b6b6b; line-height: 1.7; }
-        .legal-links { margin-top: 32px; font-size: 0.82rem; color: #9ca3af; }
-        .legal-links a { color: #6b7280; text-decoration: underline; text-underline-offset: 2px; margin: 0 6px; }
-        .legal-links a:hover { color: #1a1a1a; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MONSITEHQ — Site web pour coiffeur, en ligne en 5 minutes</title>
+  <meta name="description" content="Nous créons gratuitement le site web professionnel des coiffeurs de France. Le vôtre est peut-être déjà prêt. À partir de 9,90 € HT/mois, domaine offert.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://monsitehq.com/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="MONSITEHQ">
+  <meta property="og:url" content="https://monsitehq.com/">
+  <meta property="og:title" content="MONSITEHQ — Site web pour coiffeur, en ligne en 5 minutes">
+  <meta property="og:description" content="Nous créons gratuitement le site web professionnel des coiffeurs de France. Le vôtre est peut-être déjà prêt.">
+  <meta property="og:image" content="https://monsitehq.com/_assets/landing/hero-bg.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- Performance -->
+  <link rel="preconnect" href="https://rsms.me">
+  <link rel="preload" as="image" href="/_assets/landing/hero-bg.png" fetchpriority="high">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/_assets/home.css?v=1">
 </head>
 <body>
-    <div class="box">
-        <h1>Espace Coiffure</h1>
-        <p>Cette page est un service de previews personnalisées pour des salons de coiffure. Pour accéder à une page, utilisez l'URL spécifique du salon.</p>
-        <p class="legal-links">
-            <a href="/legal/cgv.html">CGV</a> ·
-            <a href="/legal/mentions-legales.html">Mentions légales</a> ·
-            <a href="/legal/privacy.html">Politique de confidentialité</a>
-        </p>
+
+<!-- ====================== NAVBAR ====================== -->
+<nav class="hp-nav">
+  <div class="hp-nav-inner">
+    <a class="hp-logo" href="/">
+      <span class="hp-logo-mark"></span>
+      <span class="hp-logo-text">MONSITEHQ</span>
+    </a>
+    <div class="hp-nav-right">
+      <a href="#tarifs" class="hp-nav-link">Tarifs</a>
+      <button class="hp-btn hp-btn-primary" id="hp-cta-nav" type="button">Voir si mon salon est couvert</button>
     </div>
+  </div>
+</nav>
+
+<!-- ====================== HERO ====================== -->
+<header class="hp-hero">
+  <div class="hp-hero-bg" aria-hidden="true"></div>
+  <div class="hp-hero-content">
+    <span class="hp-eyebrow">Sites web pour coiffeurs · France</span>
+    <h1 class="hp-h1">
+      On a déjà créé<br>
+      <em>votre site web.</em>
+    </h1>
+    <p class="hp-sub">
+      MONSITEHQ couvre actuellement les salons de coiffure de toute la France
+      avec un site web professionnel pré-rempli, prêt à être mis en ligne
+      en 5 minutes. Le vôtre est peut-être déjà prêt — vérifiez.
+    </p>
+    <div class="hp-hero-cta">
+      <button class="hp-btn hp-btn-primary hp-btn-lg" id="hp-cta-hero" type="button">
+        Voir si mon salon est couvert →
+      </button>
+      <p class="hp-hero-trust">
+        🔒 Hébergé en Europe · 🇫🇷 Support français · 💳 Annulable
+      </p>
+    </div>
+  </div>
+</header>
+
+<!-- ====================== COVERAGE ====================== -->
+<section class="hp-coverage">
+  <div class="hp-container">
+    <div class="hp-coverage-grid">
+      <div class="hp-coverage-text">
+        <span class="hp-eyebrow">Couverture nationale</span>
+        <h2 class="hp-h2">Plus de 11&nbsp;000 salons couverts.</h2>
+        <p class="hp-p">
+          De Paris à Marseille, de Strasbourg à Bordeaux — nous générons en
+          continu des sites web démos pour les salons de coiffure référencés
+          en France. Vérifiez si le vôtre fait partie de la couverture.
+        </p>
+        <button class="hp-btn hp-btn-secondary" id="hp-cta-coverage" type="button">
+          Vérifier mon salon →
+        </button>
+      </div>
+      <div class="hp-coverage-img">
+        <img src="/_assets/landing/france-coverage.png" alt="Carte de France stylisée avec les villes couvertes par MONSITEHQ" loading="lazy">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== HOW IT WORKS ====================== -->
+<section class="hp-how">
+  <div class="hp-container">
+    <div class="hp-section-head">
+      <span class="hp-eyebrow">Comment ça marche</span>
+      <h2 class="hp-h2">Trois étapes, cinq minutes.</h2>
+    </div>
+    <div class="hp-how-grid">
+      <div class="hp-how-card">
+        <div class="hp-how-num">1</div>
+        <h3 class="hp-how-title">On crée votre site</h3>
+        <p class="hp-p">Nous le générons à partir des informations publiques de votre salon (Google Maps, Pages Jaunes). Pas d'effort de votre côté.</p>
+      </div>
+      <div class="hp-how-card">
+        <div class="hp-how-num">2</div>
+        <h3 class="hp-how-title">Vous le découvrez</h3>
+        <p class="hp-p">Vous recevez un email avec votre site démo, déjà rempli avec vos prestations, photos, horaires. Vous le visitez en un clic.</p>
+      </div>
+      <div class="hp-how-card">
+        <div class="hp-how-num">3</div>
+        <h3 class="hp-how-title">Vous l'activez en 5 min</h3>
+        <p class="hp-p">Modifiez les textes, ajoutez vos photos. Choisissez votre formule. Votre domaine .fr ou .com et votre site sont en ligne sous 15 minutes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== PRICING ====================== -->
+<section class="hp-pricing" id="tarifs">
+  <div class="hp-container">
+    <div class="hp-section-head">
+      <span class="hp-eyebrow">Tarifs</span>
+      <h2 class="hp-h2">Simples, transparents.</h2>
+      <p class="hp-p hp-section-sub">Tous les plans incluent : site web pro, hébergement en Europe, domaine .fr ou .com offert pendant 1 an, support en français, aucun frais de mise en place.</p>
+    </div>
+    <div class="hp-pricing-grid">
+
+      <div class="hp-plan">
+        <span class="hp-plan-eyebrow">Engagement 2 ans</span>
+        <div class="hp-plan-price">
+          <span class="hp-plan-amount">9,90 €</span>
+          <span class="hp-plan-period">HT/mois</span>
+        </div>
+        <p class="hp-plan-desc">Le meilleur tarif sur 24 mois.</p>
+        <ul class="hp-plan-feats">
+          <li>Site 100% personnalisable</li>
+          <li>Domaine .fr ou .com offert</li>
+          <li>Hébergement haute performance</li>
+        </ul>
+      </div>
+
+      <div class="hp-plan hp-plan-popular">
+        <span class="hp-plan-badge">Le plus choisi</span>
+        <span class="hp-plan-eyebrow">Engagement 1 an</span>
+        <div class="hp-plan-price">
+          <span class="hp-plan-amount">17,90 €</span>
+          <span class="hp-plan-period">HT/mois</span>
+        </div>
+        <p class="hp-plan-desc">Le bon compromis sur 12 mois.</p>
+        <ul class="hp-plan-feats">
+          <li>Site 100% personnalisable</li>
+          <li>Domaine .fr ou .com offert</li>
+          <li>Hébergement haute performance</li>
+        </ul>
+      </div>
+
+      <div class="hp-plan">
+        <span class="hp-plan-eyebrow">Sans engagement</span>
+        <div class="hp-plan-price">
+          <span class="hp-plan-amount">29 €</span>
+          <span class="hp-plan-period">HT/mois</span>
+        </div>
+        <p class="hp-plan-desc">Résiliable à tout moment.</p>
+        <ul class="hp-plan-feats">
+          <li>Site 100% personnalisable</li>
+          <li>Domaine .fr ou .com offert</li>
+          <li>Hébergement haute performance</li>
+        </ul>
+      </div>
+
+    </div>
+    <p class="hp-pricing-cta">
+      <button class="hp-btn hp-btn-primary hp-btn-lg" id="hp-cta-pricing" type="button">
+        Voir si mon salon est déjà prêt →
+      </button>
+    </p>
+    <p class="hp-pricing-fineprint">Tarifs HT. TVA 20% applicable. Offre destinée aux professionnels (B2B).</p>
+  </div>
+</section>
+
+<!-- ====================== FAQ ====================== -->
+<section class="hp-faq">
+  <div class="hp-container">
+    <div class="hp-section-head">
+      <span class="hp-eyebrow">Questions fréquentes</span>
+      <h2 class="hp-h2">Vos questions, nos réponses.</h2>
+    </div>
+    <div class="hp-faq-list">
+
+      <details class="hp-faq-item">
+        <summary>Pourquoi avez-vous créé un site pour mon salon sans m'en parler ?</summary>
+        <p>Nous générons des sites démos à partir de vos informations publiques (Google Maps, Pages Jaunes), exactement comme un annuaire le fait. Vous restez libre de l'utiliser ou non. Aucune donnée n'est utilisée tant que vous ne nous donnez pas votre accord explicite.</p>
+      </details>
+
+      <details class="hp-faq-item">
+        <summary>Combien ça coûte vraiment ?</summary>
+        <p>À partir de 9,90 € HT/mois (engagement 2 ans), 17,90 € HT/mois (engagement 1 an), ou 29 € HT/mois sans engagement. Domaine offert. Aucun frais d'installation. Tarifs définitifs, sans surprise.</p>
+      </details>
+
+      <details class="hp-faq-item">
+        <summary>Est-ce que je dois savoir coder ?</summary>
+        <p>Non. L'éditeur est conçu pour être utilisé depuis votre téléphone. Modifier un texte, ajouter une photo, c'est comme sur Facebook ou Instagram.</p>
+      </details>
+
+      <details class="hp-faq-item">
+        <summary>Et si je n'aime pas le résultat ?</summary>
+        <p>Vous pouvez visiter et tester votre site démo gratuitement avant tout paiement. Vous ne payez que si vous décidez de le mettre en ligne. Sans carte bancaire, sans engagement caché.</p>
+      </details>
+
+      <details class="hp-faq-item">
+        <summary>Comment résilier ?</summary>
+        <p>En formule sans engagement, à tout moment depuis votre espace. Pour les engagements 1 an et 2 ans, à échéance ou pour faute (impayé). Tout est détaillé dans nos <a href="/legal/cgv.html">CGV</a>.</p>
+      </details>
+
+      <details class="hp-faq-item">
+        <summary>Mes données sont-elles protégées ?</summary>
+        <p>Oui. Hébergement en Europe (Hetzner, Allemagne), conforme RGPD. Aucune donnée bancaire stockée chez nous (Stripe gère). Voir notre <a href="/legal/privacy.html">politique de confidentialité</a>.</p>
+      </details>
+
+    </div>
+  </div>
+</section>
+
+<!-- ====================== TRUST FOOTER ====================== -->
+<section class="hp-trust">
+  <div class="hp-container">
+    <div class="hp-trust-grid">
+      <div class="hp-trust-item">
+        <strong>🇪🇺 Hébergement Europe</strong>
+        <span>Hetzner, Allemagne</span>
+      </div>
+      <div class="hp-trust-item">
+        <strong>🛡️ RGPD-compliant</strong>
+        <span>Conforme loi française</span>
+      </div>
+      <div class="hp-trust-item">
+        <strong>💳 Paiement sécurisé</strong>
+        <span>Stripe, PCI-DSS</span>
+      </div>
+      <div class="hp-trust-item">
+        <strong>🇫🇷 Support français</strong>
+        <span>contact@monsitehq.com</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== FOOTER ====================== -->
+<footer class="hp-footer">
+  <div class="hp-container">
+    <div class="hp-footer-top">
+      <div class="hp-footer-brand">
+        <span class="hp-logo-mark"></span>
+        <strong>MONSITEHQ</strong>
+        <p>Sites web professionnels pour les coiffeurs de France.</p>
+      </div>
+      <div class="hp-footer-links">
+        <h4>Société</h4>
+        <a href="/legal/mentions-legales.html">Mentions légales</a>
+        <a href="/legal/cgv.html">CGV</a>
+        <a href="/legal/privacy.html">Confidentialité</a>
+      </div>
+      <div class="hp-footer-links">
+        <h4>Contact</h4>
+        <a href="mailto:contact@monsitehq.com">contact@monsitehq.com</a>
+        <a href="tel:+33749420608">+33 7 49 42 06 08</a>
+        <span>61 rue de Lyon, 75012 Paris</span>
+      </div>
+    </div>
+    <div class="hp-footer-bottom">
+      <span>© 2026 KAISER CO · KAISER JOHANN, Entrepreneur individuel · SIREN 791 069 610 · TVA FR52791069610</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ====================== MODAL : LOOKUP ====================== -->
+<div class="hp-modal" id="hp-modal" role="dialog" aria-modal="true" aria-labelledby="hp-modal-title" hidden>
+  <div class="hp-modal-card">
+    <button class="hp-modal-close" id="hp-modal-close" type="button" aria-label="Fermer">×</button>
+
+    <!-- ÉTAPE 1 — input -->
+    <div class="hp-modal-step" data-step="input">
+      <h3 class="hp-modal-title" id="hp-modal-title">Voir si votre salon est déjà couvert</h3>
+      <p class="hp-modal-sub">Collez le lien Google Maps de votre salon + votre email. Si on l'a déjà créé, on vous renvoie le lien immédiatement.</p>
+
+      <form id="hp-form" class="hp-form" novalidate>
+        <label class="hp-field">
+          <span class="hp-field-label">Lien Google Maps de votre salon</span>
+          <input
+            type="url"
+            id="hp-input-url"
+            class="hp-input"
+            placeholder="https://maps.app.goo.gl/..."
+            autocomplete="off"
+            required
+          />
+        </label>
+
+        <details class="hp-tuto">
+          <summary>📍 Comment trouver ce lien ? (1 min)</summary>
+          <div class="hp-tuto-body">
+            <ol class="hp-tuto-steps">
+              <li><strong>Ouvrez Google Maps</strong> sur votre téléphone ou ordinateur.</li>
+              <li><strong>Tapez le nom de votre salon</strong> dans la barre de recherche.</li>
+              <li><strong>Cliquez sur votre salon</strong> dans les résultats.</li>
+              <li><strong>Cliquez sur "Partager"</strong> et copiez le lien proposé.</li>
+            </ol>
+            <img src="/_assets/landing/google-maps-steps.png" alt="Illustration des 4 étapes pour récupérer le lien Google Maps" class="hp-tuto-img" loading="lazy">
+          </div>
+        </details>
+
+        <label class="hp-field">
+          <span class="hp-field-label">Votre email</span>
+          <input
+            type="email"
+            id="hp-input-email"
+            class="hp-input"
+            placeholder="vous@exemple.com"
+            autocomplete="email"
+            required
+          />
+          <span class="hp-field-help">On vous renvoie le lien démo par email aussi (au cas où).</span>
+        </label>
+
+        <div class="hp-form-error" id="hp-form-error" hidden></div>
+
+        <button type="submit" class="hp-btn hp-btn-primary hp-btn-lg hp-btn-full" id="hp-submit">
+          Rechercher mon salon
+        </button>
+
+        <p class="hp-form-fineprint">
+          En cliquant, vous acceptez notre <a href="/legal/privacy.html" target="_blank">politique de confidentialité</a>.
+        </p>
+      </form>
+    </div>
+
+    <!-- ÉTAPE 2 — loading -->
+    <div class="hp-modal-step" data-step="loading" hidden>
+      <div class="hp-spinner"></div>
+      <h3 class="hp-modal-title">On cherche votre salon…</h3>
+      <p class="hp-modal-sub">Quelques secondes.</p>
+    </div>
+
+    <!-- ÉTAPE 3a — found -->
+    <div class="hp-modal-step" data-step="found" hidden>
+      <div class="hp-success-icon">✓</div>
+      <h3 class="hp-modal-title" id="hp-found-title">Bonne nouvelle !</h3>
+      <p class="hp-modal-sub" id="hp-found-msg">Votre site démo est prêt.</p>
+      <a class="hp-btn hp-btn-primary hp-btn-lg hp-btn-full" id="hp-found-link" href="#" target="_blank" rel="noopener">
+        Visiter mon site démo →
+      </a>
+      <p class="hp-found-extra">On vous a aussi renvoyé le lien par email à l'instant.</p>
+    </div>
+
+    <!-- ÉTAPE 3b — not found -->
+    <div class="hp-modal-step" data-step="notfound" hidden>
+      <div class="hp-info-icon">⏳</div>
+      <h3 class="hp-modal-title">Votre salon arrive bientôt</h3>
+      <p class="hp-modal-sub">
+        Nous n'avons pas encore généré le site de votre salon. Pas de souci :
+        <strong>nous le créons et vous l'envoyons par email sous 48h</strong>, gratuitement.
+      </p>
+      <button class="hp-btn hp-btn-secondary hp-btn-full" id="hp-notfound-close" type="button">
+        Compris, à bientôt
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script src="/_assets/home.js?v=1"></script>
 </body>
 </html>

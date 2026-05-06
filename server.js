@@ -25,12 +25,14 @@ let adminRouter = null;
 let checkoutRouter = null;
 let stripeWebhookRouter = null;
 let recoverRouter = null;
+let landingRouter = null;
 let syncRouter = null;
 if (!TENANT_ONLY) {
   ({ default: adminRouter } = await import('./src/routes/admin.js'));
   ({ default: checkoutRouter } = await import('./src/routes/checkout.js'));
   ({ default: stripeWebhookRouter } = await import('./src/routes/stripe-webhook.js'));
   ({ default: recoverRouter } = await import('./src/routes/recover.js'));
+  ({ default: landingRouter } = await import('./src/routes/landing.js'));
 } else {
   ({ default: syncRouter } = await import('./src/routes/sync.js'));
 }
@@ -241,6 +243,7 @@ app.use('/api', editRouter); // expose /api/edit/:slug
 if (!TENANT_ONLY) {
   app.use('/api', checkoutRouter); // expose /api/domain/* + /api/checkout/*
   app.use('/', recoverRouter);     // expose POST /api/recover + GET /recover/confirm
+  app.use('/api', landingRouter);  // expose POST /api/landing/check
   // Page HTML statique du formulaire de récupération (Helsinki uniquement)
   app.get('/recover', (req, res) => res.sendFile(join(SITE_DIR, 'recover.html')));
 }

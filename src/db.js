@@ -126,6 +126,45 @@ export function initSchema() {
   // Index pour lookup O(log n) du token au moment du clic
   db.exec("CREATE INDEX IF NOT EXISTS idx_salons_recovery_token ON salons(recovery_token) WHERE recovery_token IS NOT NULL");
 
+  // === Landing page lookup (via /api/landing/check) ===
+  // Stocke chaque tentative de lookup d'un salon (= leads chauds qui ont
+  // collé leur URL Google Maps + email sur la home).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS landing_leads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL,
+      google_maps_url TEXT,
+      salon_slug TEXT,
+      found INTEGER DEFAULT 0,
+      ip TEXT,
+      user_agent TEXT,
+      email_sent INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_landing_leads_email ON landing_leads(email);
+    CREATE INDEX IF NOT EXISTS idx_landing_leads_salon ON landing_leads(salon_slug);
+  `);
+
+  // === Salons demandés mais pas encore scrappés (waitlist) ===
+  // Quand un coiffeur arrive sur la landing mais qu'on ne trouve pas son salon
+  // dans la DB, on enregistre sa demande pour scraper Google Maps et lui créer
+  // un site démo dans les 48h.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pending_demos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL,
+      google_maps_url TEXT NOT NULL,
+      ip TEXT,
+      user_agent TEXT,
+      status TEXT DEFAULT 'pending',
+      notes TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      processed_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_pending_demos_status ON pending_demos(status);
+    CREATE INDEX IF NOT EXISTS idx_pending_demos_email ON pending_demos(email);
+  `);
+
   // === Domain suggestions (pré-générées par GPT, sans extension TLD) ===
   // Format JSON : [{"name":"salonjean","rank":1}, ...] (10 entries)
   if (!cols.includes('domain_suggestions_json')) db.exec("ALTER TABLE salons ADD COLUMN domain_suggestions_json TEXT");
