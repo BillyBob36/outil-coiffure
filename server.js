@@ -9,6 +9,8 @@ import { existsSync, readFileSync } from 'fs';
 import db from './src/db.js';
 import apiRouter from './src/routes/api.js';
 import editRouter from './src/routes/edit.js';
+import { buildSalonView } from './src/defaults.js';
+import { renderSalonHtml, renderRobotsTxt, renderSitemap, isMonsiteHQHost } from './src/ssr.js';
 
 // === TENANT_ONLY mode ===
 // Sur Falkenstein (= sites coiffeurs payants) on désactive :
@@ -327,30 +329,117 @@ if (!TENANT_ONLY) {
 // Site assets (CSS, JS for the public landing)
 app.use('/_assets', express.static(SITE_DIR, { maxAge: '1d' }));
 
-// Public preview : /preview/:slug
-// Sur Helsinki, si salon LIVE → redirect vers le custom hostname (= site servi par Falkenstein).
+// Public preview : /preview/:slug — SSR pour SEO
+// Sur Helsinki : si salon LIVE → redirect 302 vers le custom hostname (Falkenstein le sert).
+//                Sinon → SSR avec noindex (= démo non payée, on protège monsitehq.com).
+// Sur Falkenstein : SSR avec index+follow (= site coiffeur payé, on veut qu'il ranke).
 app.get('/preview/:slug', (req, res) => {
   const slug = req.params.slug;
   if (RESERVED_PATHS.has(slug)) return res.status(404).sendFile(join(SITE_DIR, '404.html'));
-  if (!TENANT_ONLY) {
+
+  let salon;
+  try {
+    salon = db.prepare('SELECT * FROM salons WHERE slug = ?').get(slug);
+  } catch {
+    return res.status(500).sendFile(join(SITE_DIR, '404.html'));
+  }
+  if (!salon) return res.status(404).sendFile(join(SITE_DIR, '404.html'));
+
+  // Helsinki uniquement : si salon LIVE → 302 vers son custom hostname
+  if (!TENANT_ONLY && salon.live_hostname &&
+      (salon.subscription_status === 'live' || salon.subscription_status === 'active' || salon.subscription_status === 'trialing')) {
+    return res.redirect(302, `https://${salon.live_hostname}/`);
+  }
+
+  // SSR
+  const host = (req.hostname || '').toLowerCase();
+  const onMonsiteHQ = isMonsiteHQHost(host);
+  const view = buildSalonView(salon);
+
+  // Canonical + noindex selon contexte :
+  //   - monsitehq.com/preview/* → noindex (= URL démo, jamais à indexer)
+  //                              canonical pointe vers le custom hostname si payé,
+  //                              sinon self-canonical
+  //   - {custom}/preview/* (Falkenstein) → indexable, canonical = https://{host}/
+  let canonicalUrl, noindex;
+  if (onMonsiteHQ) {
+    noindex = true;
+    canonicalUrl = (salon.live_hostname && (salon.subscription_status === 'live' || salon.subscription_status === 'active'))
+      ? `https://${salon.live_hostname}/`
+      : `https://${host}/preview/${encodeURIComponent(slug)}`;
+  } else {
+    noindex = false;
+    canonicalUrl = `https://${host}/`;
+  }
+
+  const siteUrl = onMonsiteHQ ? `https://${host}/preview/${encodeURIComponent(slug)}` : `https://${host}`;
+
+  try {
+    const html = renderSalonHtml(view, { canonicalUrl, siteUrl, noindex });
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (err) {
+    console.error('[preview SSR] error:', err);
+    res.sendFile(join(SITE_DIR, 'index.html')); // fallback : template brut, main.js fera le reste
+  }
+});
+
+// /robots.txt host-aware (Helsinki + Falkenstein)
+//   - monsitehq.com : Disallow /preview/, /admin/, etc.
+//   - custom hostname : Allow tout + sitemap référencé
+app.get('/robots.txt', (req, res) => {
+  res.set('Content-Type', 'text/plain; charset=utf-8');
+  res.set('Cache-Control', 'public, max-age=3600');
+  res.send(renderRobotsTxt(req.hostname));
+});
+
+// /sitemap.xml dynamique
+app.get('/sitemap.xml', (req, res) => {
+  const host = (req.hostname || '').toLowerCase();
+  let salonUpdatedAt = null;
+
+  if (!isMonsiteHQHost(host)) {
+    // Custom hostname : on récupère la date de dernière maj du salon pour <lastmod>
     try {
-      const r = db.prepare('SELECT live_hostname, subscription_status FROM salons WHERE slug = ?').get(slug);
-      if (r && r.live_hostname && (r.subscription_status === 'live' || r.subscription_status === 'active')) {
-        return res.redirect(302, `https://${r.live_hostname}/`);
-      }
+      const r = db.prepare('SELECT updated_at, overrides_updated_at FROM salons WHERE live_hostname = ?').get(host);
+      if (r) salonUpdatedAt = r.overrides_updated_at || r.updated_at;
     } catch {}
   }
-  res.sendFile(join(SITE_DIR, 'index.html'));
+
+  res.set('Content-Type', 'application/xml; charset=utf-8');
+  res.set('Cache-Control', 'public, max-age=3600');
+  res.send(renderSitemap(host, { salonUpdatedAt }));
 });
 
 // Sur Falkenstein (TENANT_ONLY), la racine d'un custom hostname (salon-jean.fr/)
-// redirige vers /preview/{slug} pour réutiliser le frontend existant.
+// sert directement le site du salon en SSR. Plus de redirect /preview/{slug}
+// (= une seule URL canonique = https://salon-jean.fr/, meilleur SEO).
 if (TENANT_ONLY) {
   app.get('/', (req, res) => {
-    const host = req.hostname;
-    const r = db.prepare('SELECT slug FROM salons WHERE live_hostname = ?').get(host);
-    if (r && r.slug) return res.redirect(302, `/preview/${encodeURIComponent(r.slug)}`);
-    res.status(404).send('Aucun salon associé à ' + host);
+    const host = (req.hostname || '').toLowerCase();
+    let salon;
+    try {
+      salon = db.prepare('SELECT * FROM salons WHERE live_hostname = ?').get(host);
+    } catch (err) {
+      console.error('[Falkenstein /] DB error:', err);
+      return res.status(500).send('Erreur serveur');
+    }
+    if (!salon) return res.status(404).send('Aucun salon associé à ' + host);
+
+    const view = buildSalonView(salon);
+    try {
+      const html = renderSalonHtml(view, {
+        canonicalUrl: `https://${host}/`,
+        siteUrl: `https://${host}`,
+        noindex: false,
+      });
+      res.set('Content-Type', 'text/html; charset=utf-8');
+      res.send(html);
+    } catch (err) {
+      console.error('[Falkenstein / SSR] error:', err);
+      // Fallback : redirect vers /preview/{slug} (ancien comportement)
+      res.redirect(302, `/preview/${encodeURIComponent(salon.slug)}`);
+    }
   });
 }
 
