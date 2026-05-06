@@ -189,10 +189,10 @@ a { color: var(--hp-fg); }
 .hp-hero-anime {
   position: absolute !important;     /* !important pour défaut sain face à un cache stale */
   top: 50%;
-  right: 6%;
+  right: 8%;
   transform: translateY(-50%);
   z-index: 5 !important;             /* clairement au-dessus du content (z=2) et du bg (z=1) */
-  width: min(36vw, 460px);
+  width: min(18vw, 230px);            /* taille réduite de moitié */
   height: auto;
   aspect-ratio: 1 / 1;
   pointer-events: none;

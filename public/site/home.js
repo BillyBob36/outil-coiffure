@@ -62,10 +62,14 @@
 
       // Progress 0 → 1 sur la hauteur du hero (clampé)
       const scrollY = window.scrollY || window.pageYOffset || 0;
-      const progress = Math.max(0, Math.min(1, scrollY / heroH));
+      const rawProgress = Math.max(0, Math.min(1, scrollY / heroH));
+
+      // Accélération x2 : l'animation entière se joue sur les 50% premiers
+      // du scroll du hero, puis reste figée sur la frame 1 jusqu'à 100%.
+      const animProgress = Math.min(1, rawProgress * 2);
 
       // Triangle wave : 0→0.5 = aller (0→1), 0.5→1 = retour (1→0)
-      const triangle = progress < 0.5 ? progress * 2 : (1 - progress) * 2;
+      const triangle = animProgress < 0.5 ? animProgress * 2 : (1 - animProgress) * 2;
 
       // Map vers index frame [0, FRAMES_COUNT-1]
       const idx = Math.round(triangle * (FRAMES_COUNT - 1));
