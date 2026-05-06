@@ -4,9 +4,88 @@
    - Tous les boutons "Voir si mon salon..." ouvrent la même modale
    - Modale en 3 étapes : input → loading → résultat (found / notfound)
    - POST /api/landing/check avec google_maps_url + email
+   - Animation scroll-driven dans le hero (10 frames jouées 1→10→1 selon scroll)
    ============================================================================= */
 (function () {
   'use strict';
+
+  // ===========================================================================
+  // ANIMATION SCROLL-DRIVEN (hero)
+  // 10 frames préchargées, jouées en triangle wave selon la position de scroll
+  // dans le hero : 0%→50% du hero = frame 1→10, 50%→100% = frame 10→1.
+  // Respecte prefers-reduced-motion (frame 1 statique).
+  // Désactivée sur mobile (image cachée par le CSS).
+  // ===========================================================================
+  (function setupHeroAnime() {
+    const animeImg = document.getElementById('hp-anime-img');
+    if (!animeImg) return;
+
+    // Liste des frames disponibles (numéros impairs : 001, 003, …, 019)
+    const FRAME_NAMES = ['001','003','005','007','009','011','013','015','017','019'];
+    const FRAMES_COUNT = FRAME_NAMES.length;
+
+    // Si l'utilisateur a activé "Reduce motion" système, on garde la frame 1
+    // statique et on n'active pas l'effet scroll-driven (WCAG 2.1).
+    const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) return;
+
+    // Désactivée si CSS cache l'image (mobile <900px) — on évite d'utiliser des
+    // ressources réseau et des cycles CPU pour rien.
+    const isHidden = () => getComputedStyle(animeImg.parentElement).display === 'none';
+
+    // Préchargement : on télécharge les 10 frames immédiatement (≈235 KB total
+    // en WebP). Les URLs résolues sont conservées pour pouvoir swap instantanément.
+    const frameUrls = FRAME_NAMES.map(n => `/_assets/landing/anime/logo-${n}.webp`);
+    const preloaded = frameUrls.map(url => {
+      const img = new Image();
+      img.src = url;
+      return img;
+    });
+
+    let currentFrame = 0;
+    let rafScheduled = false;
+
+    function setFrame(idx) {
+      if (idx === currentFrame) return;
+      currentFrame = idx;
+      animeImg.src = frameUrls[idx];
+    }
+
+    function update() {
+      rafScheduled = false;
+      if (isHidden()) return;
+
+      const hero = document.querySelector('.hp-hero');
+      if (!hero) return;
+      const heroH = hero.offsetHeight;
+      if (heroH <= 0) return;
+
+      // Progress 0 → 1 sur la hauteur du hero (clampé)
+      const scrollY = window.scrollY || window.pageYOffset || 0;
+      const progress = Math.max(0, Math.min(1, scrollY / heroH));
+
+      // Triangle wave : 0→0.5 = aller (0→1), 0.5→1 = retour (1→0)
+      const triangle = progress < 0.5 ? progress * 2 : (1 - progress) * 2;
+
+      // Map vers index frame [0, FRAMES_COUNT-1]
+      const idx = Math.round(triangle * (FRAMES_COUNT - 1));
+      setFrame(idx);
+    }
+
+    function onScroll() {
+      if (!rafScheduled) {
+        rafScheduled = true;
+        requestAnimationFrame(update);
+      }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    // Initial render après load (ensure hero height is known)
+    if (document.readyState === 'complete') update();
+    else window.addEventListener('load', update, { once: true });
+  })();
+
 
   const $ = (id) => document.getElementById(id);
 
