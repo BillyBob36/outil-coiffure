@@ -4,9 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MONSITEHQ — Site web pour coiffeur, en ligne en 5 minutes</title>
-  <meta name="description" content="Nous créons gratuitement le site web professionnel des coiffeurs de France. Le vôtre est peut-être déjà prêt. À partir de 9,90 € HT/mois, domaine offert.">
+  <meta name="description" content="Sites web professionnels pour les coiffeurs de France. Nos équipes travaillent d'arrache-pied pour préparer le vôtre. Stack 2026 : SSR, Schema.org, Hetzner UE. À partir de 9,90 € HT/mois, domaine offert.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <link rel="canonical" href="https://monsitehq.com/">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/_assets/landing/icon-monsitehq.png">
+  <link rel="apple-touch-icon" href="/_assets/landing/icon-monsitehq.png">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -14,16 +18,41 @@
   <meta property="og:site_name" content="MONSITEHQ">
   <meta property="og:url" content="https://monsitehq.com/">
   <meta property="og:title" content="MONSITEHQ — Site web pour coiffeur, en ligne en 5 minutes">
-  <meta property="og:description" content="Nous créons gratuitement le site web professionnel des coiffeurs de France. Le vôtre est peut-être déjà prêt.">
-  <meta property="og:image" content="https://monsitehq.com/_assets/landing/hero-bg.png">
+  <meta property="og:description" content="Sites web professionnels pour les coiffeurs de France. Nos équipes travaillent d'arrache-pied pour préparer le vôtre.">
+  <meta property="og:image" content="https://monsitehq.com/_assets/landing/hero-bg.webp">
   <meta name="twitter:card" content="summary_large_image">
+
+  <!-- Schema.org Organization -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "MONSITEHQ",
+    "alternateName": "Quick Site",
+    "url": "https://monsitehq.com",
+    "logo": "https://monsitehq.com/_assets/landing/icon-monsitehq.png",
+    "email": "contact@monsitehq.com",
+    "telephone": "+33749420608",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "61 rue de Lyon",
+      "addressLocality": "Paris",
+      "postalCode": "75012",
+      "addressCountry": "FR"
+    },
+    "founder": {
+      "@type": "Person",
+      "name": "Johann Kaiser"
+    }
+  }
+  </script>
 
   <!-- Performance -->
   <link rel="preconnect" href="https://rsms.me">
-  <link rel="preload" as="image" href="/_assets/landing/hero-bg.png" fetchpriority="high">
+  <link rel="preload" as="image" href="/_assets/landing/hero-bg.webp" fetchpriority="high">
   <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/_assets/home.css?v=1">
+  <link rel="stylesheet" href="/_assets/home.css?v=2">
 </head>
 <body>
 
@@ -31,11 +60,12 @@
 <nav class="hp-nav">
   <div class="hp-nav-inner">
     <a class="hp-logo" href="/">
-      <span class="hp-logo-mark"></span>
+      <img class="hp-logo-img" src="/_assets/landing/logo-seul-crop.webp" alt="" width="32" height="32">
       <span class="hp-logo-text">MONSITEHQ</span>
     </a>
     <div class="hp-nav-right">
       <a href="#tarifs" class="hp-nav-link">Tarifs</a>
+      <a href="#stack" class="hp-nav-link">Notre stack</a>
       <button class="hp-btn hp-btn-primary" id="hp-cta-nav" type="button">Voir si mon salon est couvert</button>
     </div>
   </div>
@@ -45,22 +75,22 @@
 <header class="hp-hero">
   <div class="hp-hero-bg" aria-hidden="true"></div>
   <div class="hp-hero-content">
-    <span class="hp-eyebrow">Sites web pour coiffeurs · France</span>
+    <span class="hp-eyebrow">Sites web premium pour coiffeurs · France entière</span>
     <h1 class="hp-h1">
       On a déjà créé<br>
       <em>votre site web.</em>
     </h1>
     <p class="hp-sub">
-      MONSITEHQ couvre actuellement les salons de coiffure de toute la France
-      avec un site web professionnel pré-rempli, prêt à être mis en ligne
-      en 5 minutes. Le vôtre est peut-être déjà prêt — vérifiez.
+      Nos équipes travaillent d'arrache-pied pour couvrir tous les salons de coiffure de France
+      avec un site web professionnel, prêt à être mis en ligne en 5 minutes. Stack technique
+      à la pointe de 2026, tarifs qui cassent le marché. <strong>Le vôtre est peut-être déjà prêt.</strong>
     </p>
     <div class="hp-hero-cta">
       <button class="hp-btn hp-btn-primary hp-btn-lg" id="hp-cta-hero" type="button">
         Voir si mon salon est couvert →
       </button>
       <p class="hp-hero-trust">
-        🔒 Hébergé en Europe · 🇫🇷 Support français · 💳 Annulable
+        🇪🇺 Hébergé en UE · 🛡️ RGPD by-design · 🇫🇷 Support français
       </p>
     </div>
   </div>
@@ -72,18 +102,20 @@
     <div class="hp-coverage-grid">
       <div class="hp-coverage-text">
         <span class="hp-eyebrow">Couverture nationale</span>
-        <h2 class="hp-h2">Plus de 11&nbsp;000 salons couverts.</h2>
+        <h2 class="hp-h2">Plus de 11&nbsp;000 salons déjà couverts.</h2>
         <p class="hp-p">
-          De Paris à Marseille, de Strasbourg à Bordeaux — nous générons en
-          continu des sites web démos pour les salons de coiffure référencés
-          en France. Vérifiez si le vôtre fait partie de la couverture.
+          De Paris à Marseille, de Strasbourg à Bordeaux — nos équipes
+          travaillent d'arrache-pied pour préparer un site web démo,
+          gratuit, pour chaque salon de coiffure professionnel référencé en France.
+          Chaque site est unique, pré-rempli avec vos vraies informations.
+          Vérifiez si le vôtre fait partie de la couverture actuelle.
         </p>
         <button class="hp-btn hp-btn-secondary" id="hp-cta-coverage" type="button">
           Vérifier mon salon →
         </button>
       </div>
       <div class="hp-coverage-img">
-        <img src="/_assets/landing/france-coverage.png" alt="Carte de France stylisée avec les villes couvertes par MONSITEHQ" loading="lazy">
+        <img src="/_assets/landing/france-coverage.webp" alt="Carte de France stylisée avec les villes couvertes par MONSITEHQ" loading="lazy" width="1200" height="800">
       </div>
     </div>
   </div>
@@ -97,20 +129,76 @@
       <h2 class="hp-h2">Trois étapes, cinq minutes.</h2>
     </div>
     <div class="hp-how-grid">
-      <div class="hp-how-card">
+      <article class="hp-how-card">
+        <img class="hp-how-img" src="/_assets/landing/logo-seul-crop.webp" alt="" loading="lazy" width="120" height="120">
         <div class="hp-how-num">1</div>
-        <h3 class="hp-how-title">On crée votre site</h3>
-        <p class="hp-p">Nous le générons à partir des informations publiques de votre salon (Google Maps, Pages Jaunes). Pas d'effort de votre côté.</p>
-      </div>
-      <div class="hp-how-card">
+        <h3 class="hp-how-title">On crée votre site, gratuitement</h3>
+        <p class="hp-p">Nos équipes travaillent d'arrache-pied pour générer votre site
+          à partir des informations publiques de votre salon (Google Maps, Pages Jaunes).
+          <strong>Zéro effort de votre côté</strong>, zéro engagement, zéro carte bancaire à ce stade.</p>
+      </article>
+      <article class="hp-how-card">
+        <img class="hp-how-img" src="/_assets/landing/2-loupe-doree.webp" alt="" loading="lazy" width="120" height="120">
         <div class="hp-how-num">2</div>
-        <h3 class="hp-how-title">Vous le découvrez</h3>
-        <p class="hp-p">Vous recevez un email avec votre site démo, déjà rempli avec vos prestations, photos, horaires. Vous le visitez en un clic.</p>
-      </div>
-      <div class="hp-how-card">
+        <h3 class="hp-how-title">Vous le découvrez en un clic</h3>
+        <p class="hp-p">Vous recevez un email avec votre site démo, déjà rempli avec vos
+          prestations, photos, horaires et avis Google. Vous le visitez tel qu'il sera
+          en production. Vous pouvez tout modifier depuis votre téléphone, comme sur
+          Facebook ou Instagram.</p>
+      </article>
+      <article class="hp-how-card">
+        <img class="hp-how-img" src="/_assets/landing/3-activer-doree.webp" alt="" loading="lazy" width="120" height="120">
         <div class="hp-how-num">3</div>
-        <h3 class="hp-how-title">Vous l'activez en 5 min</h3>
-        <p class="hp-p">Modifiez les textes, ajoutez vos photos. Choisissez votre formule. Votre domaine .fr ou .com et votre site sont en ligne sous 15 minutes.</p>
+        <h3 class="hp-how-title">Vous l'activez en 5 minutes</h3>
+        <p class="hp-p">Choisissez votre formule, on vous offre votre nom de domaine
+          .fr ou .com, votre site est <strong>en ligne en moins de 15 minutes</strong>
+          avec certificat SSL, hébergement européen, et conformité RGPD.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== STACK TECHNIQUE ====================== -->
+<section class="hp-stack" id="stack">
+  <div class="hp-container">
+    <div class="hp-section-head">
+      <span class="hp-eyebrow">Notre stack technique</span>
+      <h2 class="hp-h2">À la pointe de 2026.</h2>
+      <p class="hp-p hp-section-sub">
+        On ne s'arrête pas à un joli design. Sous le capot, votre site bénéficie d'une
+        infrastructure que peu d'agences web facturant 1500&nbsp;€ peuvent égaler.
+      </p>
+    </div>
+    <div class="hp-stack-grid">
+      <div class="hp-stack-item">
+        <div class="hp-stack-icon">⚡</div>
+        <strong>LCP &lt; 2&nbsp;s</strong>
+        <p>Core Web Vitals optimisés, score Lighthouse 95+ par défaut. Google ranke les sites rapides.</p>
+      </div>
+      <div class="hp-stack-item">
+        <div class="hp-stack-icon">🌍</div>
+        <strong>CDN global Cloudflare</strong>
+        <p>Votre site chargé en moins de 100&nbsp;ms partout en France. 200+ datacenters mondiaux, anti-DDoS inclus.</p>
+      </div>
+      <div class="hp-stack-item">
+        <div class="hp-stack-icon">📊</div>
+        <strong>SEO premium intégré</strong>
+        <p>Server-Side Rendering, Schema.org HairSalon (étoiles + horaires direct dans Google), sitemap dynamique. Conforme aux best practices Google 2026.</p>
+      </div>
+      <div class="hp-stack-item">
+        <div class="hp-stack-icon">🇪🇺</div>
+        <strong>Hébergement Hetzner UE</strong>
+        <p>Vos données stockées en Allemagne (Hetzner Falkenstein), conformité RGPD by-design. Aucun transfert hors-UE non encadré.</p>
+      </div>
+      <div class="hp-stack-item">
+        <div class="hp-stack-icon">💳</div>
+        <strong>14 méthodes de paiement</strong>
+        <p>Stripe Live activé : Apple Pay, Google Pay, Klarna, Bancontact, Link, carte… Réduit le drop-off au paiement de 10-15&nbsp;%.</p>
+      </div>
+      <div class="hp-stack-item">
+        <div class="hp-stack-icon">🔐</div>
+        <strong>SSL automatique + backups</strong>
+        <p>Certificat SSL Let's Encrypt renouvelé automatiquement, sauvegardes quotidiennes chiffrées, monitoring 24/7.</p>
       </div>
     </div>
   </div>
@@ -121,8 +209,13 @@
   <div class="hp-container">
     <div class="hp-section-head">
       <span class="hp-eyebrow">Tarifs</span>
-      <h2 class="hp-h2">Simples, transparents.</h2>
-      <p class="hp-p hp-section-sub">Tous les plans incluent : site web pro, hébergement en Europe, domaine .fr ou .com offert pendant 1 an, support en français, aucun frais de mise en place.</p>
+      <h2 class="hp-h2">Des prix qui cassent le marché.</h2>
+      <p class="hp-p hp-section-sub">
+        Une agence web vous facturerait <strong>1&nbsp;500 à 3&nbsp;000&nbsp;€</strong> de mise en place,
+        plus 50 à 150&nbsp;€/mois de maintenance. Wix et Squarespace tournent autour de 17 à 37&nbsp;€/mois
+        avec un design générique. Nous, c'est <strong>9,90&nbsp;€</strong> pour un site sur-mesure pré-rempli, hébergé en Europe,
+        avec domaine offert. <em>Aucun frais d'installation.</em>
+      </p>
     </div>
     <div class="hp-pricing-grid">
 
@@ -175,7 +268,7 @@
         Voir si mon salon est déjà prêt →
       </button>
     </p>
-    <p class="hp-pricing-fineprint">Tarifs HT. TVA 20% applicable. Offre destinée aux professionnels (B2B).</p>
+    <p class="hp-pricing-fineprint">Tarifs HT, TVA 20% applicable. Offre destinée aux professionnels (B2B). Aucun frais de mise en place.</p>
   </div>
 </section>
 
@@ -190,12 +283,17 @@
 
       <details class="hp-faq-item">
         <summary>Pourquoi avez-vous créé un site pour mon salon sans m'en parler ?</summary>
-        <p>Nous générons des sites démos à partir de vos informations publiques (Google Maps, Pages Jaunes), exactement comme un annuaire le fait. Vous restez libre de l'utiliser ou non. Aucune donnée n'est utilisée tant que vous ne nous donnez pas votre accord explicite.</p>
+        <p>Nos équipes travaillent en continu pour préparer un site démo de chaque salon référencé publiquement (Google Maps, Pages Jaunes), exactement comme un annuaire le fait. Vous restez libre de l'utiliser ou non. Aucune donnée personnelle n'est exploitée tant que vous ne nous donnez pas votre accord explicite, et nous respectons l'intégralité du RGPD.</p>
       </details>
 
       <details class="hp-faq-item">
         <summary>Combien ça coûte vraiment ?</summary>
-        <p>À partir de 9,90 € HT/mois (engagement 2 ans), 17,90 € HT/mois (engagement 1 an), ou 29 € HT/mois sans engagement. Domaine offert. Aucun frais d'installation. Tarifs définitifs, sans surprise.</p>
+        <p>À partir de 9,90&nbsp;€ HT/mois (engagement 2 ans), 17,90&nbsp;€ HT/mois (engagement 1 an), ou 29&nbsp;€ HT/mois sans engagement. Domaine .fr ou .com offert pendant 1 an. Aucun frais d'installation. Tarifs définitifs, sans surprise, sans option cachée.</p>
+      </details>
+
+      <details class="hp-faq-item">
+        <summary>Pourquoi votre prix est si bas ?</summary>
+        <p>Parce que tout est automatisé. Pas d'agence intermédiaire, pas de devis sur-mesure, pas de chef de projet à 80&nbsp;€/h. Nos équipes développement ont conçu une infrastructure capable de générer et maintenir des milliers de sites simultanément. Vous bénéficiez de l'efficacité industrielle au prix de l'industrie.</p>
       </details>
 
       <details class="hp-faq-item">
@@ -205,7 +303,7 @@
 
       <details class="hp-faq-item">
         <summary>Et si je n'aime pas le résultat ?</summary>
-        <p>Vous pouvez visiter et tester votre site démo gratuitement avant tout paiement. Vous ne payez que si vous décidez de le mettre en ligne. Sans carte bancaire, sans engagement caché.</p>
+        <p>Vous pouvez visiter et tester votre site démo gratuitement avant tout paiement. Vous ne payez que si vous décidez de le mettre en ligne. Sans carte bancaire à ce stade, sans engagement caché.</p>
       </details>
 
       <details class="hp-faq-item">
@@ -215,7 +313,12 @@
 
       <details class="hp-faq-item">
         <summary>Mes données sont-elles protégées ?</summary>
-        <p>Oui. Hébergement en Europe (Hetzner, Allemagne), conforme RGPD. Aucune donnée bancaire stockée chez nous (Stripe gère). Voir notre <a href="/legal/privacy.html">politique de confidentialité</a>.</p>
+        <p>Oui. Hébergement chez Hetzner en Allemagne (UE), conforme RGPD. Aucune donnée bancaire stockée chez nous (Stripe certifié PCI-DSS niveau 1 gère). Politique de confidentialité conforme à la directive Omnibus 2022. Voir notre <a href="/legal/privacy.html">politique de confidentialité</a>.</p>
+      </details>
+
+      <details class="hp-faq-item">
+        <summary>J'ai déjà un site, j'ai perdu mon lien d'accès</summary>
+        <p>Pas de souci. Allez sur la <a href="/recover">page de récupération</a>, entrez l'email avec lequel vous vous êtes inscrit, et vous recevrez un lien de connexion automatique valide 10 minutes.</p>
       </details>
 
     </div>
@@ -236,7 +339,7 @@
       </div>
       <div class="hp-trust-item">
         <strong>💳 Paiement sécurisé</strong>
-        <span>Stripe, PCI-DSS</span>
+        <span>Stripe, PCI-DSS niveau 1</span>
       </div>
       <div class="hp-trust-item">
         <strong>🇫🇷 Support français</strong>
@@ -251,7 +354,7 @@
   <div class="hp-container">
     <div class="hp-footer-top">
       <div class="hp-footer-brand">
-        <span class="hp-logo-mark"></span>
+        <img class="hp-footer-logo" src="/_assets/landing/logo-seul-crop.webp" alt="MONSITEHQ" width="40" height="40" loading="lazy">
         <strong>MONSITEHQ</strong>
         <p>Sites web professionnels pour les coiffeurs de France.</p>
       </div>
@@ -262,10 +365,15 @@
         <a href="/legal/privacy.html">Confidentialité</a>
       </div>
       <div class="hp-footer-links">
-        <h4>Contact</h4>
+        <h4>Espace client</h4>
+        <a href="/recover">J'ai perdu mon lien d'accès</a>
         <a href="mailto:contact@monsitehq.com">contact@monsitehq.com</a>
         <a href="tel:+33749420608">+33 7 49 42 06 08</a>
-        <span>61 rue de Lyon, 75012 Paris</span>
+      </div>
+      <div class="hp-footer-links">
+        <h4>Adresse</h4>
+        <span>61 rue de Lyon</span>
+        <span>75012 Paris, France</span>
       </div>
     </div>
     <div class="hp-footer-bottom">
@@ -306,7 +414,7 @@
               <li><strong>Cliquez sur votre salon</strong> dans les résultats.</li>
               <li><strong>Cliquez sur "Partager"</strong> et copiez le lien proposé.</li>
             </ol>
-            <img src="/_assets/landing/google-maps-steps.png" alt="Illustration des 4 étapes pour récupérer le lien Google Maps" class="hp-tuto-img" loading="lazy">
+            <img src="/_assets/landing/google-maps-steps.webp" alt="Illustration des 4 étapes pour récupérer le lien Google Maps" class="hp-tuto-img" loading="lazy" width="1200" height="800">
           </div>
         </details>
 
@@ -331,6 +439,7 @@
 
         <p class="hp-form-fineprint">
           En cliquant, vous acceptez notre <a href="/legal/privacy.html" target="_blank">politique de confidentialité</a>.
+          Vous avez perdu votre lien d'accès ? <a href="/recover">Récupérez-le ici</a>.
         </p>
       </form>
     </div>
@@ -358,8 +467,8 @@
       <div class="hp-info-icon">⏳</div>
       <h3 class="hp-modal-title">Votre salon arrive bientôt</h3>
       <p class="hp-modal-sub">
-        Nous n'avons pas encore généré le site de votre salon. Pas de souci :
-        <strong>nous le créons et vous l'envoyons par email sous 48h</strong>, gratuitement.
+        Nos équipes travaillent à étendre la couverture en continu. Votre demande est enregistrée :
+        <strong>nous créons votre site et vous l'envoyons par email sous 48h</strong>, gratuitement.
       </p>
       <button class="hp-btn hp-btn-secondary hp-btn-full" id="hp-notfound-close" type="button">
         Compris, à bientôt
@@ -369,6 +478,6 @@
   </div>
 </div>
 
-<script src="/_assets/home.js?v=1"></script>
+<script src="/_assets/home.js?v=2"></script>
 </body>
 </html>

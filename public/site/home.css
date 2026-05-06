@@ -39,14 +39,13 @@ html, body {
 a { color: var(--hp-fg); }
 
 /* -------- Logo & buttons -------- */
-.hp-logo-mark {
+.hp-logo-img {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  margin-right: 12px;
   display: inline-block;
-  width: 12px; height: 12px;
-  background: var(--hp-gold);
-  border-radius: 999px;
   vertical-align: middle;
-  margin-right: 10px;
-  box-shadow: 0 0 0 4px var(--hp-gold-soft);
+  object-fit: cover;
 }
 .hp-logo {
   display: inline-flex; align-items: center;
@@ -58,6 +57,13 @@ a { color: var(--hp-fg); }
   color: var(--hp-fg);
 }
 .hp-logo-text { vertical-align: middle; }
+.hp-footer-logo {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  display: block;
+  margin-bottom: 12px;
+  object-fit: cover;
+}
 
 .hp-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -248,21 +254,30 @@ a { color: var(--hp-fg); }
   border-radius: 16px;
   padding: 32px 28px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-align: center;
 }
 .hp-how-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 14px 40px rgba(26, 24, 20, 0.07);
 }
+.hp-how-img {
+  display: block;
+  width: 96px; height: 96px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin: 0 auto 14px;
+  background: var(--hp-bg-soft);
+}
 .hp-how-num {
-  width: 44px; height: 44px;
+  width: 36px; height: 36px;
   background: var(--hp-gold-soft);
   color: var(--hp-gold-dark);
   border-radius: 999px;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--hp-serif);
   font-weight: 600;
-  font-size: 1.4rem;
-  margin-bottom: 18px;
+  font-size: 1.2rem;
+  margin: 0 auto 14px;
 }
 .hp-how-title {
   font-family: var(--hp-serif);
@@ -270,6 +285,65 @@ a { color: var(--hp-fg); }
   font-size: 1.4rem;
   margin: 0 0 10px;
   color: var(--hp-fg);
+}
+.hp-how-card .hp-p { text-align: left; }
+
+/* =============================================================================
+   STACK TECHNIQUE
+   ============================================================================= */
+.hp-stack {
+  background: var(--hp-fg);
+  color: var(--hp-bg);
+  padding: 100px 0;
+}
+.hp-stack .hp-eyebrow { color: var(--hp-gold); }
+.hp-stack .hp-h2 { color: var(--hp-bg); }
+.hp-stack .hp-section-sub {
+  color: rgba(250, 248, 245, 0.75);
+  font-size: 1.05rem;
+}
+.hp-stack-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 24px;
+}
+.hp-stack-item {
+  background: rgba(250, 248, 245, 0.04);
+  border: 1px solid rgba(250, 248, 245, 0.1);
+  border-radius: 14px;
+  padding: 24px 22px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.hp-stack-item:hover {
+  border-color: var(--hp-gold);
+  background: rgba(201, 169, 110, 0.08);
+}
+.hp-stack-icon {
+  width: 44px; height: 44px;
+  background: var(--hp-gold-soft);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  margin-bottom: 14px;
+}
+.hp-stack-item strong {
+  display: block;
+  font-size: 1.04rem;
+  font-weight: 600;
+  color: var(--hp-bg);
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+.hp-stack-item p {
+  font-size: 0.88rem;
+  color: rgba(250, 248, 245, 0.7);
+  line-height: 1.55;
+  margin: 0;
+}
+@media (max-width: 768px) {
+  .hp-stack { padding: 70px 0; }
+  .hp-stack-grid { grid-template-columns: 1fr; gap: 14px; }
 }
 @media (max-width: 768px) {
   .hp-how { padding: 70px 0; }
