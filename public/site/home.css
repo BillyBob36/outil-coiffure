@@ -40,12 +40,12 @@ a { color: var(--hp-fg); }
 
 /* -------- Logo & buttons -------- */
 .hp-logo-img {
-  width: 32px; height: 32px;
-  border-radius: 8px;
+  width: 40px; height: 40px;
   margin-right: 12px;
   display: inline-block;
   vertical-align: middle;
-  object-fit: cover;
+  object-fit: contain;
+  background: transparent;
 }
 .hp-logo {
   display: inline-flex; align-items: center;
@@ -254,7 +254,6 @@ a { color: var(--hp-fg); }
   border-radius: 16px;
   padding: 32px 28px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  text-align: center;
 }
 .hp-how-card:hover {
   transform: translateY(-4px);
@@ -262,22 +261,10 @@ a { color: var(--hp-fg); }
 }
 .hp-how-img {
   display: block;
-  width: 96px; height: 96px;
-  object-fit: cover;
-  border-radius: 12px;
-  margin: 0 auto 14px;
-  background: var(--hp-bg-soft);
-}
-.hp-how-num {
-  width: 36px; height: 36px;
-  background: var(--hp-gold-soft);
-  color: var(--hp-gold-dark);
-  border-radius: 999px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--hp-serif);
-  font-weight: 600;
-  font-size: 1.2rem;
-  margin: 0 auto 14px;
+  width: 80px; height: 80px;
+  object-fit: contain;
+  margin: 0 0 18px 0;
+  background: transparent;
 }
 .hp-how-title {
   font-family: var(--hp-serif);
@@ -286,7 +273,6 @@ a { color: var(--hp-fg); }
   margin: 0 0 10px;
   color: var(--hp-fg);
 }
-.hp-how-card .hp-p { text-align: left; }
 
 /* =============================================================================
    STACK TECHNIQUE
