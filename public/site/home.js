@@ -10,40 +10,31 @@
   'use strict';
 
   // ===========================================================================
-  // ANIMATION SCROLL-DRIVEN (hero)
-  // 10 frames préchargées, jouées en triangle wave selon la position de scroll
-  // dans le hero : 0%→50% du hero = frame 1→10, 50%→100% = frame 10→1.
-  // Respecte prefers-reduced-motion (frame 1 statique).
-  // Désactivée sur mobile (image cachée par le CSS).
+  // ANIMATION HERO (10 frames jouées 1→10→1 toutes les ~10 secondes, ~1s/cycle)
+  // - Désynchronisée du scroll
+  // - Float CSS permanent géré côté CSS (animation hpFloat)
+  // - Respecte prefers-reduced-motion (frame 1 statique, no anim)
+  // - Pause quand l'onglet est en arrière-plan (économie CPU/batterie)
   // ===========================================================================
   (function setupHeroAnime() {
     const animeImg = document.getElementById('hp-anime-img');
     if (!animeImg) return;
 
-    // Liste des frames disponibles (numéros impairs : 001, 003, …, 019)
     const FRAME_NAMES = ['001','003','005','007','009','011','013','015','017','019'];
     const FRAMES_COUNT = FRAME_NAMES.length;
+    const FRAME_INTERVAL_MS = 50;     // 50ms × ~18 transitions ≈ 900ms ~= 1s
+    const PAUSE_BETWEEN_MS = 10000;   // attente entre 2 cycles ≈ 10s
 
-    // Si l'utilisateur a activé "Reduce motion" système, on garde la frame 1
-    // statique et on n'active pas l'effet scroll-driven (WCAG 2.1).
     const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reducedMotion) return;
 
-    // Désactivée si CSS cache l'image (mobile <900px) — on évite d'utiliser des
-    // ressources réseau et des cycles CPU pour rien.
-    const isHidden = () => getComputedStyle(animeImg.parentElement).display === 'none';
-
-    // Préchargement : on télécharge les 10 frames immédiatement (≈235 KB total
-    // en WebP). Les URLs résolues sont conservées pour pouvoir swap instantanément.
+    // Préchargement des frames (235 KB WebP total)
     const frameUrls = FRAME_NAMES.map(n => `/_assets/landing/anime/logo-${n}.webp`);
-    const preloaded = frameUrls.map(url => {
-      const img = new Image();
-      img.src = url;
-      return img;
-    });
+    frameUrls.forEach(url => { const i = new Image(); i.src = url; });
 
     let currentFrame = 0;
-    let rafScheduled = false;
+    let cycleTimer = null;        // setInterval handle (le cycle de frames)
+    let nextCycleTimer = null;    // setTimeout handle (attente entre cycles)
 
     function setFrame(idx) {
       if (idx === currentFrame) return;
@@ -51,43 +42,41 @@
       animeImg.src = frameUrls[idx];
     }
 
-    function update() {
-      rafScheduled = false;
-      if (isHidden()) return;
-
-      const hero = document.querySelector('.hp-hero');
-      if (!hero) return;
-      const heroH = hero.offsetHeight;
-      if (heroH <= 0) return;
-
-      // Progress 0 → 1 sur la hauteur du hero (clampé)
-      const scrollY = window.scrollY || window.pageYOffset || 0;
-      const rawProgress = Math.max(0, Math.min(1, scrollY / heroH));
-
-      // Accélération x2 : l'animation entière se joue sur les 50% premiers
-      // du scroll du hero, puis reste figée sur la frame 1 jusqu'à 100%.
-      const animProgress = Math.min(1, rawProgress * 2);
-
-      // Triangle wave : 0→0.5 = aller (0→1), 0.5→1 = retour (1→0)
-      const triangle = animProgress < 0.5 ? animProgress * 2 : (1 - animProgress) * 2;
-
-      // Map vers index frame [0, FRAMES_COUNT-1]
-      const idx = Math.round(triangle * (FRAMES_COUNT - 1));
-      setFrame(idx);
+    /** Joue 1 cycle complet : frame 0→9→0 sur ~1s, puis programme le prochain à +10s. */
+    function playOneCycle() {
+      if (cycleTimer) return; // cycle déjà en cours
+      let i = 0, dir = 1;
+      setFrame(0);
+      cycleTimer = setInterval(() => {
+        i += dir;
+        if (i >= FRAMES_COUNT - 1) {
+          dir = -1;
+          setFrame(FRAMES_COUNT - 1);
+        } else if (i <= 0 && dir === -1) {
+          setFrame(0);
+          clearInterval(cycleTimer);
+          cycleTimer = null;
+          // Schedule next cycle dans ~10s
+          nextCycleTimer = setTimeout(playOneCycle, PAUSE_BETWEEN_MS);
+        } else {
+          setFrame(i);
+        }
+      }, FRAME_INTERVAL_MS);
     }
 
-    function onScroll() {
-      if (!rafScheduled) {
-        rafScheduled = true;
-        requestAnimationFrame(update);
-      }
+    function stopAnim() {
+      if (cycleTimer) { clearInterval(cycleTimer); cycleTimer = null; }
+      if (nextCycleTimer) { clearTimeout(nextCycleTimer); nextCycleTimer = null; }
     }
 
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    // Initial render après load (ensure hero height is known)
-    if (document.readyState === 'complete') update();
-    else window.addEventListener('load', update, { once: true });
+    // Pause quand l'onglet n'est pas visible (économie CPU/batterie)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopAnim();
+      else if (!cycleTimer && !nextCycleTimer) playOneCycle();
+    });
+
+    // Premier cycle après un court délai pour que la page soit posée
+    setTimeout(playOneCycle, 1500);
   })();
 
 

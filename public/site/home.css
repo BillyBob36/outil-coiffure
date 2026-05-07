@@ -186,16 +186,18 @@ a { color: var(--hp-fg); }
    Position absolue (out-of-flow) → ne déplace PAS le texte du hero.
    Visuellement par-dessus le bg (z-index 3 > bg z-index 1).
    Cachée sur mobile (pas la place). */
+/* Animation hero — centrée au milieu de la moitié droite de l'écran (75% from left).
+   Float CSS permanent (subtil), désynchronisé du scroll. Frame anim toutes les ~10s. */
 .hp-hero-anime {
-  position: absolute !important;     /* !important pour défaut sain face à un cache stale */
+  position: absolute !important;
   top: 50%;
-  right: 8%;
-  transform: translateY(-50%);
-  z-index: 5 !important;             /* clairement au-dessus du content (z=2) et du bg (z=1) */
-  width: min(18vw, 230px);            /* taille réduite de moitié */
+  left: 75%;                          /* 75% = milieu de la moitié droite */
+  transform: translate(-50%, -50%);   /* centrage exact sur ce point */
+  z-index: 5 !important;
+  width: min(18vw, 230px);
   height: auto;
   aspect-ratio: 1 / 1;
-  pointer-events: none;
+  pointer-events: auto;               /* nécessaire pour détecter :hover */
   user-select: none;
   display: block;
   margin: 0;
@@ -206,10 +208,30 @@ a { color: var(--hp-fg); }
   width: 100%;
   height: 100%;
   object-fit: contain;
-  will-change: contents;
+  will-change: transform, contents;
+  /* Float permanent : très lent (6s), faible amplitude (8px) — donne juste assez
+     de mouvement pour détacher l'image du fond sans distraire. */
+  animation: hpFloat 6s ease-in-out infinite;
+}
+.hp-hero-anime:hover img {
+  /* Au hover, l'amplitude double et le rythme accélère légèrement (life-like) */
+  animation: hpFloatStrong 3s ease-in-out infinite;
+}
+@keyframes hpFloat {
+  0%, 100% { transform: translateY(0) rotate(-0.5deg); }
+  50%      { transform: translateY(-8px) rotate(0.5deg); }
+}
+@keyframes hpFloatStrong {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg) scale(1); }
+  50%      { transform: translateY(-18px) rotate(1.5deg) scale(1.04); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hp-hero-anime img {
+    animation: none !important;
+  }
 }
 @media (max-width: 900px) {
-  /* Sur mobile/tablette portrait, on cache l'animation : pas de place sur le hero */
+  /* Sur mobile/tablette portrait, on cache l'animation : pas la place */
   .hp-hero-anime { display: none !important; }
 }
 
