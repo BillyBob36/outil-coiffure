@@ -186,49 +186,64 @@ a { color: var(--hp-fg); }
    Position absolue (out-of-flow) → ne déplace PAS le texte du hero.
    Visuellement par-dessus le bg (z-index 3 > bg z-index 1).
    Cachée sur mobile (pas la place). */
-/* Animation hero — centrée au milieu de la moitié droite de l'écran (75% from left).
-   Float CSS permanent (subtil), désynchronisé du scroll. Frame anim toutes les ~10s. */
+/* Animation hero — pattern à 2 couches pour un hover fluide :
+   - .hp-hero-anime (outer)  : positionnement + scale au hover (avec transition CSS)
+   - .hp-hero-anime-float (inner) : float continu, indépendant du hover (= pas de jump)
+   Centrée au milieu de la moitié droite du viewport (left: 75%).
+   Frame anim désynchronisée du scroll (timer JS, voir home.js). */
 .hp-hero-anime {
   position: absolute !important;
   top: 50%;
-  left: 75%;                          /* 75% = milieu de la moitié droite */
-  transform: translate(-50%, -50%);   /* centrage exact sur ce point */
+  left: 75%;
+  transform: translate(-50%, -50%);
   z-index: 5 !important;
   width: min(18vw, 230px);
   height: auto;
   aspect-ratio: 1 / 1;
-  pointer-events: auto;               /* nécessaire pour détecter :hover */
+  pointer-events: auto;
   user-select: none;
   display: block;
   margin: 0;
   padding: 0;
+  /* Transition douce du scale au hover, sans casser le rythme du float */
+  transition: transform 700ms cubic-bezier(.2, .9, .3, 1);
+}
+.hp-hero-anime:hover {
+  /* Le hover ajoute juste un scale doux. Le float continu reste sur l'inner. */
+  transform: translate(-50%, -50%) scale(1.08);
+}
+.hp-hero-anime-float {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Le mouvement de float principal — large amplitude, courbe organique 5 stops.
+     L'image se promène dans la moitié droite du hero. */
+  animation: hpFloat 14s ease-in-out infinite;
+  will-change: transform;
 }
 .hp-hero-anime img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  will-change: transform, contents;
-  /* Float permanent : très lent (6s), faible amplitude (8px) — donne juste assez
-     de mouvement pour détacher l'image du fond sans distraire. */
-  animation: hpFloat 6s ease-in-out infinite;
+  will-change: contents;
 }
-.hp-hero-anime:hover img {
-  /* Au hover, l'amplitude double et le rythme accélère légèrement (life-like) */
-  animation: hpFloatStrong 3s ease-in-out infinite;
-}
+
+/* Trajectoire de promenade en 5 points : large amplitude X (-90 à +120 px),
+   amplitude Y plus modeste (-50 à +50 px), micro-rotations (~±2.5°). */
 @keyframes hpFloat {
-  0%, 100% { transform: translateY(0) rotate(-0.5deg); }
-  50%      { transform: translateY(-8px) rotate(0.5deg); }
+  0%   { transform: translate(0,     0   ) rotate(-1deg); }
+  18%  { transform: translate(-90px, -35px) rotate(2.5deg); }
+  35%  { transform: translate(80px,  -55px) rotate(-2deg); }
+  55%  { transform: translate(120px, 35px ) rotate(1.5deg); }
+  75%  { transform: translate(-60px, 50px ) rotate(-1.5deg); }
+  100% { transform: translate(0,     0   ) rotate(-1deg); }
 }
-@keyframes hpFloatStrong {
-  0%, 100% { transform: translateY(0) rotate(-1.5deg) scale(1); }
-  50%      { transform: translateY(-18px) rotate(1.5deg) scale(1.04); }
-}
+
 @media (prefers-reduced-motion: reduce) {
-  .hp-hero-anime img {
-    animation: none !important;
-  }
+  .hp-hero-anime-float { animation: none !important; }
+  .hp-hero-anime { transition: none !important; }
+  .hp-hero-anime:hover { transform: translate(-50%, -50%) !important; }
 }
 @media (max-width: 900px) {
   /* Sur mobile/tablette portrait, on cache l'animation : pas la place */

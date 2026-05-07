@@ -22,7 +22,7 @@
 
     const FRAME_NAMES = ['001','003','005','007','009','011','013','015','017','019'];
     const FRAMES_COUNT = FRAME_NAMES.length;
-    const FRAME_INTERVAL_MS = 50;     // 50ms × ~18 transitions ≈ 900ms ~= 1s
+    const FRAME_INTERVAL_MS = 25;     // 25ms × ~18 transitions ≈ 450ms (x2 plus rapide)
     const PAUSE_BETWEEN_MS = 10000;   // attente entre 2 cycles ≈ 10s
 
     const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
