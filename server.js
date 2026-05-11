@@ -45,6 +45,11 @@ const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR || join(__dirname, 'public/s
 // Fallback : à côté de SCREENSHOTS_DIR (= sur le volume persistant en prod).
 const UPLOADS_DIR = process.env.UPLOADS_DIR
   || join(process.env.SCREENSHOTS_DIR ? dirname(process.env.SCREENSHOTS_DIR) : join(__dirname, 'data'), 'uploads');
+// HERO_IMAGES_DIR : photos cropées (1920×1080) déposées par le service photo-picker
+// (cf. photo-picker-poc/). En prod, dossier partagé sur le volume Coolify ; en local,
+// à côté de SCREENSHOTS_DIR. Ces images sont servies en read-only par /hero-images/{slug}.jpg.
+const HERO_IMAGES_DIR = process.env.HERO_IMAGES_DIR
+  || join(process.env.SCREENSHOTS_DIR ? dirname(process.env.SCREENSHOTS_DIR) : join(__dirname, 'data'), 'hero-images');
 const SITE_DIR = join(__dirname, 'public/site');
 
 const ADMIN_BASE_URL = process.env.ADMIN_BASE_URL || '';
@@ -224,6 +229,9 @@ app.use((req, res, next) => {
 // Routes always available regardless of host
 app.use('/screenshots', express.static(SCREENSHOTS_DIR, { maxAge: '1h' }));
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '1h' }));
+// /hero-images/{slug}.jpg : images hero cropées 1920×1080 produites par photo-picker.
+// Référencées en BDD via overrides_json.hero.backgroundImage = "/hero-images/{slug}.jpg".
+app.use('/hero-images', express.static(HERO_IMAGES_DIR, { maxAge: '1d' }));
 // Normalisation : /legal/privacy.html/  →  redirige 301 vers /legal/privacy.html
 // (sécurise les liens partagés ou collés avec un slash final, par ex. dans Stripe).
 app.use('/legal', (req, res, next) => {
