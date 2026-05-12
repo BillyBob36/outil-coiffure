@@ -157,7 +157,7 @@
       <div class="mqs-plans">${plansHtml}</div>
       <div class="mqs-modal-footer">
         <p class="mqs-trust">
-          <strong>Sans frais de mise en place</strong> · Site en ligne sous 15 minutes ·
+          <strong>Sans frais de mise en place</strong> · Site en ligne sous 5 minutes ·
           Hébergé en Europe
         </p>
       </div>

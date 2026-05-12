@@ -4,13 +4,21 @@ import { buildSalonView } from '../defaults.js';
 
 const router = express.Router();
 
+// Middleware admin pour routes liste (expose edit_token, email, phone, stats internes).
+// `/api/salon/:slug` (singulier) reste public car utilisé par le preview SSR — son
+// payload ne contient PAS de PII (filtré par buildSalonView).
+function requireAdminSession(req, res, next) {
+  if (req.session?.userId) return next();
+  return res.status(401).json({ error: 'Auth required' });
+}
+
 router.get('/salon/:slug', (req, res) => {
   const row = db.prepare('SELECT * FROM salons WHERE slug = ?').get(req.params.slug);
   if (!row) return res.status(404).json({ error: 'Salon introuvable' });
   res.json(buildSalonView(row));
 });
 
-router.get('/salons', (req, res) => {
+router.get('/salons', requireAdminSession, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 200, 5000);
   const offset = parseInt(req.query.offset) || 0;
   const search = req.query.search || '';
@@ -90,7 +98,7 @@ router.get('/salons', (req, res) => {
   res.json({ total, limit, offset, rows: enrichedRows });
 });
 
-router.get('/csv-imports', (req, res) => {
+router.get('/csv-imports', requireAdminSession, (req, res) => {
   const rows = db.prepare(`
     SELECT id, filename, total_rows, imported_rows, skipped_rows, imported_at
     FROM csv_imports
@@ -100,7 +108,7 @@ router.get('/csv-imports', (req, res) => {
   res.json(rows);
 });
 
-router.get('/stats', (req, res) => {
+router.get('/stats', requireAdminSession, (req, res) => {
   const groupId = req.query.group_id || '';
   let groupClause = '';
   const groupParams = {};

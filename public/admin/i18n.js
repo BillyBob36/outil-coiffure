@@ -490,13 +490,13 @@ const TRANSLATIONS = {
   }
 };
 
-// Detection auto : prefere localStorage > navigateur > defaut FR
+// Detection lang : prefere localStorage > defaut FR.
+// L'outil est destiné à l'agence FR ; on ne se base PLUS sur navigator.language
+// car même un user FR peut avoir Chrome en EN (cas observé en test). Si l'user
+// veut EN ou ZH, il clique le sélecteur — son choix est persisté en localStorage.
 function detectLang() {
   const stored = localStorage.getItem('outil-coiffure-lang');
   if (stored && TRANSLATIONS[stored]) return stored;
-  const browser = (navigator.language || 'fr').toLowerCase();
-  if (browser.startsWith('zh')) return 'zh';
-  if (browser.startsWith('en')) return 'en';
   return 'fr';
 }
 

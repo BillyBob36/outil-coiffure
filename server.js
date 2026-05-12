@@ -75,11 +75,30 @@ if (!TENANT_ONLY) {
   await ensureAdminUser();
 }
 
+// Fail-fast si SESSION_SECRET non défini ou trop court — empêche tout démarrage
+// avec un secret prédictible (qui rendrait toutes les sessions forgeables).
+const SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET || SESSION_SECRET.length < 16) {
+  console.error('FATAL: SESSION_SECRET manquant ou trop court (min 16 chars). Set la variable d\'env avant de redémarrer.');
+  process.exit(1);
+}
+
 const app = express();
 app.set('trust proxy', 1);
 
+// Headers de sécurité défensifs (clickjacking, MIME sniffing, leak referer).
+// Pas de CSP ici — nécessite un audit dédié pour ne pas casser Stripe.js, fonts
+// Google, Cloudflare Insights, etc.
+app.use((req, res, next) => {
+  res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-Frame-Options', 'SAMEORIGIN');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -303,7 +322,23 @@ app.get('/admin/:slug', (req, res, next) => {
       }
     } catch {}
   }
-  res.sendFile(join(__dirname, 'public/edit/index.html'));
+  // Vérification serveur-side du token : si manquant ou ne matche pas un salon,
+  // on retourne 401 (au lieu de 200 + page d'erreur JS). Plus correct pour audits
+  // sécurité + SEO. La même page HTML est servie (UX identique), juste le status
+  // code change. Le coiffeur légitime avec un token valide voit 200 normalement.
+  const token = req.query.token;
+  let statusCode = 200;
+  if (!token) {
+    statusCode = 401;
+  } else {
+    try {
+      const r = db.prepare('SELECT 1 FROM salons WHERE slug = ? AND edit_token = ?').get(slug, token);
+      if (!r) statusCode = 401;
+    } catch {
+      statusCode = 401;
+    }
+  }
+  res.status(statusCode).sendFile(join(__dirname, 'public/edit/index.html'));
 });
 
 // === Routes admin agence : uniquement sur Helsinki ===

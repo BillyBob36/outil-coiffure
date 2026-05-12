@@ -37,9 +37,9 @@
   const host = window.location.hostname;
   const isDemoHost = host === 'monsitehq.com' || host === 'localhost' || host === '127.0.0.1';
   if (!isDemoHost) return;
-  try {
-    if (localStorage.getItem('mqs-banner-permadismissed') === '1') return;
-  } catch (_) { /* pas de localStorage : on continue */ }
+  // Note: ancien flag localStorage 'mqs-banner-permadismissed' supprimé — entraînait
+  // une perte de lead irréversible si l'user cliquait la croix une fois. La banner
+  // réapparait désormais toujours après REAPPEAR_AFTER_MS suite à un close.
 
   const REAPPEAR_AFTER_MS = 5000;    // 5s après close (demande Johann)
 

@@ -15,7 +15,7 @@
     <div class="login-box">
         <h1 data-i18n="login.title">Outil coiffure</h1>
         <p class="login-subtitle" data-i18n="login.subtitle">Connexion administrateur</p>
-        <form id="login-form">
+        <form id="login-form" method="POST" action="/admin/login">
             <label>
                 <span data-i18n="login.email">Email</span>
                 <input type="email" name="email" required autocomplete="username">
