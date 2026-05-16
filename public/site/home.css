@@ -26,6 +26,9 @@
 }
 
 * { box-sizing: border-box; }
+/* Garantit que l'attribut HTML `hidden` ne soit JAMAIS écrasé par des display: flex/grid/block
+   (sinon les .hp-modal-step[hidden] resteraient visibles → toutes les réponses s'empilent) */
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; }
 body {
   font-family: var(--font-body);
