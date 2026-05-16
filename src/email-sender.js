@@ -113,13 +113,13 @@ export async function sendSignupSuccessEmail({ to, salonName, liveHostname, plan
     <a href="${liveUrl}" style="display: inline-block; background: #0a0a0a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 14px;">Voir mon site →</a>
   </div>
 
-  <div style="background: #fff7e6; border-left: 4px solid #c9a96e; border-radius: 0 8px 8px 0; padding: 18px 20px; margin: 24px 0;">
-    <p style="margin: 0 0 8px; font-size: 13px; color: #92400e; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Modifier votre site</p>
+  <div style="background: #FAF6EC; border-left: 4px solid #F4A300; border-radius: 0 8px 8px 0; padding: 18px 20px; margin: 24px 0;">
+    <p style="margin: 0 0 8px; font-size: 13px; color: #002FA7; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Modifier votre site</p>
     <p style="margin: 0 0 12px; font-size: 14px; color: #4b5563; line-height: 1.5;">
       Cliquez sur le bouton ci-dessous pour accéder à votre espace de modification (textes, photos, prestations, horaires…).
     </p>
     <a href="${adminUrl}" style="display: inline-block; background: #0a0a0a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 14px;">Modifier mon site →</a>
-    <p style="margin: 12px 0 0; font-size: 12px; color: #92400e;">
+    <p style="margin: 12px 0 0; font-size: 12px; color: #15130E;">
       <strong>Important :</strong> ce lien contient votre clé d'accès personnelle. Conservez cet email.
     </p>
   </div>
