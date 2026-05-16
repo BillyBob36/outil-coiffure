@@ -47,16 +47,18 @@ function loadTemplate() {
 // Hosts considérés comme "domaine principal" SaaS (marketing + agency) — utilisé
 // pour décider du noindex et du canonical. Tout host pas dans cette liste est
 // un custom hostname coiffeur (= site qui doit être indexable).
-const MONSITEHQ_HOSTS = new Set([
-  'monsitehq.com',
-  'www.monsitehq.com',
+// Note: monsitehq.com reste dans la liste pour préserver le comportement noindex
+// sur les URLs legacy (avant qu'elles ne 301-redirect côté Express).
+const MAIN_DOMAIN_HOSTS = new Set([
   'maquickpage.fr',
   'www.maquickpage.fr',
+  'monsitehq.com',
+  'www.monsitehq.com',
   'localhost',
   '127.0.0.1',
 ]);
-export function isMonsiteHQHost(host) {
-  return MONSITEHQ_HOSTS.has((host || '').toLowerCase());
+export function isMainDomainHost(host) {
+  return MAIN_DOMAIN_HOSTS.has((host || '').toLowerCase());
 }
 
 // =============================================================================
@@ -107,7 +109,7 @@ function replaceElementByIdHtml(html, id, newInnerHtml) {
 /**
  * @param {Object} view - résultat de buildSalonView(salonRow) (cf. defaults.js)
  * @param {Object} options
- * @param {string} options.canonicalUrl - URL canonique (https://salon-jean.fr/ ou https://monsitehq.com/preview/jean)
+ * @param {string} options.canonicalUrl - URL canonique (https://salon-jean.fr/ ou https://maquickpage.fr/preview/jean)
  * @param {string} options.siteUrl - URL utilisée pour OG/JSON-LD (= origin du site)
  * @param {boolean} options.noindex - injecte <meta robots noindex,nofollow>
  * @returns {string} HTML rendu
@@ -141,7 +143,7 @@ export function renderSalonHtml(view, options = {}) {
     canonicalUrl ? `<link rel="canonical" href="${escapeHtml(canonicalUrl)}">` : '',
     robotsTag,
     `<meta name="format-detection" content="telephone=yes">`,
-    `<meta name="author" content="${escapeHtml(view.nom || 'MONSITEHQ')}">`,
+    `<meta name="author" content="${escapeHtml(view.nom || 'MaQuickPage')}">`,
     preloadHero,
     ogTags,
     `<script type="application/ld+json">${jsonLd}</script>`,
@@ -220,13 +222,13 @@ export function renderSalonHtml(view, options = {}) {
 
 /**
  * Génère le contenu robots.txt selon l'hôte.
- * - monsitehq.com (et localhost en dev) : Disallow /preview/, /admin/, /api/, etc.
+ * - maquickpage.fr (et localhost en dev) : Disallow /preview/, /admin/, /api/, etc.
  *     → protège contre l'indexation des 11k pages démo + l'admin
  * - Custom hostname (= salon coiffeur live) : Allow tout + sitemap référencé
  */
 export function renderRobotsTxt(host) {
-  const isMain = isMonsiteHQHost(host);
-  const safeHost = (host || 'monsitehq.com').toLowerCase();
+  const isMain = isMainDomainHost(host);
+  const safeHost = (host || 'maquickpage.fr').toLowerCase();
 
   if (isMain) {
     return [
@@ -240,7 +242,7 @@ export function renderRobotsTxt(host) {
       `Disallow: /uploads/`,
       `Allow: /`,
       ``,
-      `Sitemap: https://monsitehq.com/sitemap.xml`,
+      `Sitemap: https://maquickpage.fr/sitemap.xml`,
       ``,
     ].join('\n');
   }
@@ -264,7 +266,7 @@ export function renderRobotsTxt(host) {
 /**
  * Génère le sitemap.xml selon le contexte.
  *
- * - monsitehq.com : home + pages légales (PAS les /preview/, qui sont noindex)
+ * - maquickpage.fr : home + pages légales (PAS les /preview/, qui sont noindex)
  * - Custom hostname : home (one-pager). Plus tard si on passe en multi-page,
  *     on ajoutera les sous-pages.
  *
@@ -274,20 +276,20 @@ export function renderRobotsTxt(host) {
  *   (= overrides_updated_at) pour le <lastmod>
  */
 export function renderSitemap(host, options = {}) {
-  const isMain = isMonsiteHQHost(host);
-  const safeHost = (host || 'monsitehq.com').toLowerCase();
+  const isMain = isMainDomainHost(host);
+  const safeHost = (host || 'maquickpage.fr').toLowerCase();
   const todayIso = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
   const urls = [];
 
   if (isMain) {
-    urls.push({ loc: `https://monsitehq.com/`, changefreq: 'weekly', priority: '1.0', lastmod: todayIso });
-    urls.push({ loc: `https://monsitehq.com/legal/cgv.html`, changefreq: 'monthly', priority: '0.5', lastmod: todayIso });
-    urls.push({ loc: `https://monsitehq.com/legal/cgv-2y.html`, changefreq: 'monthly', priority: '0.4', lastmod: todayIso });
-    urls.push({ loc: `https://monsitehq.com/legal/cgv-1y.html`, changefreq: 'monthly', priority: '0.4', lastmod: todayIso });
-    urls.push({ loc: `https://monsitehq.com/legal/cgv-flex.html`, changefreq: 'monthly', priority: '0.4', lastmod: todayIso });
-    urls.push({ loc: `https://monsitehq.com/legal/privacy.html`, changefreq: 'monthly', priority: '0.5', lastmod: todayIso });
-    urls.push({ loc: `https://monsitehq.com/legal/mentions-legales.html`, changefreq: 'monthly', priority: '0.4', lastmod: todayIso });
+    urls.push({ loc: `https://maquickpage.fr/`, changefreq: 'weekly', priority: '1.0', lastmod: todayIso });
+    urls.push({ loc: `https://maquickpage.fr/legal/cgv.html`, changefreq: 'monthly', priority: '0.5', lastmod: todayIso });
+    urls.push({ loc: `https://maquickpage.fr/legal/cgv-2y.html`, changefreq: 'monthly', priority: '0.4', lastmod: todayIso });
+    urls.push({ loc: `https://maquickpage.fr/legal/cgv-1y.html`, changefreq: 'monthly', priority: '0.4', lastmod: todayIso });
+    urls.push({ loc: `https://maquickpage.fr/legal/cgv-flex.html`, changefreq: 'monthly', priority: '0.4', lastmod: todayIso });
+    urls.push({ loc: `https://maquickpage.fr/legal/privacy.html`, changefreq: 'monthly', priority: '0.5', lastmod: todayIso });
+    urls.push({ loc: `https://maquickpage.fr/legal/mentions-legales.html`, changefreq: 'monthly', priority: '0.4', lastmod: todayIso });
   } else {
     // Custom hostname : home seule (one-pager).
     const lastmod = (options.salonUpdatedAt && options.salonUpdatedAt.slice(0, 10)) || todayIso;
@@ -309,5 +311,5 @@ export default {
   renderSalonHtml,
   renderRobotsTxt,
   renderSitemap,
-  isMonsiteHQHost,
+  isMainDomainHost,
 };

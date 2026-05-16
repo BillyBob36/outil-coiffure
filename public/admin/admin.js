@@ -169,7 +169,7 @@ function urlCell(displayText, fullUrl, hrefUrl) {
 }
 
 function publicBaseFromHost() {
-  // Sur outil.monsitehq.com (agency admin), le public est sur monsitehq.com
+  // Sur outil.maquickpage.fr (agency admin), le public est sur maquickpage.fr
   const host = window.location.host;
   if (host.startsWith('outil.')) {
     return window.location.protocol + '//' + host.slice('outil.'.length);

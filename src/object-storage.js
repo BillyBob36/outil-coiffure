@@ -11,10 +11,10 @@
  * Env vars (prod) :
  *   OBJECT_STORAGE_ENDPOINT   ex: https://fsn1.your-objectstorage.com
  *   OBJECT_STORAGE_REGION     ex: fsn1
- *   OBJECT_STORAGE_BUCKET     ex: monsitehq-uploads
+ *   OBJECT_STORAGE_BUCKET     ex: maquickpage-uploads
  *   OBJECT_STORAGE_ACCESS_KEY
  *   OBJECT_STORAGE_SECRET_KEY
- *   OBJECT_STORAGE_PUBLIC_URL ex: https://uploads.monsitehq.com  (CDN devant)
+ *   OBJECT_STORAGE_PUBLIC_URL ex: https://uploads.maquickpage.fr  (CDN devant)
  *                              fallback: https://{bucket}.{endpoint}
  */
 

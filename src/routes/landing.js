@@ -192,7 +192,7 @@ router.post('/landing/check', express.json({ limit: '10kb' }), async (req, res) 
 
   if (salon) {
     // === SALON TROUVÉ ===
-    const baseUrl = process.env.PUBLIC_BASE_URL || 'https://monsitehq.com';
+    const baseUrl = process.env.PUBLIC_BASE_URL || 'https://maquickpage.fr';
     const demoUrl = `${baseUrl}/preview/${encodeURIComponent(salon.slug)}`;
     const salonName = salon.nom_clean || salon.nom;
 
@@ -274,10 +274,10 @@ async function sendDemoLinkEmail({ to, salonName, demoUrl, ville }) {
   </p>
   <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 28px 0;">
   <p style="font-size: 12px; color: #9ca3af; line-height: 1.5; margin: 0;">
-    MONSITEHQ · KAISER CO · KAISER JOHANN, Entrepreneur individuel · SIREN 791 069 610<br>
-    <a href="https://monsitehq.com/legal/cgv.html" style="color: #9ca3af;">CGV</a> ·
-    <a href="https://monsitehq.com/legal/mentions-legales.html" style="color: #9ca3af;">Mentions légales</a> ·
-    <a href="https://monsitehq.com/legal/privacy.html" style="color: #9ca3af;">Confidentialité</a>
+    MaQuickPage · KAISER CO · KAISER JOHANN, Entrepreneur individuel · SIREN 791 069 610<br>
+    <a href="https://maquickpage.fr/legal/cgv.html" style="color: #9ca3af;">CGV</a> ·
+    <a href="https://maquickpage.fr/legal/mentions-legales.html" style="color: #9ca3af;">Mentions légales</a> ·
+    <a href="https://maquickpage.fr/legal/privacy.html" style="color: #9ca3af;">Confidentialité</a>
   </p>
 </body></html>`;
   const text = `Bonjour,
@@ -287,13 +287,13 @@ ${demoUrl}
 
 C'est gratuit pour le découvrir. À partir de 9,90 € HT/mois, domaine offert, aucun frais d'installation.
 
-MONSITEHQ — contact@monsitehq.com`;
+MaQuickPage — contact@maquickpage.fr`;
 
   // Réutilise sendRaw via un import dynamique (évite cycle)
   const { default: emailSender } = await import('../email-sender.js');
   // Pas de sendRaw exporté → on appelle via fetch direct ici (RESEND API)
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL || 'noreply@monsitehq.com';
+  const from = process.env.RESEND_FROM_EMAIL || 'noreply@maquickpage.fr';
   const replyTo = process.env.RESEND_REPLY_TO || null;
   const body = { from, to: [to], subject, html, text };
   if (replyTo) body.reply_to = replyTo;

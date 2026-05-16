@@ -591,8 +591,8 @@ router.get('/export-csv', (req, res) => {
   const csvSources = String(csvSourcesRaw).split(',').map(s => s.trim()).filter(Boolean);
   const groupId = req.query.group_id || '';
   const format = req.query.format || 'smartlead'; // 'smartlead' | 'full'
-  const publicBase = process.env.PUBLIC_BASE_URL || 'https://monsitehq.com';
-  const adminBase = process.env.ADMIN_BASE_URL || 'https://outil.monsitehq.com';
+  const publicBase = process.env.PUBLIC_BASE_URL || 'https://maquickpage.fr';
+  const adminBase = process.env.ADMIN_BASE_URL || 'https://outil.maquickpage.fr';
 
   let query = `SELECT slug, nom, nom_clean, ville, code_postal, adresse, telephone, email,
                       note_avis, nb_avis, lien_facebook, lien_instagram, lien_google_maps,

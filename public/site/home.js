@@ -1,5 +1,5 @@
 /* =============================================================================
-   home.js — Logique de la landing MONSITEHQ.
+   home.js — Logique de la landing MaQuickPage.
 
    - Tous les boutons "Voir si mon salon..." ouvrent la même modale
    - Modale en 3 étapes : input → loading → résultat (found / notfound)

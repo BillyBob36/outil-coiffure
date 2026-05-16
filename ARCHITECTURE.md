@@ -57,8 +57,8 @@ flowchart TB
     V2 --> CF
     V3 --> CF
 
-    CF -->|"outil.monsitehq.com"| Helsinki
-    CF -->|"monsitehq.com /preview /admin"| Helsinki
+    CF -->|"outil.maquickpage.fr"| Helsinki
+    CF -->|"maquickpage.fr /preview /admin"| Helsinki
     CFSaaS -.->|"fallback origin"| Falkenstein
     Falkenstein -->|"API readonly /api/salon/:slug"| Helsinki
     Helsinki --> External
@@ -94,8 +94,12 @@ flowchart TB
 | Coût | 7,79€ TTC/mois |
 | Apps | uniquement le render multi-tenant (V1 pending) |
 
-### Cloudflare zone `monsitehq.com`
+### Cloudflare zone `monsitehq.com` (legacy infra)
 **Rôle** : DNS, CDN, WAF, DDoS, Cloudflare for SaaS pour les domaines custom.
+**Note** : Après le rebrand vers `maquickpage.fr`, cette zone Cloudflare reste
+en place pour servir l'infra technique (custom hostnames clients via Cloudflare
+for SaaS, fallback origin `customers.monsitehq.com`). Le domaine maquickpage.fr
+lui-même est sur OVH DNS — pas de Cloudflare pour la landing.
 
 | Élément | Valeur |
 |---|---|

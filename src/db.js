@@ -119,7 +119,7 @@ export function initSchema() {
   if (!cols.includes('suspended_reason')) db.exec("ALTER TABLE salons ADD COLUMN suspended_reason TEXT");
 
   // === Récupération d'accès admin (magic link via /recover) ===
-  // Le coiffeur entre son email sur monsitehq.com/recover, on génère un token
+  // Le coiffeur entre son email sur maquickpage.fr/recover, on génère un token
   // single-use valable 10 min, et on lui envoie un email avec le lien.
   if (!cols.includes('recovery_token')) db.exec("ALTER TABLE salons ADD COLUMN recovery_token TEXT");
   if (!cols.includes('recovery_token_expires_at')) db.exec("ALTER TABLE salons ADD COLUMN recovery_token_expires_at TEXT");

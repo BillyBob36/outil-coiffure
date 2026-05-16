@@ -3,13 +3,13 @@
 // Toutes les assertions = régressions critiques à détecter avant deploy.
 //
 // Pré-requis : outil-coiffure doit être démarré (local sur PORT=3000 ou prod via
-// BASE_URL=https://monsitehq.com et ADMIN_BASE_URL=https://outil.monsitehq.com).
+// BASE_URL=https://maquickpage.fr et ADMIN_BASE_URL=https://outil.maquickpage.fr).
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-const BASE = process.env.BASE_URL || 'https://monsitehq.com';
-const ADMIN = process.env.ADMIN_BASE_URL || 'https://outil.monsitehq.com';
+const BASE = process.env.BASE_URL || 'https://maquickpage.fr';
+const ADMIN = process.env.ADMIN_BASE_URL || 'https://outil.maquickpage.fr';
 // Pour tester /preview, fournir un slug existant via env (sinon skip).
 const EXISTING_SLUG = process.env.TEST_SLUG || '';
 
@@ -143,7 +143,7 @@ describe('Smoke — Preview salon (si TEST_SLUG)', { skip: !EXISTING_SLUG }, () 
   });
 });
 
-describe('Smoke — Admin agence (outil.monsitehq.com)', () => {
+describe('Smoke — Admin agence (outil.maquickpage.fr)', () => {
   test('GET /admin → redirect (vers /admin/ ou /admin/login)', async () => {
     // Cloudflare fait un slash-redirect Express → /admin → /admin/ (301).
     // Depuis /admin/, l'app sert l'index admin qui check auth + redirect JS vers

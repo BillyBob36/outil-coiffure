@@ -10,7 +10,7 @@ import db from './src/db.js';
 import apiRouter from './src/routes/api.js';
 import editRouter from './src/routes/edit.js';
 import { buildSalonView } from './src/defaults.js';
-import { renderSalonHtml, renderRobotsTxt, renderSitemap, isMonsiteHQHost } from './src/ssr.js';
+import { renderSalonHtml, renderRobotsTxt, renderSitemap, isMainDomainHost } from './src/ssr.js';
 
 // === TENANT_ONLY mode ===
 // Sur Falkenstein (= sites coiffeurs payants) on désactive :
@@ -51,7 +51,7 @@ const ADMIN_BASE_URL = process.env.ADMIN_BASE_URL || '';
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';
 // LANDING_BASE_URL : domaine commercial (page d'accueil + signup).
 // Découplé de PUBLIC_BASE_URL pour permettre une bascule indépendante.
-// Sur monsitehq.com on garde les /preview/*, /admin/*, etc., mais la landing
+// Sur maquickpage.fr on garde les /preview/*, /admin/*, etc., mais la landing
 // "Voir si mon salon est couvert" vit maintenant sur https://maquickpage.fr/.
 const LANDING_BASE_URL = process.env.LANDING_BASE_URL || 'https://maquickpage.fr';
 const adminHost = ADMIN_BASE_URL ? new URL(ADMIN_BASE_URL).hostname : null;
@@ -213,16 +213,16 @@ if (TENANT_ONLY) {
 }
 
 // ====================================================================
-// HOSTNAME-AWARE ROUTING (monsitehq.com architecture)
+// HOSTNAME-AWARE ROUTING (maquickpage.fr architecture)
 // ====================================================================
-// Agency admin tool       : outil.monsitehq.com (ADMIN_BASE_URL)
+// Agency admin tool       : outil.maquickpage.fr (ADMIN_BASE_URL)
 //   /                     -> redirect to /admin
 //   /admin                -> agency dashboard
 //   /admin/login          -> login page
 //   /admin/<api-route>    -> agency admin API (POST/PUT/DELETE/GET)
 //   /api/*                -> public API
 //
-// Public landing + salon admin : monsitehq.com (PUBLIC_BASE_URL)
+// Public landing + salon admin : maquickpage.fr (PUBLIC_BASE_URL)
 //   /                     -> homepage
 //   /preview/:slug        -> public landing of a salon
 //   /admin/:slug          -> salon's edit page (auth via ?token=xxx)
@@ -230,6 +230,30 @@ if (TENANT_ONLY) {
 //   /screenshots/*        -> static screenshots
 //   /uploads/*            -> uploaded photos (hero, gallery)
 // ====================================================================
+
+// ====================================================================
+// LEGACY HOSTS — 301 redirect everything to the new MaQuickPage domain
+// ====================================================================
+// On préserve le SEO juice + les anciens liens (cold emails, bookmarks
+// admin agence, URLs CGV partagées dans Stripe) en redirigeant chaque
+// host monsitehq.com vers son équivalent maquickpage.fr.
+//
+// Exclu : customers.monsitehq.com (= wildcard Falkenstein, sera migré
+// séparément quand on basculera la prod Cloudflare for SaaS).
+// ====================================================================
+const LEGACY_HOST_REDIRECTS = {
+  'monsitehq.com': 'https://maquickpage.fr',
+  'www.monsitehq.com': 'https://maquickpage.fr',
+  'outil.monsitehq.com': 'https://outil.maquickpage.fr',
+};
+app.use((req, res, next) => {
+  const host = (req.hostname || '').toLowerCase();
+  const dest = LEGACY_HOST_REDIRECTS[host];
+  if (dest) {
+    return res.redirect(301, `${dest}${req.originalUrl}`);
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   const host = (req.hostname || '').toLowerCase();
@@ -297,9 +321,9 @@ app.use('/edit-app', express.static(join(__dirname, 'public/edit')));
 
 // ====================================================================
 // PUBLIC HOST GATE on /admin/*
-// Sur monsitehq.com (host public), on bloque TOUT sous /admin/* sauf le
+// Sur maquickpage.fr (host public), on bloque TOUT sous /admin/* sauf le
 // pattern /admin/{slug} (page d'edition coiffeur). Sinon le static middleware
-// servirait public/admin/index.html sur monsitehq.com/admin/ — bug de leak.
+// servirait public/admin/index.html sur maquickpage.fr/admin/ — bug de leak.
 // ====================================================================
 app.use('/admin', (req, res, next) => {
   if (req.routingMode !== 'public') return next();
@@ -357,7 +381,7 @@ app.get('/admin/:slug', (req, res, next) => {
 
 // === Routes admin agence : uniquement sur Helsinki ===
 if (!TENANT_ONLY) {
-  // Agency admin assets (CSS, JS, login.html, etc.) — uniquement utilises sur outil.monsitehq.com
+  // Agency admin assets (CSS, JS, login.html, etc.) — uniquement utilises sur outil.maquickpage.fr
   app.use('/admin', express.static(join(__dirname, 'public/admin')));
 
   // Agency admin login page
@@ -383,7 +407,7 @@ app.use('/_assets', express.static(SITE_DIR, { maxAge: '1d' }));
 
 // Public preview : /preview/:slug — SSR pour SEO
 // Sur Helsinki : si salon LIVE → redirect 302 vers le custom hostname (Falkenstein le sert).
-//                Sinon → SSR avec noindex (= démo non payée, on protège monsitehq.com).
+//                Sinon → SSR avec noindex (= démo non payée, on protège maquickpage.fr).
 // Sur Falkenstein : SSR avec index+follow (= site coiffeur payé, on veut qu'il ranke).
 app.get('/preview/:slug', (req, res) => {
   const slug = req.params.slug;
@@ -405,16 +429,16 @@ app.get('/preview/:slug', (req, res) => {
 
   // SSR
   const host = (req.hostname || '').toLowerCase();
-  const onMonsiteHQ = isMonsiteHQHost(host);
+  const onMainDomain = isMainDomainHost(host);
   const view = buildSalonView(salon);
 
   // Canonical + noindex selon contexte :
-  //   - monsitehq.com/preview/* → noindex (= URL démo, jamais à indexer)
+  //   - maquickpage.fr/preview/* → noindex (= URL démo, jamais à indexer)
   //                              canonical pointe vers le custom hostname si payé,
   //                              sinon self-canonical
   //   - {custom}/preview/* (Falkenstein) → indexable, canonical = https://{host}/
   let canonicalUrl, noindex;
-  if (onMonsiteHQ) {
+  if (onMainDomain) {
     noindex = true;
     canonicalUrl = (salon.live_hostname && (salon.subscription_status === 'live' || salon.subscription_status === 'active'))
       ? `https://${salon.live_hostname}/`
@@ -424,7 +448,7 @@ app.get('/preview/:slug', (req, res) => {
     canonicalUrl = `https://${host}/`;
   }
 
-  const siteUrl = onMonsiteHQ ? `https://${host}/preview/${encodeURIComponent(slug)}` : `https://${host}`;
+  const siteUrl = onMainDomain ? `https://${host}/preview/${encodeURIComponent(slug)}` : `https://${host}`;
 
   try {
     const html = renderSalonHtml(view, { canonicalUrl, siteUrl, noindex });
@@ -437,7 +461,7 @@ app.get('/preview/:slug', (req, res) => {
 });
 
 // /robots.txt host-aware (Helsinki + Falkenstein)
-//   - monsitehq.com : Disallow /preview/, /admin/, etc.
+//   - maquickpage.fr : Disallow /preview/, /admin/, etc.
 //   - custom hostname : Allow tout + sitemap référencé
 app.get('/robots.txt', (req, res) => {
   res.set('Content-Type', 'text/plain; charset=utf-8');
@@ -450,7 +474,7 @@ app.get('/sitemap.xml', (req, res) => {
   const host = (req.hostname || '').toLowerCase();
   let salonUpdatedAt = null;
 
-  if (!isMonsiteHQHost(host)) {
+  if (!isMainDomainHost(host)) {
     // Custom hostname : on récupère la date de dernière maj du salon pour <lastmod>
     try {
       const r = db.prepare('SELECT updated_at, overrides_updated_at FROM salons WHERE live_hostname = ?').get(host);
@@ -496,14 +520,12 @@ if (TENANT_ONLY) {
 }
 
 // Root
+//   - host=outil.maquickpage.fr  → /admin
+//   - host=maquickpage.fr        → landing (home.html)
+//   - host=monsitehq.com (legacy)→ 301 via LEGACY_HOST_REDIRECTS middleware en amont
+//   - local dev / autre host     → landing par défaut
 app.get('/', (req, res) => {
   if (req.routingMode === 'admin') return res.redirect('/admin');
-  // Bascule landing : la racine de monsitehq.com (= public host) ne sert plus
-  // la landing — elle est exclusivement sur LANDING_BASE_URL maintenant.
-  // Redirect 301 pour préserver le SEO juice acquis.
-  if (req.routingMode === 'public' && landingHost) {
-    return res.redirect(301, `https://${landingHost}/`);
-  }
   res.sendFile(join(SITE_DIR, 'home.html'));
 });
 

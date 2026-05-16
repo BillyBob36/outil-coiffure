@@ -9,7 +9,7 @@
     "dev": "node --watch server.js",
     "init-db": "node src/db.js init",
     "test": "node --test tests/",
-    "test:prod": "BASE_URL=https://monsitehq.com ADMIN_BASE_URL=https://outil.monsitehq.com node --test tests/"
+    "test:prod": "BASE_URL=https://maquickpage.fr ADMIN_BASE_URL=https://outil.maquickpage.fr node --test tests/"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1041.0",

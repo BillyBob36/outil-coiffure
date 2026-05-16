@@ -3,14 +3,14 @@
  *
  * - No-op gracieux si RESEND_API_KEY n'est pas défini (log warning, pas d'erreur)
  * - Templates fixes : signup_success, signup_cancelled, provisioning_error
- * - Sender FROM doit être un domaine vérifié dans Resend (ex: hello@monsitehq.com)
+ * - Sender FROM doit être un domaine vérifié dans Resend (ex: hello@maquickpage.fr)
  *
  * Pour activer :
  *   1. https://resend.com/api-keys → créer une clé restricted "Sending access"
- *   2. https://resend.com/domains → ajouter monsitehq.com + DKIM via API Cloudflare
+ *   2. https://resend.com/domains → ajouter maquickpage.fr + DKIM via API Cloudflare
  *   3. Set env vars sur Coolify :
  *        RESEND_API_KEY=re_xxx
- *        RESEND_FROM_EMAIL=hello@monsitehq.com
+ *        RESEND_FROM_EMAIL=hello@maquickpage.fr
  *        RESEND_REPLY_TO=johann.metagora@gmail.com
  */
 
@@ -21,7 +21,7 @@ function isEnabled() {
 }
 
 function getFrom() {
-  return process.env.RESEND_FROM_EMAIL || 'noreply@monsitehq.com';
+  return process.env.RESEND_FROM_EMAIL || 'noreply@maquickpage.fr';
 }
 function getReplyTo() {
   return process.env.RESEND_REPLY_TO || null;
@@ -93,7 +93,7 @@ export async function sendSignupSuccessEmail({ to, salonName, liveHostname, plan
   const adminUrl = editToken
     ? `https://${liveHostname}/admin/${encodeURIComponent(slug)}?token=${encodeURIComponent(editToken)}`
     : `https://${liveHostname}/admin/${encodeURIComponent(slug)}`;
-  const recoverUrl = `https://monsitehq.com/recover`;
+  const recoverUrl = `https://maquickpage.fr/recover`;
 
   const subject = `${salonName} — votre site est en ligne sur ${liveHostname}`;
 
@@ -102,7 +102,7 @@ export async function sendSignupSuccessEmail({ to, salonName, liveHostname, plan
 <body style="font-family: -apple-system, system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 30px; color: #1a1a1a; background: #ffffff;">
   <h1 style="font-size: 24px; margin: 0 0 16px;">Bonjour ${escapeHtml(salonName)},</h1>
   <p style="font-size: 16px; line-height: 1.5; color: #4b5563;">
-    Votre site est maintenant <strong>en ligne</strong>. Bienvenue sur MONSITEHQ.
+    Votre site est maintenant <strong>en ligne</strong>. Bienvenue sur MaQuickPage.
   </p>
 
   <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 24px 0;">
@@ -141,17 +141,17 @@ export async function sendSignupSuccessEmail({ to, salonName, liveHostname, plan
   <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 28px 0;">
 
   <p style="font-size: 12px; color: #9ca3af; line-height: 1.5; margin: 0;">
-    Une question ? Répondez à cet email ou écrivez à <a href="mailto:contact@monsitehq.com" style="color: #6b7280;">contact@monsitehq.com</a>.<br>
-    MONSITEHQ — KAISER CO · KAISER JOHANN, Entrepreneur individuel · SIREN 791 069 610 · 61 rue de Lyon, 75012 Paris<br>
-    <a href="https://monsitehq.com/legal/cgv.html" style="color: #9ca3af;">CGV</a> ·
-    <a href="https://monsitehq.com/legal/mentions-legales.html" style="color: #9ca3af;">Mentions légales</a> ·
-    <a href="https://monsitehq.com/legal/privacy.html" style="color: #9ca3af;">Confidentialité</a>
+    Une question ? Répondez à cet email ou écrivez à <a href="mailto:contact@maquickpage.fr" style="color: #6b7280;">contact@maquickpage.fr</a>.<br>
+    MaQuickPage — KAISER CO · KAISER JOHANN, Entrepreneur individuel · SIREN 791 069 610 · 61 rue de Lyon, 75012 Paris<br>
+    <a href="https://maquickpage.fr/legal/cgv.html" style="color: #9ca3af;">CGV</a> ·
+    <a href="https://maquickpage.fr/legal/mentions-legales.html" style="color: #9ca3af;">Mentions légales</a> ·
+    <a href="https://maquickpage.fr/legal/privacy.html" style="color: #9ca3af;">Confidentialité</a>
   </p>
 </body></html>`;
 
   const text = `Bonjour ${salonName},
 
-Votre site est maintenant en ligne. Bienvenue sur MONSITEHQ.
+Votre site est maintenant en ligne. Bienvenue sur MaQuickPage.
 
 ADRESSE DE VOTRE SITE
 ${liveUrl}
@@ -167,29 +167,29 @@ Hébergement : Hetzner (Allemagne, UE)
 VOUS AVEZ PERDU CET EMAIL ?
 Allez sur ${recoverUrl}, entrez votre adresse e-mail d'inscription, vous recevrez un nouveau lien.
 
-Une question ? Répondez à cet email ou écrivez à contact@monsitehq.com
+Une question ? Répondez à cet email ou écrivez à contact@maquickpage.fr
 
-MONSITEHQ — KAISER CO · KAISER JOHANN, Entrepreneur individuel · SIREN 791 069 610
-CGV : https://monsitehq.com/legal/cgv.html
-Mentions légales : https://monsitehq.com/legal/mentions-legales.html
-Confidentialité : https://monsitehq.com/legal/privacy.html`;
+MaQuickPage — KAISER CO · KAISER JOHANN, Entrepreneur individuel · SIREN 791 069 610
+CGV : https://maquickpage.fr/legal/cgv.html
+Mentions légales : https://maquickpage.fr/legal/mentions-legales.html
+Confidentialité : https://maquickpage.fr/legal/privacy.html`;
 
   return sendRaw({ to, subject, html, text });
 }
 
 /**
  * Email magic-link de récupération d'accès admin (déclenché par /recover).
- * Le coiffeur entre son email sur monsitehq.com/recover, on lui envoie un
+ * Le coiffeur entre son email sur maquickpage.fr/recover, on lui envoie un
  * lien valable 10 minutes vers son admin avec son token.
  */
 export async function sendRecoveryEmail({ to, salonName, recoverConfirmUrl }) {
-  const subject = `Votre lien d'accès à MONSITEHQ`;
+  const subject = `Votre lien d'accès à MaQuickPage`;
   const html = `<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"></head>
 <body style="font-family: -apple-system, system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 30px; color: #1a1a1a; background: #ffffff;">
   <h1 style="font-size: 22px; margin: 0 0 16px;">Bonjour${salonName ? ' ' + escapeHtml(salonName) : ''},</h1>
   <p style="font-size: 15px; line-height: 1.5; color: #4b5563;">
-    Vous avez demandé à récupérer l'accès à l'espace de modification de votre site MONSITEHQ.
+    Vous avez demandé à récupérer l'accès à l'espace de modification de votre site MaQuickPage.
     Cliquez sur le bouton ci-dessous pour vous y connecter automatiquement&nbsp;:
   </p>
   <p style="margin: 28px 0; text-align: center;">
@@ -201,13 +201,13 @@ export async function sendRecoveryEmail({ to, salonName, recoverConfirmUrl }) {
   </p>
   <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 28px 0;">
   <p style="font-size: 12px; color: #9ca3af; line-height: 1.5; margin: 0;">
-    MONSITEHQ — KAISER CO · contact@monsitehq.com<br>
-    <a href="https://monsitehq.com/legal/privacy.html" style="color: #9ca3af;">Politique de confidentialité</a>
+    MaQuickPage — KAISER CO · contact@maquickpage.fr<br>
+    <a href="https://maquickpage.fr/legal/privacy.html" style="color: #9ca3af;">Politique de confidentialité</a>
   </p>
 </body></html>`;
   const text = `Bonjour${salonName ? ' ' + salonName : ''},
 
-Vous avez demandé à récupérer l'accès à l'espace de modification de votre site MONSITEHQ.
+Vous avez demandé à récupérer l'accès à l'espace de modification de votre site MaQuickPage.
 Cliquez sur le lien ci-dessous pour vous y connecter automatiquement :
 
 ${recoverConfirmUrl}
@@ -215,7 +215,7 @@ ${recoverConfirmUrl}
 Ce lien est valable 10 minutes et ne peut être utilisé qu'une seule fois.
 Si vous n'avez pas demandé cet email, ignorez-le.
 
-MONSITEHQ — contact@monsitehq.com`;
+MaQuickPage — contact@maquickpage.fr`;
   return sendRaw({ to, subject, html, text });
 }
 
@@ -224,7 +224,7 @@ MONSITEHQ — contact@monsitehq.com`;
  */
 export async function sendProvisioningErrorEmail({ adminEmail, salonName, slug, hostname, errorMessage }) {
   const subject = `[ALERTE] Provisioning échoué pour ${salonName} (${hostname})`;
-  const adminUrl = `https://outil.monsitehq.com/admin/salons/${slug}`;
+  const adminUrl = `https://outil.maquickpage.fr/admin/salons/${slug}`;
   const html = `<!DOCTYPE html>
 <html><body style="font-family: -apple-system, system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 30px;">
   <h1 style="color: #b91c1c;">⚠ Provisioning échoué</h1>

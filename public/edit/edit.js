@@ -22,7 +22,7 @@ const state = {
 
 // --- Routing : extraire slug + token de l'URL ---
 function parseUrl() {
-  // Pattern : /admin/{slug}?token=xxx (nouveau, monsitehq.com)
+  // Pattern : /admin/{slug}?token=xxx (nouveau, maquickpage.fr)
   // ou      : /edit/{slug}?token=xxx (ancien, conserve pour les liens deja envoyes)
   const path = window.location.pathname;
   const m = path.match(/^\/(?:admin|edit)\/([^/]+)/);
@@ -203,8 +203,8 @@ function renderAll() {
 }
 
 function getPublicBaseUrl() {
-  // En prod, public et admin coiffeur sont sur le meme host (monsitehq.com)
-  // L'agency admin est sur outil.monsitehq.com — dans ce cas, on revient sur monsitehq.com
+  // En prod, public et admin coiffeur sont sur le meme host (maquickpage.fr)
+  // L'agency admin est sur outil.maquickpage.fr — dans ce cas, on revient sur maquickpage.fr
   const host = window.location.host;
   if (host.startsWith('outil.')) {
     return window.location.protocol + '//' + host.slice('outil.'.length);

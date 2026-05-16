@@ -2,7 +2,7 @@
  * Route de récupération d'accès admin (magic link).
  *
  * Flow :
- *   1. Coiffeur va sur monsitehq.com/recover (page HTML statique)
+ *   1. Coiffeur va sur maquickpage.fr/recover (page HTML statique)
  *   2. Saisit son email → POST /api/recover { email }
  *   3. Si un salon LIVE existe avec cet owner_email :
  *        - on génère un recovery_token UUID (single-use, 10 min)
@@ -108,7 +108,7 @@ router.post('/api/recover', express.json(), async (req, res) => {
     `).run(token, row.id);
 
     // Envoie l'email
-    const baseUrl = process.env.PUBLIC_BASE_URL || 'https://monsitehq.com';
+    const baseUrl = process.env.PUBLIC_BASE_URL || 'https://maquickpage.fr';
     const confirmUrl = `${baseUrl}/recover/confirm?token=${encodeURIComponent(token)}`;
 
     const emailResult = await sendRecoveryEmail({
@@ -180,7 +180,7 @@ router.get('/recover/confirm', (req, res) => {
     console.error('[recover/confirm] error:', err);
     res.status(500).send(renderErrorPage(
       'Erreur',
-      'Une erreur est survenue. Réessayez dans quelques minutes ou contactez contact@monsitehq.com.'
+      'Une erreur est survenue. Réessayez dans quelques minutes ou contactez contact@maquickpage.fr.'
     ));
   }
 });
@@ -190,7 +190,7 @@ function renderErrorPage(title, message) {
 <html lang="fr"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(title)} — MONSITEHQ</title>
+<title>${escapeHtml(title)} — MaQuickPage</title>
 <link rel="stylesheet" href="/legal/legal.css">
 </head>
 <body>

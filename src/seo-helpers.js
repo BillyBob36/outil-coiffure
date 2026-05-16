@@ -146,7 +146,7 @@ export function generateJsonLd(view, options = {}) {
   const contact = c.contact || {};
   const hero = c.hero || {};
   const services = (c.services && Array.isArray(c.services.items)) ? c.services.items : [];
-  const siteUrl = (options.siteUrl || 'https://monsitehq.com').replace(/\/$/, '');
+  const siteUrl = (options.siteUrl || 'https://maquickpage.fr').replace(/\/$/, '');
 
   const data = {
     '@context': 'https://schema.org',
@@ -239,7 +239,7 @@ export function generateJsonLd(view, options = {}) {
 // =============================================================================
 
 export function generateOgTags(view, options = {}) {
-  const siteUrl = (options.siteUrl || 'https://monsitehq.com').replace(/\/$/, '');
+  const siteUrl = (options.siteUrl || 'https://maquickpage.fr').replace(/\/$/, '');
   const title = options.title || generateTitle(view);
   const description = options.description || generateMetaDescription(view);
   const image = (view.content && view.content.hero && view.content.hero.backgroundImage)
@@ -248,7 +248,7 @@ export function generateOgTags(view, options = {}) {
   return [
     `<meta property="og:type" content="website">`,
     `<meta property="og:locale" content="fr_FR">`,
-    `<meta property="og:site_name" content="${escapeHtml(view.nom || 'MONSITEHQ')}">`,
+    `<meta property="og:site_name" content="${escapeHtml(view.nom || 'MaQuickPage')}">`,
     `<meta property="og:url" content="${escapeHtml(siteUrl + '/')}">`,
     `<meta property="og:title" content="${escapeHtml(title)}">`,
     `<meta property="og:description" content="${escapeHtml(description)}">`,

@@ -31,11 +31,11 @@
     return;
   }
   // Bannière de vente affichée UNIQUEMENT sur les sites demo Helsinki
-  // (hostname monsitehq.com). Sur Falkenstein (customers.* ou custom hostname
+  // (hostname maquickpage.fr). Sur Falkenstein (customers.* ou custom hostname
   // coiffeur), le coiffeur a déjà payé → pas de bannière "9,90 €/mois" qui
   // s'afficherait à ses propres clients. S'applique aussi bien à /preview qu'à /admin.
   const host = window.location.hostname;
-  const isDemoHost = host === 'monsitehq.com' || host === 'localhost' || host === '127.0.0.1';
+  const isDemoHost = host === 'maquickpage.fr' || host === 'localhost' || host === '127.0.0.1';
   if (!isDemoHost) return;
   // Note: ancien flag localStorage 'mqs-banner-permadismissed' supprimé — entraînait
   // une perte de lead irréversible si l'user cliquait la croix une fois. La banner

@@ -282,7 +282,7 @@
     // d'un email de récupération). Les visiteurs publics du salon ne doivent
     // pas voir ce bouton (UX confuse + risque de redirection vers /admin).
     const host = window.location.hostname;
-    const isDemoHost = host === 'monsitehq.com' || host === 'localhost' || host === '127.0.0.1';
+    const isDemoHost = host === 'maquickpage.fr' || host === 'localhost' || host === '127.0.0.1';
 
     if (isDemoHost) {
       // Site demo Helsinki → comportement actuel : bouton + onboarding tour

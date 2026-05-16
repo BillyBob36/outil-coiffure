@@ -318,7 +318,7 @@ router.post('/checkout/create-session', express.json(), async (req, res) => {
   // line_items : juste l'abonnement. Le domaine est offert (1 an), absorbé sur la marge.
   const lineItems = [{ price: plan.priceId, quantity: 1 }];
 
-  const baseUrl = process.env.PUBLIC_BASE_URL || 'https://monsitehq.com';
+  const baseUrl = process.env.PUBLIC_BASE_URL || 'https://maquickpage.fr';
   const successUrl = `${baseUrl}/preview/${slug}?signup=success&session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${baseUrl}/preview/${slug}?signup=cancelled`;
 
