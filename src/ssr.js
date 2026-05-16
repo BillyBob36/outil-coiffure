@@ -44,11 +44,14 @@ function loadTemplate() {
   return templateCache;
 }
 
-// Hosts considérés comme "monsitehq" public principal — utilisé pour décider
-// du noindex et du canonical
+// Hosts considérés comme "domaine principal" SaaS (marketing + agency) — utilisé
+// pour décider du noindex et du canonical. Tout host pas dans cette liste est
+// un custom hostname coiffeur (= site qui doit être indexable).
 const MONSITEHQ_HOSTS = new Set([
   'monsitehq.com',
   'www.monsitehq.com',
+  'maquickpage.fr',
+  'www.maquickpage.fr',
   'localhost',
   '127.0.0.1',
 ]);

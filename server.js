@@ -49,8 +49,14 @@ const SITE_DIR = join(__dirname, 'public/site');
 
 const ADMIN_BASE_URL = process.env.ADMIN_BASE_URL || '';
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';
+// LANDING_BASE_URL : domaine commercial (page d'accueil + signup).
+// Découplé de PUBLIC_BASE_URL pour permettre une bascule indépendante.
+// Sur monsitehq.com on garde les /preview/*, /admin/*, etc., mais la landing
+// "Voir si mon salon est couvert" vit maintenant sur https://maquickpage.fr/.
+const LANDING_BASE_URL = process.env.LANDING_BASE_URL || 'https://maquickpage.fr';
 const adminHost = ADMIN_BASE_URL ? new URL(ADMIN_BASE_URL).hostname : null;
 const publicHost = PUBLIC_BASE_URL ? new URL(PUBLIC_BASE_URL).hostname : null;
+const landingHost = LANDING_BASE_URL ? new URL(LANDING_BASE_URL).hostname : null;
 
 async function ensureAdminUser() {
   const email = process.env.ADMIN_EMAIL || 'admin@lamidetlm.com';
@@ -226,12 +232,20 @@ if (TENANT_ONLY) {
 // ====================================================================
 
 app.use((req, res, next) => {
-  const host = req.hostname;
+  const host = (req.hostname || '').toLowerCase();
   const isAdminHost = adminHost && host === adminHost;
   const isPublicHost = publicHost && host === publicHost;
+  // Landing host = apex (maquickpage.fr) OU www.maquickpage.fr
+  const isLandingHost = landingHost && (host === landingHost || host === `www.${landingHost}`);
 
   if (isAdminHost) {
     req.routingMode = 'admin';
+  } else if (isLandingHost) {
+    req.routingMode = 'landing';
+    // Canonical : www.maquickpage.fr → maquickpage.fr (301)
+    if (host === `www.${landingHost}`) {
+      return res.redirect(301, `https://${landingHost}${req.originalUrl}`);
+    }
   } else if (isPublicHost) {
     req.routingMode = 'public';
   } else {
@@ -484,6 +498,12 @@ if (TENANT_ONLY) {
 // Root
 app.get('/', (req, res) => {
   if (req.routingMode === 'admin') return res.redirect('/admin');
+  // Bascule landing : la racine de monsitehq.com (= public host) ne sert plus
+  // la landing — elle est exclusivement sur LANDING_BASE_URL maintenant.
+  // Redirect 301 pour préserver le SEO juice acquis.
+  if (req.routingMode === 'public' && landingHost) {
+    return res.redirect(301, `https://${landingHost}/`);
+  }
   res.sendFile(join(SITE_DIR, 'home.html'));
 });
 
