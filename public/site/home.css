@@ -277,13 +277,20 @@ button { font-family: inherit; }
 .hp-how-card {
   background: var(--ivory);
   border: var(--border-thick);
-  padding: 36px 32px 32px;
+  padding: 28px 32px 32px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   transition: transform 200ms, box-shadow 200ms;
 }
 .hp-how-card:hover { transform: translate(-4px, -4px); box-shadow: var(--shadow-md); }
+.hp-how-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 4px;
+}
 .hp-how-num {
   font-family: var(--font-display);
   font-size: clamp(72px, 8vw, 110px);
@@ -291,7 +298,17 @@ button { font-family: inherit; }
   line-height: 0.9;
   color: var(--klein);
   letter-spacing: -0.04em;
-  margin: 0 0 4px;
+}
+.hp-how-img {
+  display: block;
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  flex-shrink: 0;
+  margin-top: 8px;
+  /* Les WebP existants ont un fond blanc + ombre subtile — pas d'alpha.
+     multiply fait disparaître le blanc dans l'ivoire de la card et garde l'or visible. */
+  mix-blend-mode: multiply;
 }
 .hp-how-title {
   font-family: var(--font-display);
@@ -301,7 +318,6 @@ button { font-family: inherit; }
   margin: 0;
 }
 .hp-how-card .hp-p { margin: 0; }
-.hp-how-img { display: none; }
 @media (max-width: 900px) {
   .hp-how { padding: 80px 0; }
   .hp-how-grid { grid-template-columns: 1fr; gap: 20px; }
