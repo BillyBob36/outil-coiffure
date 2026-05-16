@@ -554,17 +554,11 @@ button { font-family: inherit; }
 .hp-footer-brand strong { font-family: var(--font-display); font-size: 28px; font-weight: 700; letter-spacing: -0.01em; }
 .hp-footer-brand p { font-size: 14px; opacity: 0.7; max-width: 320px; margin: 0; }
 .hp-footer-logo {
-  width: 48px; height: 48px;
-  background: var(--ivory);
-  display: grid;
-  place-items: center;
-  border: var(--border-med);
-  border-color: var(--ivory);
-}
-.hp-footer-logo img {
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
+  display: block;
+  /* Picto blanc standalone sur le fond anthracite du footer — pas de carré derrière */
 }
 .hp-footer-links { display: flex; flex-direction: column; gap: 8px; }
 .hp-footer-links h4 {
