@@ -212,25 +212,25 @@ button { font-family: inherit; }
   position: relative;
   overflow: hidden;
 }
-/* Watermark Bauhaus : grand picto saffron tronqué à droite, opacité très faible.
-   Best practice : décor asymétrique, pointer-events:none, sous le contenu, contenu lisible. */
+/* Watermark Bauhaus : grand picto saffron CENTRÉ derrière le contenu,
+   opacité très faible pour ne pas nuire à la lisibilité.
+   pointer-events:none + z-index:1 + mix-blend-mode multiply = effet ambiance discret. */
 .hp-hero::before {
   content: '';
   position: absolute;
   top: 50%;
-  right: -10%;
-  transform: translateY(-50%);
-  width: clamp(420px, 75vh, 760px);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: clamp(360px, 70vh, 720px);
   aspect-ratio: 1;
   background: url('/_assets/landing/pictos/quick-jaune.png') no-repeat center / contain;
-  opacity: 0.10;
+  opacity: 0.07;
   pointer-events: none;
   z-index: 1;
-  /* mix-blend-mode adoucit la couleur sur le fond ivoire (effet d'ambiance) */
   mix-blend-mode: multiply;
 }
 @media (max-width: 720px) {
-  .hp-hero::before { right: -30%; width: 90vw; opacity: 0.07; }
+  .hp-hero::before { width: min(90vw, 460px); opacity: 0.05; }
 }
 .hp-hero-content {
   max-width: 1100px;
@@ -300,33 +300,42 @@ button { font-family: inherit; }
   flex-direction: column;
   gap: 14px;
   transition: transform 200ms, box-shadow 200ms;
+  position: relative;
+  overflow: hidden;
 }
 .hp-how-card:hover { transform: translate(-4px, -4px); box-shadow: var(--shadow-md); }
-.hp-how-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 4px;
-}
-.hp-how-num {
+/* Numéro 1/2/3 en fond GROS et CENTRÉ, très transparent — ne nuit pas à la lisibilité */
+.hp-how-bg-num {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   font-family: var(--font-display);
-  font-size: clamp(72px, 8vw, 110px);
   font-weight: 700;
-  line-height: 0.9;
+  font-size: clamp(180px, 28vw, 320px);
+  line-height: 0.85;
   color: var(--klein);
-  letter-spacing: -0.04em;
+  opacity: 0.10;
+  letter-spacing: -0.06em;
+  pointer-events: none;
+  z-index: 0;
+  user-select: none;
 }
 .hp-how-img {
   display: block;
   width: 96px;
   height: 96px;
   object-fit: contain;
-  flex-shrink: 0;
-  margin-top: 8px;
-  /* Les WebP existants ont un fond blanc + ombre subtile — pas d'alpha.
-     multiply fait disparaître le blanc dans l'ivoire de la card et garde l'or visible. */
+  position: relative;
+  z-index: 1;
+  /* Aligné à gauche : le picto remplace le rôle visuel des anciens numéros */
+  /* Les WebP existants (clef/loupe/main/activer) ont un fond blanc — multiply fond ivoire */
   mix-blend-mode: multiply;
+}
+.hp-how-title,
+.hp-how-card .hp-p {
+  position: relative;
+  z-index: 1;
 }
 .hp-how-title {
   font-family: var(--font-display);
@@ -339,6 +348,12 @@ button { font-family: inherit; }
 @media (max-width: 900px) {
   .hp-how { padding: 80px 0; }
   .hp-how-grid { grid-template-columns: 1fr; gap: 20px; }
+  .hp-how-bg-num { font-size: clamp(160px, 45vw, 260px); opacity: 0.09; }
+  .hp-how-img { width: 88px; height: 88px; }
+}
+@media (max-width: 480px) {
+  .hp-how-bg-num { font-size: clamp(140px, 55vw, 220px); }
+  .hp-how-img { width: 80px; height: 80px; }
 }
 
 /* ===== STACK — anthracite ===== */
