@@ -349,7 +349,14 @@ button { font-family: inherit; }
   flex-direction: column;
   gap: 10px;
 }
-.hp-stack-icon { font-size: 32px; line-height: 1; }
+.hp-stack-icon {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  display: block;
+  margin-bottom: 4px;
+  /* Les pictos or sont sur fond transparent (PNG/WebP avec alpha) — pas besoin de blend */
+}
 .hp-stack-item strong { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
 .hp-stack-item p { font-size: 14.5px; line-height: 1.55; margin: 0; opacity: 0.85; }
 @media (max-width: 720px) {
