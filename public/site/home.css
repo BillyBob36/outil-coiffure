@@ -178,22 +178,14 @@ button { font-family: inherit; }
 }
 .hp-logo { display: flex; align-items: center; gap: 14px; text-decoration: none; }
 .hp-logo:hover { text-decoration: none; }
-.hp-logo-mark {
-  width: 36px; height: 36px;
-  background: var(--anthracite);
-  color: var(--ivory);
-  display: grid;
-  place-items: center;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 20px;
-  border: var(--border-med);
-}
-.hp-logo-mark img {
-  width: 26px;
-  height: 26px;
+.hp-logo-mark-img {
+  width: 64px;
+  height: 64px;
   object-fit: contain;
   display: block;
+}
+@media (max-width: 720px) {
+  .hp-logo-mark-img { width: 48px; height: 48px; }
 }
 .hp-logo-text {
   font-family: var(--font-display);
@@ -219,6 +211,26 @@ button { font-family: inherit; }
   border-bottom: var(--border-med);
   position: relative;
   overflow: hidden;
+}
+/* Watermark Bauhaus : grand picto saffron tronqué à droite, opacité très faible.
+   Best practice : décor asymétrique, pointer-events:none, sous le contenu, contenu lisible. */
+.hp-hero::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -10%;
+  transform: translateY(-50%);
+  width: clamp(420px, 75vh, 760px);
+  aspect-ratio: 1;
+  background: url('/_assets/landing/pictos/quick-jaune.png') no-repeat center / contain;
+  opacity: 0.10;
+  pointer-events: none;
+  z-index: 1;
+  /* mix-blend-mode adoucit la couleur sur le fond ivoire (effet d'ambiance) */
+  mix-blend-mode: multiply;
+}
+@media (max-width: 720px) {
+  .hp-hero::before { right: -30%; width: 90vw; opacity: 0.07; }
 }
 .hp-hero-content {
   max-width: 1100px;
@@ -529,16 +541,16 @@ button { font-family: inherit; }
 .hp-footer-logo {
   width: 48px; height: 48px;
   background: var(--ivory);
-  color: var(--anthracite);
   display: grid;
   place-items: center;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 26px;
   border: var(--border-med);
   border-color: var(--ivory);
 }
-.hp-footer img.hp-footer-logo { display: none; }
+.hp-footer-logo img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
 .hp-footer-links { display: flex; flex-direction: column; gap: 8px; }
 .hp-footer-links h4 {
   font-family: var(--font-display);
