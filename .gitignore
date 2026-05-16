@@ -17,3 +17,4 @@ desktop.ini
 *.jpg
 # Sauf les images statiques par défaut de la galerie demo (whitelistées)
 !public/site/gallery-defaults/*.jpg
+home.zip

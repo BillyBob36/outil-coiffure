@@ -47,21 +47,43 @@
   }
   </script>
 
-  <!-- Performance -->
-  <link rel="preconnect" href="https://rsms.me">
-  <link rel="preload" as="image" href="/_assets/landing/hero-bg.webp" fetchpriority="high">
-  <link rel="preload" as="image" href="/_assets/landing/anime/logo-001.webp" fetchpriority="high">
-  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/_assets/home.css?v=9">
+  <!-- Performance + Bauhaus fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Grotesk:wght@400..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/_assets/home.css?v=10">
 </head>
 <body>
+
+<!-- ====================== MARQUEE TOP ====================== -->
+<div class="hp-marquee" aria-hidden="true">
+  <div class="hp-marquee-track">
+    <span>11&nbsp;000 salons couverts</span>
+    <span>Domaine .fr offert</span>
+    <span>Hetzner UE 🇪🇺</span>
+    <span>9,90&nbsp;€/mois</span>
+    <span>RGPD by-design</span>
+    <span>En ligne en 5 minutes</span>
+    <span>Stack 2026</span>
+    <span>SSL automatique</span>
+    <span>Support français 🇫🇷</span>
+    <span>11&nbsp;000 salons couverts</span>
+    <span>Domaine .fr offert</span>
+    <span>Hetzner UE 🇪🇺</span>
+    <span>9,90&nbsp;€/mois</span>
+    <span>RGPD by-design</span>
+    <span>En ligne en 5 minutes</span>
+    <span>Stack 2026</span>
+    <span>SSL automatique</span>
+    <span>Support français 🇫🇷</span>
+  </div>
+</div>
 
 <!-- ====================== NAVBAR ====================== -->
 <nav class="hp-nav">
   <div class="hp-nav-inner">
     <a class="hp-logo" href="/">
-      <img class="hp-logo-img" src="/_assets/landing/logo-seul-crop.png" alt="" width="40" height="40">
+      <span class="hp-logo-mark" aria-hidden="true">M</span>
       <span class="hp-logo-text">MaQuickPage</span>
     </a>
     <div class="hp-nav-right">
@@ -74,12 +96,6 @@
 
 <!-- ====================== HERO ====================== -->
 <header class="hp-hero">
-  <div class="hp-hero-bg" aria-hidden="true"></div>
-  <div class="hp-hero-anime" aria-hidden="true">
-    <div class="hp-hero-anime-float">
-      <img id="hp-anime-img" src="/_assets/landing/anime/logo-001.webp" alt="" loading="eager" decoding="async" width="500" height="500">
-    </div>
-  </div>
   <div class="hp-hero-content">
     <span class="hp-eyebrow">Sites web premium pour coiffeurs · France entière</span>
     <h1 class="hp-h1">
@@ -116,7 +132,7 @@
           Chaque site est unique, pré-rempli avec vos vraies informations.
           Vérifiez si le vôtre fait partie de la couverture actuelle.
         </p>
-        <button class="hp-btn hp-btn-secondary" id="hp-cta-coverage" type="button">
+        <button class="hp-btn hp-btn-secondary hp-btn-lg" id="hp-cta-coverage" type="button">
           Vérifier mon salon →
         </button>
       </div>
@@ -136,14 +152,14 @@
     </div>
     <div class="hp-how-grid">
       <article class="hp-how-card">
-        <img class="hp-how-img" src="/_assets/landing/clef-doree.webp" alt="" loading="lazy" width="120" height="120">
+        <div class="hp-how-num" aria-hidden="true">01</div>
         <h3 class="hp-how-title">On crée votre site, gratuitement</h3>
         <p class="hp-p">Nos équipes travaillent d'arrache-pied pour générer votre site
           à partir des informations publiques de votre salon (Google Maps, Pages Jaunes).
           <strong>Zéro effort de votre côté</strong>, zéro engagement, zéro carte bancaire à ce stade.</p>
       </article>
       <article class="hp-how-card">
-        <img class="hp-how-img" src="/_assets/landing/2-loupe-doree.webp" alt="" loading="lazy" width="120" height="120">
+        <div class="hp-how-num" aria-hidden="true">02</div>
         <h3 class="hp-how-title">Vous le découvrez en un clic</h3>
         <p class="hp-p">Vous recevez un email avec votre site démo, déjà rempli avec vos
           prestations, photos, horaires et avis Google. Vous le visitez tel qu'il sera
@@ -151,7 +167,7 @@
           Facebook ou Instagram.</p>
       </article>
       <article class="hp-how-card">
-        <img class="hp-how-img" src="/_assets/landing/logo-seul-crop.png" alt="" loading="lazy" width="120" height="120">
+        <div class="hp-how-num" aria-hidden="true">03</div>
         <h3 class="hp-how-title">Vous l'activez en 5 minutes</h3>
         <p class="hp-p">Choisissez votre formule, on vous offre votre nom de domaine
           .fr ou .com, votre site est <strong>en ligne en moins de 5 minutes</strong>
@@ -160,6 +176,30 @@
     </div>
   </div>
 </section>
+
+<!-- ====================== MARQUEE BLUE (entre how & stack) ====================== -->
+<div class="hp-marquee hp-marquee--blue" aria-hidden="true">
+  <div class="hp-marquee-track">
+    <span>11&nbsp;000 salons couverts</span>
+    <span>Domaine .fr offert</span>
+    <span>Hetzner UE 🇪🇺</span>
+    <span>9,90&nbsp;€/mois</span>
+    <span>RGPD by-design</span>
+    <span>En ligne en 5 minutes</span>
+    <span>Stack 2026</span>
+    <span>SSL automatique</span>
+    <span>Support français 🇫🇷</span>
+    <span>11&nbsp;000 salons couverts</span>
+    <span>Domaine .fr offert</span>
+    <span>Hetzner UE 🇪🇺</span>
+    <span>9,90&nbsp;€/mois</span>
+    <span>RGPD by-design</span>
+    <span>En ligne en 5 minutes</span>
+    <span>Stack 2026</span>
+    <span>SSL automatique</span>
+    <span>Support français 🇫🇷</span>
+  </div>
+</div>
 
 <!-- ====================== STACK TECHNIQUE ====================== -->
 <section class="hp-stack" id="stack">
@@ -349,7 +389,7 @@
   <div class="hp-container">
     <div class="hp-footer-top">
       <div class="hp-footer-brand">
-        <img class="hp-footer-logo" src="/_assets/landing/logo-seul-crop.png" alt="MaQuickPage" width="48" height="48" loading="lazy">
+        <div class="hp-footer-logo" aria-hidden="true">M</div>
         <strong>MaQuickPage</strong>
         <p>Sites web professionnels pour les coiffeurs de France.</p>
       </div>
