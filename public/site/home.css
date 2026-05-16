@@ -189,6 +189,12 @@ button { font-family: inherit; }
   font-size: 20px;
   border: var(--border-med);
 }
+.hp-logo-mark img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  display: block;
+}
 .hp-logo-text {
   font-family: var(--font-display);
   font-weight: 700;
