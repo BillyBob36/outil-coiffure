@@ -16,7 +16,7 @@
 
 const RESEND_API = 'https://api.resend.com/emails';
 
-function isEnabled() {
+export function isEnabled() {
   return !!process.env.RESEND_API_KEY;
 }
 

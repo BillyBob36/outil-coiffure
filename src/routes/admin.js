@@ -667,7 +667,13 @@ router.get('/export-csv', (req, res) => {
 
   const csv = stringify(enriched, stringifyOpts);
   const suffix = format === 'smartlead' ? 'smartlead' : 'full';
-  const scope = csvSource || (groupId ? `group${groupId}` : 'all');
+  // Scope = source CSV (si une seule), 'multi' (plusieurs), ou groupId, ou 'all'.
+  let scope;
+  if (csvSources.length === 1) scope = csvSources[0].replace(/[^a-z0-9_-]/gi, '_').slice(0, 40);
+  else if (csvSources.length > 1) scope = `multi${csvSources.length}`;
+  else if (groupId === 'none') scope = 'no-group';
+  else if (groupId) scope = `group${groupId}`;
+  else scope = 'all';
   const filename = `salons-${suffix}-${scope}-${Date.now()}.csv`;
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
