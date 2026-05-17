@@ -717,6 +717,9 @@
     requestAnimationFrame(() => {
       requestAnimationFrame(() => state.modalEl.classList.add('mqs-modal-open'));
     });
+
+    // Notifie le banner (top ribbon + bottom bar) de se cacher pendant la modal
+    window.dispatchEvent(new CustomEvent('mqs-pricing-modal-open'));
   }
 
   function closeModal() {
@@ -730,6 +733,8 @@
       }
       state.modalEl = null;
     }, 300);
+    // Notifie le banner qu'il peut ré-apparaître
+    window.dispatchEvent(new CustomEvent('mqs-pricing-modal-close'));
   }
 
   function onEscapeKey(e) {

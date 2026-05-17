@@ -187,6 +187,18 @@
     mountBar(false);
   }
 
+  // Cache visuellement le ribbon + bar/pill quand la modal pricing est ouverte
+  // (les éléments restent en DOM, juste display:none → l'état est préservé).
+  function setHidden(hidden) {
+    const ids = ['mqs-ribbon', 'mqs-bar-wrap', 'mqs-pill-wrap'];
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = hidden ? 'none' : '';
+    }
+  }
+  window.addEventListener('mqs-pricing-modal-open',  () => setHidden(true));
+  window.addEventListener('mqs-pricing-modal-close', () => setHidden(false));
+
   // === Triggers (identiques à l'ancien banner) ===
   function isOnboardingActive() {
     return !!document.querySelector('.mqs-pre-overlay, .mqs-onb-overlay');
