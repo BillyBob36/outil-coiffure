@@ -181,7 +181,10 @@
     if (mounted) return;
     mounted = true;
 
-    if (!document.getElementById('mqs-ribbon')) {
+    // Ribbon (top noir "DÉMO + Créer le mien") : visible uniquement en /preview/{slug}.
+    // Pas dans l'éditeur /admin/{slug} où l'utilisateur est déjà en train de
+    // personnaliser son site — le ribbon serait redondant et visuellement parasite.
+    if (isPreview && !document.getElementById('mqs-ribbon')) {
       document.body.appendChild(buildRibbon());
     }
     mountBar(false);
