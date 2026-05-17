@@ -158,7 +158,7 @@ async function runProvisioning(job, params) {
   // Étape 3 : configure DNS du domaine OVH (CNAME @ → fallback)
   job.step = 'ovh_dns';
   await configureOvhDns(hostname, FALLBACK_ORIGIN);
-  console.log(`[provisioning] ${slug} OVH DNS CNAME set`);
+  console.log(`[provisioning] ${slug} OVH DNS A+AAAA → Cloudflare anycast`);
 
   // Étape 4 : Cloudflare for SaaS — add custom hostname
   job.step = 'cloudflare_add';
@@ -376,40 +376,44 @@ async function pollOvhDomainReady(hostname, options = {}) {
   throw new Error(`OVH domain ${hostname} not ready within ${timeoutMs}ms`);
 }
 
-async function configureOvhDns(hostname, fallbackOrigin) {
-  // Pour la zone DNS du domaine OVH, on remet à zéro les A/AAAA/CNAME du root
-  // puis on met un CNAME @ vers le fallback origin Cloudflare.
-  // Attention : un CNAME sur l'apex (@) n'est techniquement pas valide DNS-wise.
-  // OVH supporte le "CNAME flatening" via un flag, mais la meilleure pratique est
-  // d'utiliser un A record vers les IPs Cloudflare. Pour V1 on tente le CNAME apex
-  // qui marche dans 95% des cas chez OVH.
+// Cloudflare anycast IPs (les mêmes que customers.monsitehq.com).
+// On ne peut PAS faire un CNAME sur l'apex (RFC 1912 §2.4, OVH refuse avec
+// "Subdomain is mandatory for CNAME"). On pousse donc 2× A (IPv4) + 2× AAAA (IPv6)
+// vers Cloudflare anycast pour l'apex ET pour www. Cloudflare for SaaS route
+// ensuite vers le fallback origin (customers.monsitehq.com → Falkenstein).
+const CF_SAAS_ANYCAST_IPV4 = ['188.114.97.2', '188.114.96.2'];
+const CF_SAAS_ANYCAST_IPV6 = ['2a06:98c1:3120::2', '2a06:98c1:3121::2'];
+
+async function configureOvhDns(hostname, _fallbackOrigin) {
+  // _fallbackOrigin gardé en signature pour rétro-compat des callers,
+  // mais ignoré : on pointe DNS vers Cloudflare anycast (le fallback est géré
+  // côté Cloudflare for SaaS, pas côté DNS).
   try {
-    // 1. Lister les records existants à la racine
-    const records = await ovhFetch('GET', `/domain/zone/${hostname}/record?subDomain=`);
-    // 2. Supprimer les A/AAAA/CNAME de la racine pour éviter les conflits
-    for (const id of records) {
+    // 1. Lister tous les records et supprimer A/AAAA/CNAME sur apex + www
+    const recordIds = await ovhFetch('GET', `/domain/zone/${hostname}/record`);
+    for (const id of recordIds) {
       try {
         const rec = await ovhFetch('GET', `/domain/zone/${hostname}/record/${id}`);
-        if (['A', 'AAAA', 'CNAME'].includes(rec.fieldType)) {
+        const sub = rec.subDomain || '';
+        if ((sub === '' || sub === 'www') && ['A', 'AAAA', 'CNAME'].includes(rec.fieldType)) {
           await ovhFetch('DELETE', `/domain/zone/${hostname}/record/${id}`);
         }
       } catch {}
     }
-    // 3. Ajouter le CNAME @ → fallback
-    await ovhFetch('POST', `/domain/zone/${hostname}/record`, {
-      fieldType: 'CNAME',
-      subDomain: '',
-      target: fallbackOrigin + '.',
-      ttl: 600,
-    });
-    // 4. Aussi un CNAME www → fallback (pour les visiteurs qui tapent www.)
-    await ovhFetch('POST', `/domain/zone/${hostname}/record`, {
-      fieldType: 'CNAME',
-      subDomain: 'www',
-      target: fallbackOrigin + '.',
-      ttl: 600,
-    });
-    // 5. Refresh la zone
+    // 2. Pousser A + AAAA sur apex (= '') et sur www
+    for (const sub of ['', 'www']) {
+      for (const ip of CF_SAAS_ANYCAST_IPV4) {
+        await ovhFetch('POST', `/domain/zone/${hostname}/record`, {
+          fieldType: 'A', subDomain: sub, target: ip, ttl: 3600,
+        });
+      }
+      for (const ip of CF_SAAS_ANYCAST_IPV6) {
+        await ovhFetch('POST', `/domain/zone/${hostname}/record`, {
+          fieldType: 'AAAA', subDomain: sub, target: ip, ttl: 3600,
+        });
+      }
+    }
+    // 3. Refresh la zone (applique les changements côté NS OVH)
     await ovhFetch('POST', `/domain/zone/${hostname}/refresh`, {});
   } catch (err) {
     throw new Error(`OVH DNS config failed: ${err.message}`);
