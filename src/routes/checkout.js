@@ -294,25 +294,70 @@ router.post('/checkout/create-session', express.json(), async (req, res) => {
   const salon = db.prepare('SELECT id, slug, nom, nom_clean, ville FROM salons WHERE slug = ?').get(slug);
   if (!salon) return res.status(404).json({ error: 'Salon introuvable' });
 
-  // Refais un check final OVH du domain (au cas où il aurait été pris entre-temps)
-  let check;
-  try {
-    check = await checkDomainAvailability(hostname);
-  } catch (err) {
-    return res.status(502).json({ error: 'Service OVH indisponible' });
-  }
-  if (!check.available) {
-    return res.status(409).json({ error: 'Ce domaine n\'est plus disponible. Choisissez-en un autre.' });
-  }
-  // Filtre TLD + prix : on accepte uniquement .fr et .com sous le seuil
-  const isAllowedTld = /\.(fr|com)$/i.test(hostname);
-  if (!isAllowedTld) {
-    return res.status(400).json({ error: 'Seules les extensions .fr et .com sont supportées.' });
-  }
-  if (check.priceEurTtc != null && check.priceEurTtc > MAX_REASONABLE_DOMAIN_PRICE_TTC) {
-    return res.status(400).json({ error: 'Ce domaine est en tarif premium, choisissez-en un autre.' });
+  // === TEST BYPASS PAYMENT (uniquement pour les slugs whitelisted) =============
+  // En mode bypass : skip Stripe, skip OVH check, trigger provisioning direct.
+  // Sécurité : actif uniquement pour les slugs explicitement listés en env var
+  // TEST_BYPASS_PAYMENT_SLUGS (csv). On NE BYPASS PAS pour les vrais clients.
+  const bypassSlugs = (process.env.TEST_BYPASS_PAYMENT_SLUGS || '')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const isBypass = bypassSlugs.includes(slug);
+
+  if (isBypass) {
+    console.log(`[TEST BYPASS] checkout/create-session pour slug='${slug}' → skip Stripe + skip OVH check`);
+  } else {
+    // Refais un check final OVH du domain (au cas où il aurait été pris entre-temps)
+    let check;
+    try {
+      check = await checkDomainAvailability(hostname);
+    } catch (err) {
+      return res.status(502).json({ error: 'Service OVH indisponible' });
+    }
+    if (!check.available) {
+      return res.status(409).json({ error: 'Ce domaine n\'est plus disponible. Choisissez-en un autre.' });
+    }
+    // Filtre TLD + prix : on accepte uniquement .fr et .com sous le seuil
+    const isAllowedTld = /\.(fr|com)$/i.test(hostname);
+    if (!isAllowedTld) {
+      return res.status(400).json({ error: 'Seules les extensions .fr et .com sont supportées.' });
+    }
+    if (check.priceEurTtc != null && check.priceEurTtc > MAX_REASONABLE_DOMAIN_PRICE_TTC) {
+      return res.status(400).json({ error: 'Ce domaine est en tarif premium, choisissez-en un autre.' });
+    }
   }
 
+  // === BRANCHE BYPASS : skip Stripe, trigger provisioning direct ================
+  if (isBypass) {
+    const clientIp = (req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress || '').toString().split(',')[0].trim();
+    const fakeSessionId = `test_bypass_${Date.now()}`;
+    db.prepare(`
+      UPDATE salons
+      SET signup_session_id = ?, owner_email = ?, plan = ?, live_hostname = ?,
+          commitment_months = ?, subscription_status = 'provisioning',
+          stripe_customer_id = ?, stripe_subscription_id = ?,
+          signed_up_at = datetime('now'),
+          cgv_accepted_at = datetime('now'), cgv_version = ?, cgv_accepted_ip = ?,
+          updated_at = datetime('now')
+      WHERE slug = ?
+    `).run(fakeSessionId, email, planKey, hostname, plan.commitmentMonths,
+           'cus_TEST_BYPASS', 'sub_TEST_BYPASS', cgv_version, clientIp, slug);
+
+    // Lance provisioning en async
+    const { startProvisioning } = await import('../provisioning-worker.js');
+    startProvisioning({
+      slug, hostname, planKey, customerEmail: email,
+      stripeCustomerId: 'cus_TEST_BYPASS',
+      stripeSubscriptionId: 'sub_TEST_BYPASS',
+    }).catch(err => {
+      console.error('[TEST BYPASS] startProvisioning failed:', err.message);
+      db.prepare(`UPDATE salons SET subscription_status='error', updated_at=datetime('now') WHERE slug=?`).run(slug);
+    });
+
+    const baseUrl = process.env.PUBLIC_BASE_URL || 'https://maquickpage.fr';
+    const successUrl = `${baseUrl}/preview/${slug}?signup=success&session_id=${fakeSessionId}&bypass=1`;
+    return res.json({ url: successUrl, sessionId: fakeSessionId, bypass: true });
+  }
+
+  // === BRANCHE NORMALE : Stripe checkout =========================================
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2026-04-22.dahlia' });
 
   // line_items : juste l'abonnement. Le domaine est offert (1 an), absorbé sur la marge.

@@ -148,15 +148,30 @@ async function runProvisioning(job, params) {
   // Pas de Cloudflare for SaaS (chicken-and-egg HTTP-01). DNS A direct →
   // Falkenstein. Caddy y fetch un cert LE on-demand pour chaque nouveau host.
 
+  // TEST bypass : skip OVH register pour les hostnames dont on est déjà
+  // propriétaire (= domaines de test possédés via achats précédents). Évite
+  // de re-payer 6€ à chaque test E2E. Liste en env var (csv).
+  const testSkipOvhRegisterHostnames = (process.env.TEST_SKIP_OVH_REGISTER_HOSTNAMES || '')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const skipOvhRegister = testSkipOvhRegisterHostnames.includes(hostname);
+
   // Étape 1 : OVH register (toujours 1 an = P1Y)
   job.step = 'ovh_register';
-  const orderInfo = await ovhRegisterDomain(hostname, 1);
-  console.log(`[provisioning] ${slug} OVH order ${orderInfo.orderId} placed (P1Y)`);
+  if (skipOvhRegister) {
+    console.log(`[TEST BYPASS] ${slug} → skip OVH register pour ${hostname} (déjà possédé)`);
+  } else {
+    const orderInfo = await ovhRegisterDomain(hostname, 1);
+    console.log(`[provisioning] ${slug} OVH order ${orderInfo.orderId} placed (P1Y)`);
+  }
 
   // Étape 2 : poll OVH task domain jusqu'à "ok"
   job.step = 'ovh_poll';
-  await pollOvhDomainReady(hostname);
-  console.log(`[provisioning] ${slug} OVH domain READY`);
+  if (skipOvhRegister) {
+    console.log(`[TEST BYPASS] ${slug} → skip OVH poll (domain déjà ready)`);
+  } else {
+    await pollOvhDomainReady(hostname);
+    console.log(`[provisioning] ${slug} OVH domain READY`);
+  }
 
   // Étape 3 : configure DNS du domaine OVH (A apex + www → Falkenstein)
   // pollOvhZoneReady inclus → résout le timing race (zone DNS pas prête juste
