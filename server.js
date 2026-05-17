@@ -345,32 +345,71 @@ app.use('/admin', (req, res, next) => {
   next();
 });
 
-// Salon edit page : /admin/:slug (auth par token URL, pas par session)
-// Defini AVANT le static admin et le adminRouter pour gerer en priorite les slugs.
+// Salon edit page : /admin/:slug
 //
-// Sur Helsinki (TOOLS), si le salon a un live_hostname (= déjà payé/migré sur
-// Falkenstein), on redirige vers le custom hostname pour que le coiffeur édite
-// la version Falkenstein (= source de vérité post-paiement).
+// Auth :
+//   - SITES DÉMO (Helsinki / maquickpage.fr) : token URL uniquement (?token={edit_token})
+//   - SITES LIVE (Falkenstein) : cookie session signé (`mqs_session`), valable 30j.
+//     Si pas de cookie : check ?token= (edit_token OU session_token magic link)
+//       → si valide : pose cookie + redirect /admin/{slug} (URL nettoyée)
+//     Si rien : 401, l'UI affiche un form magic link.
+//
+// Sur Helsinki, si le salon est LIVE → redirect vers le custom hostname pour
+// que l'auth Falkenstein prenne le relais.
+const { readSessionCookie, setSessionCookie } = await import('./src/admin-auth.js');
+const { consumeSessionToken } = TENANT_ONLY ? await import('./src/routes/admin-recover.js') : { consumeSessionToken: () => null };
+
 app.get('/admin/:slug', (req, res, next) => {
   const slug = req.params.slug;
   if (RESERVED_ADMIN_PATHS.has(slug)) return next();
   if (req.routingMode === 'admin') return next();
+
+  // Helsinki : si LIVE → redirect vers Falkenstein
   if (!TENANT_ONLY) {
     try {
       const r = db.prepare('SELECT live_hostname, subscription_status FROM salons WHERE slug = ?').get(slug);
-      // Idem que /preview : on ne redirige que sur status='live' (provisioning terminé).
-      // Sur status='active' (= juste facturé), le custom hostname peut ne pas
-      // encore résoudre → 30 min de DNS_PROBE_FINISHED_NXDOMAIN si on redirige tôt.
       if (r && r.live_hostname && r.subscription_status === 'live') {
-        const token = req.query.token ? `?token=${encodeURIComponent(req.query.token)}` : '';
-        return res.redirect(302, `https://${r.live_hostname}/admin/${encodeURIComponent(slug)}${token}`);
+        const tk = req.query.token ? `?token=${encodeURIComponent(req.query.token)}` : '';
+        return res.redirect(302, `https://${r.live_hostname}/admin/${encodeURIComponent(slug)}${tk}`);
       }
     } catch {}
   }
-  // Vérification serveur-side du token : si manquant ou ne matche pas un salon,
-  // on retourne 401 (au lieu de 200 + page d'erreur JS). Plus correct pour audits
-  // sécurité + SEO. La même page HTML est servie (UX identique), juste le status
-  // code change. Le coiffeur légitime avec un token valide voit 200 normalement.
+
+  // === Sites LIVE (Falkenstein) : cookie session ============================
+  if (TENANT_ONLY) {
+    // 1. Cookie valide ?
+    const cookieSlug = readSessionCookie(req);
+    if (cookieSlug === slug) {
+      return res.status(200).sendFile(join(__dirname, 'public/edit/index.html'));
+    }
+
+    // 2. session_token (= magic link one-time)
+    const sessionToken = req.query.session_token;
+    if (sessionToken) {
+      const tokenSlug = consumeSessionToken(sessionToken);
+      if (tokenSlug === slug) {
+        setSessionCookie(res, slug);
+        return res.redirect(302, `/admin/${encodeURIComponent(slug)}`);
+      }
+    }
+
+    // 3. edit_token (= 1ère ouverture depuis email post-paiement)
+    const editToken = req.query.token;
+    if (editToken) {
+      try {
+        const r = db.prepare('SELECT 1 FROM salons WHERE slug = ? AND edit_token = ?').get(slug, editToken);
+        if (r) {
+          setSessionCookie(res, slug);
+          return res.redirect(302, `/admin/${encodeURIComponent(slug)}`);
+        }
+      } catch {}
+    }
+
+    // 4. Aucune auth → 401 + UI affichera le form magic link
+    return res.status(401).sendFile(join(__dirname, 'public/edit/index.html'));
+  }
+
+  // === Sites DÉMO (Helsinki) : token URL uniquement (= comportement actuel) =
   const token = req.query.token;
   let statusCode = 200;
   if (!token) {
@@ -385,6 +424,12 @@ app.get('/admin/:slug', (req, res, next) => {
   }
   res.status(statusCode).sendFile(join(__dirname, 'public/edit/index.html'));
 });
+
+// === Magic link recovery sur Falkenstein ================================
+if (TENANT_ONLY) {
+  const { default: adminRecoverRouter } = await import('./src/routes/admin-recover.js');
+  app.use('/api', adminRecoverRouter); // POST /api/auth/request-magic-link
+}
 
 // === Routes admin agence : uniquement sur Helsinki ===
 if (!TENANT_ONLY) {

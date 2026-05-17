@@ -27,7 +27,7 @@ function getReplyTo() {
   return process.env.RESEND_REPLY_TO || null;
 }
 
-async function sendRaw({ to, subject, html, text }) {
+export async function sendRaw({ to, subject, html, text }) {
   if (!isEnabled()) {
     console.log(`[email-sender] RESEND_API_KEY missing — skip email to ${to} subject="${subject}"`);
     return { ok: false, reason: 'no_api_key' };

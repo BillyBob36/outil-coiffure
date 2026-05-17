@@ -42,20 +42,35 @@ function toast(message, type = 'success') {
 }
 
 // --- API helpers ---
+// Si state.token est vide (= site live, cookie auth), on omet le query param ;
+// le serveur lit alors le cookie `mqs_session`. Sur les démos Helsinki, le
+// token reste obligatoire en URL.
+function tokenQS() {
+  return state.token ? `?token=${encodeURIComponent(state.token)}` : '';
+}
+function tokenQSExtra(extra) {
+  // Pour les paths avec query déjà présent, on append &token=...
+  if (!state.token) return '';
+  return `&token=${encodeURIComponent(state.token)}`;
+}
+
 async function apiGet() {
-  const res = await fetch(`/api/edit/${encodeURIComponent(state.slug)}?token=${encodeURIComponent(state.token)}`);
+  const res = await fetch(`/api/edit/${encodeURIComponent(state.slug)}${tokenQS()}`, { credentials: 'same-origin' });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Erreur' }));
-    throw new Error(err.error || 'Erreur ' + res.status);
+    const e = new Error(err.error || 'Erreur ' + res.status);
+    e.status = res.status;
+    throw e;
   }
   return res.json();
 }
 
 async function apiPut(overrides) {
-  const res = await fetch(`/api/edit/${encodeURIComponent(state.slug)}?token=${encodeURIComponent(state.token)}`, {
+  const res = await fetch(`/api/edit/${encodeURIComponent(state.slug)}${tokenQS()}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ overrides })
+    body: JSON.stringify({ overrides }),
+    credentials: 'same-origin',
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Erreur' }));
@@ -65,8 +80,9 @@ async function apiPut(overrides) {
 }
 
 async function apiResetOverrides() {
-  const res = await fetch(`/api/edit/${encodeURIComponent(state.slug)}/overrides?token=${encodeURIComponent(state.token)}`, {
-    method: 'DELETE'
+  const res = await fetch(`/api/edit/${encodeURIComponent(state.slug)}/overrides${tokenQS()}`, {
+    method: 'DELETE',
+    credentials: 'same-origin',
   });
   if (!res.ok) throw new Error('Erreur reset');
   return res.json();
@@ -76,9 +92,10 @@ async function apiUploadImage(blob, kind) {
   const fd = new FormData();
   fd.append('image', blob, `${kind}.jpg`);
   fd.append('kind', kind);
-  const res = await fetch(`/api/edit/${encodeURIComponent(state.slug)}/upload-image?token=${encodeURIComponent(state.token)}`, {
+  const res = await fetch(`/api/edit/${encodeURIComponent(state.slug)}/upload-image${tokenQS()}`, {
     method: 'POST',
-    body: fd
+    body: fd,
+    credentials: 'same-origin',
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Erreur upload' }));
@@ -746,6 +763,12 @@ async function load() {
     $('edit-loader').classList.add('fade');
     setTimeout(() => $('edit-loader').remove(), 400);
   } catch (e) {
+    // 401 / 403 : pas d'auth → form magic link recovery (uniquement sur custom
+    // hostname = site live ; sur démo Helsinki on garde l'ancien message)
+    const isCustomHostname = !/^maquickpage\.fr$|^localhost$|^127\.0\.0\.1$/i.test(location.hostname);
+    if ((e.status === 401 || e.status === 403) && isCustomHostname) {
+      return showRecoveryForm();
+    }
     document.body.innerHTML = `
       <div style="max-width:480px;margin:80px auto;padding:32px;background:white;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.1);font-family:sans-serif;text-align:center;">
         <h1 style="font-family:'Cormorant Garamond',serif;color:#cf222e;font-size:2rem;margin-bottom:16px;">Accès refusé</h1>
@@ -757,13 +780,70 @@ async function load() {
 }
 
 // ===========================================================
+// MAGIC LINK RECOVERY FORM
+// ===========================================================
+// Affiché quand pas d'auth valide (pas de cookie session ni de token).
+// Le coiffeur entre son email → on POST /api/auth/request-magic-link →
+// il reçoit un lien qui pose le cookie + le redirige sur /admin/{slug}.
+function showRecoveryForm(message) {
+  document.body.innerHTML = `
+    <div style="max-width:480px;margin:80px auto;padding:36px;background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.12);font-family:'Montserrat',sans-serif;">
+      <h1 style="font-family:'Cormorant Garamond',serif;color:#0E1014;font-size:1.8rem;margin:0 0 8px;">Accès à votre espace</h1>
+      <p style="color:#6b6b6b;font-size:0.95rem;line-height:1.55;margin:0 0 24px;">${escapeAttr(message || 'Saisissez l\'email associé à votre site pour recevoir un lien de connexion.')}</p>
+      <form id="recover-form" style="display:flex;flex-direction:column;gap:14px;">
+        <input id="recover-email" type="email" required autofocus placeholder="votre@email.com"
+          style="padding:14px 16px;border:1.5px solid #d4d4d8;border-radius:8px;font-size:15px;font-family:inherit;outline:none;"/>
+        <button type="submit" id="recover-submit"
+          style="background:#0E1014;color:#fff;border:0;padding:14px;border-radius:8px;font-weight:600;font-size:15px;cursor:pointer;font-family:inherit;">
+          Recevoir mon lien de connexion
+        </button>
+        <p id="recover-feedback" style="color:#16a34a;font-size:0.9rem;margin:4px 0 0;display:none;"></p>
+      </form>
+      <p style="color:#9ca3af;font-size:0.8rem;margin:24px 0 0;text-align:center;">
+        MaQuickPage — <a href="mailto:contact@maquickpage.fr" style="color:#9ca3af;">contact@maquickpage.fr</a>
+      </p>
+    </div>
+  `;
+  const form = document.getElementById('recover-form');
+  const submit = document.getElementById('recover-submit');
+  const feedback = document.getElementById('recover-feedback');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('recover-email').value.trim();
+    if (!email) return;
+    submit.disabled = true;
+    submit.textContent = 'Envoi en cours…';
+    try {
+      const res = await fetch('/api/auth/request-magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      feedback.style.display = 'block';
+      feedback.textContent = data.message || 'Si l\'email correspond, vous recevrez un lien dans quelques minutes.';
+      submit.textContent = 'Lien envoyé ✓';
+    } catch (err) {
+      feedback.style.color = '#dc2626';
+      feedback.style.display = 'block';
+      feedback.textContent = 'Erreur réseau. Réessayez dans un instant.';
+      submit.disabled = false;
+      submit.textContent = 'Recevoir mon lien de connexion';
+    }
+  });
+}
+
+// ===========================================================
 // INIT
 // ===========================================================
 const parsed = parseUrl();
-if (!parsed || !parsed.token) {
-  document.body.innerHTML = `<div style="max-width:480px;margin:80px auto;padding:32px;background:white;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.1);font-family:sans-serif;text-align:center;"><h1 style="font-family:'Cormorant Garamond',serif;color:#cf222e;font-size:2rem;">Lien invalide</h1><p style="color:#6b6b6b;">Le token d'édition est manquant. Utilisez le lien fourni dans votre email.</p></div>`;
+if (!parsed) {
+  // URL malformée
+  showRecoveryForm('URL invalide. Saisissez votre email pour recevoir un lien.');
 } else {
   state.slug = parsed.slug;
-  state.token = parsed.token;
-  load();
+  state.token = parsed.token || ''; // token optionnel (cookie session possible)
+  // Tentative de chargement. Si 401 (= pas de cookie + pas de token), on
+  // affiche le form magic link.
+  load().catch(() => {});
 }

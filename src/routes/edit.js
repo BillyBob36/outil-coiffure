@@ -16,11 +16,29 @@ const upload = multer({
   limits: { fileSize: 12 * 1024 * 1024 } // 12 MB max upload (sera compresse cote serveur)
 });
 
-// Auth par token : token dans query (?token=) ou header X-Edit-Token
+// Auth : 2 mécanismes possibles selon le contexte
+//   1. Cookie session signé `mqs_session` (utilisé sur les sites LIVE Falkenstein,
+//      après l'ouverture initiale du lien email — token retiré de l'URL)
+//   2. Token edit_token en query/header/body (utilisé sur les démos Helsinki +
+//      compatibilité avec les anciens liens)
+import { readSessionCookie } from '../admin-auth.js';
+
 function requireToken(req, res, next) {
   const slug = req.params.slug;
+  if (!slug) return res.status(400).json({ error: 'Slug manquant' });
+
+  // 1. Cookie session ?
+  const cookieSlug = readSessionCookie(req);
+  if (cookieSlug === slug) {
+    const row = db.prepare('SELECT id, slug, edit_token FROM salons WHERE slug = ?').get(slug);
+    if (!row) return res.status(404).json({ error: 'Salon introuvable' });
+    req.salon = row;
+    return next();
+  }
+
+  // 2. Token URL/header/body (= compat ancien flux + démos)
   const token = req.query.token || req.headers['x-edit-token'] || req.body?.token;
-  if (!slug || !token) return res.status(401).json({ error: 'Token manquant' });
+  if (!token) return res.status(401).json({ error: 'Authentification requise' });
 
   const row = db.prepare('SELECT id, slug, edit_token FROM salons WHERE slug = ?').get(slug);
   if (!row) return res.status(404).json({ error: 'Salon introuvable' });
