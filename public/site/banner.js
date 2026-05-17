@@ -104,8 +104,8 @@
           <div class="mqs-bar-copy">
             <div class="mqs-bar-copy-1"><b>2 847 sites</b> publiés ce mois sur MaQuickPage</div>
             <div class="mqs-bar-copy-2">
+              <span class="mqs-bar-from">à partir de</span>
               <span class="mqs-price-chip">9,90 €/mois</span>
-              <span class="mqs-bar-sub">zero frais cachés · domaine inclus</span>
             </div>
           </div>
           <button class="mqs-bar-cta" type="button">Publier mon site →</button>

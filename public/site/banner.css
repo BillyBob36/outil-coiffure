@@ -158,8 +158,12 @@
 .mqs-bar-copy-1 b { font-weight: 700; }
 .mqs-bar-copy-2 {
   margin-top: 4px;
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: baseline; gap: 6px;
   font-size: 12.5px;
+  color: rgba(0,0,0,.55);
+}
+.mqs-bar-from {
+  font-weight: 500;
   color: rgba(0,0,0,.55);
 }
 .mqs-price-chip {
@@ -170,7 +174,6 @@
   padding: 2px 7px; border-radius: 5px;
   letter-spacing: .01em;
 }
-.mqs-bar-sub { color: rgba(0,0,0,.55); }
 
 .mqs-bar-cta {
   appearance: none; border: 0; cursor: pointer;
