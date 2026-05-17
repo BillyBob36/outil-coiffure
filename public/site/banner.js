@@ -1,5 +1,5 @@
 /* =============================================================================
-   Banner MaQuickPage — TOP RIBBON + BOTTOM BAR + PILL collapsed
+   Banner MaQuickPage — TOP RIBBON + BOTTOM BAR
    Design adapté de "Sitely CTA combo" → vanilla JS.
 
    Comportement :
@@ -7,14 +7,22 @@
          INVISIBLE tant que le user n'a pas scrollé jusqu'à .intro
          Trigger : mouseenter desktop OU IntersectionObserver ≥ 30% mobile
          Attend la fermeture de l'onboarding si actif
+         Affiche : ribbon (top) + bar (bottom)
      - Sur /admin/{slug} :
          VISIBLE immédiatement
-     - Closeable (bottom bar) → collapse en pill. Click pill → ré-ouvre.
+         Affiche : bar (bottom) UNIQUEMENT — pas de ribbon dans l'éditeur
+     - Pas de bouton "réduire" : la bar reste toujours visible (pas de pill).
      - N'apparaît PAS si :
          - URL ?nocapture=1 (Puppeteer screenshots)
          - URL ?banner=off (dev)
          - Host = custom (= site coiffeur payé, Falkenstein)
      - CTA → ouvre la modal pricing via window.MqsPricingModal.open()
+
+   Décalage des FAB (bouton "Modifier mon site" sur preview, bouton "?" tuto
+   dans l'éditeur) : quand la bar est mounted, on pose `body.mqs-bar-active` +
+   on set la CSS variable `--mqs-bar-h` (hauteur réelle de la bar). Les FAB
+   utilisent ces signaux pour se décaler au-dessus de la bar uniquement
+   pendant que celle-ci est visible.
    ============================================================================= */
 
 (function () {
@@ -33,10 +41,7 @@
   const isDemoHost = host === 'maquickpage.fr' || host === 'localhost' || host === '127.0.0.1';
   if (!isDemoHost) return;
 
-  const REAPPEAR_AFTER_MS = 5000;
-
   let mounted = false;
-  let collapsed = false;
 
   // Helpers
   function openPricingModal() {
@@ -67,7 +72,29 @@
   }
   function formatCount(n) {
     // "1234" → "1 234" (espace insécable comme séparateur de milliers, format FR)
-    return n.toLocaleString('fr-FR').replace(/\s/g, ' ');
+    return n.toLocaleString('fr-FR').replace(/\s/g, ' ');
+  }
+
+  // Mesure la hauteur réelle de la bar (incluant son margin-bottom virtuel de
+  // 24px / 16px = position bottom) et expose --mqs-bar-h sur <html>. Les FAB
+  // s'en servent pour se positionner au-dessus pile au bon endroit.
+  function syncBarHeightVar() {
+    const bar = document.querySelector('#mqs-bar-wrap .mqs-bar');
+    if (!bar) {
+      document.documentElement.style.removeProperty('--mqs-bar-h');
+      return;
+    }
+    const h = Math.round(bar.getBoundingClientRect().height);
+    document.documentElement.style.setProperty('--mqs-bar-h', `${h}px`);
+  }
+
+  function setBarActive(active) {
+    document.body.classList.toggle('mqs-bar-active', !!active);
+    if (active) {
+      syncBarHeightVar();
+    } else {
+      document.documentElement.style.removeProperty('--mqs-bar-h');
+    }
   }
 
   function buildRibbon() {
@@ -105,11 +132,6 @@
     b.id = 'mqs-bar-wrap';
     b.innerHTML = `
       <div class="mqs-bar" id="mqs-bar">
-        <button class="mqs-bar-min" type="button" aria-label="Réduire">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M3 6.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
-        </button>
         <div class="mqs-bar-inner">
           <div class="mqs-bar-avatars" aria-hidden="true">
             <div class="mqs-ava mqs-ava--1"></div>
@@ -130,96 +152,56 @@
       </div>
     `;
     b.querySelector('.mqs-bar-cta').addEventListener('click', openPricingModal);
-    b.querySelector('.mqs-bar-min').addEventListener('click', () => {
-      collapsed = true;
-      b.remove();
-      mountPill();
-    });
     return b;
   }
 
-  function buildPill() {
-    const p = document.createElement('div');
-    p.id = 'mqs-pill-wrap';
-    p.innerHTML = `
-      <button class="mqs-pill" type="button" aria-label="Publier mon site">
-        <span class="mqs-pill-price">9,90 €/mo</span>
-        <span class="mqs-pill-label">Publier mon site →</span>
-        <span class="mqs-pill-expand" role="presentation" aria-label="Agrandir">
-          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-            <path d="M2 6.5L5.5 3 9 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </span>
-      </button>
-    `;
-    const pillBtn = p.querySelector('.mqs-pill');
-    const expandIcon = p.querySelector('.mqs-pill-expand');
-    // Click sur la flèche d'expand → ré-ouvre la bar
-    expandIcon.addEventListener('click', (e) => {
-      e.stopPropagation();
-      collapsed = false;
-      p.remove();
-      mountBar(true);
-    });
-    // Click sur le reste du pill → ouvre la modal pricing
-    pillBtn.addEventListener('click', openPricingModal);
-    return p;
-  }
-
-  function mountBar(pulse) {
+  function mountBar() {
     const existing = document.getElementById('mqs-bar-wrap');
     if (existing) existing.remove();
     const bar = buildBar();
     document.body.appendChild(bar);
-    if (pulse) {
-      const inner = bar.querySelector('.mqs-bar');
-      inner.classList.add('mqs-bar--pulse');
-      setTimeout(() => inner.classList.remove('mqs-bar--pulse'), 1200);
-    }
-  }
-
-  function mountPill() {
-    const existing = document.getElementById('mqs-pill-wrap');
-    if (existing) existing.remove();
-    const pill = buildPill();
-    document.body.appendChild(pill);
-    // Réapparition garantie de la bar après 5s
-    setTimeout(() => {
-      const stillPill = document.getElementById('mqs-pill-wrap');
-      if (stillPill && collapsed) {
-        collapsed = false;
-        stillPill.remove();
-        mountBar(true);
-      }
-    }, REAPPEAR_AFTER_MS);
+    setBarActive(true);
+    // Re-mesure après que le DOM ait peint, et au resize (la hauteur peut changer
+    // si la 2e ligne wrap sur petite largeur).
+    requestAnimationFrame(syncBarHeightVar);
   }
 
   function showAll() {
     if (mounted) return;
     mounted = true;
 
-    // Ribbon (top noir "DÉMO + Créer le mien") : visible uniquement en /preview/{slug}.
+    // Ribbon (top noir "DÉMO + Voir les tarifs") : visible uniquement en /preview/{slug}.
     // Pas dans l'éditeur /admin/{slug} où l'utilisateur est déjà en train de
     // personnaliser son site — le ribbon serait redondant et visuellement parasite.
     if (isPreview && !document.getElementById('mqs-ribbon')) {
       document.body.appendChild(buildRibbon());
     }
-    mountBar(false);
+    mountBar();
   }
 
-  // Cache visuellement le ribbon + bar/pill quand la modal pricing est ouverte
+  // Cache visuellement le ribbon + bar quand la modal pricing est ouverte
   // (les éléments restent en DOM, juste display:none → l'état est préservé).
+  // On retire aussi `body.mqs-bar-active` pour que les FAB reprennent leur
+  // position normale tant que la modal masque la bar.
   function setHidden(hidden) {
-    const ids = ['mqs-ribbon', 'mqs-bar-wrap', 'mqs-pill-wrap'];
+    const ids = ['mqs-ribbon', 'mqs-bar-wrap'];
     for (const id of ids) {
       const el = document.getElementById(id);
       if (el) el.style.display = hidden ? 'none' : '';
     }
+    setBarActive(!hidden && !!document.getElementById('mqs-bar-wrap'));
   }
   window.addEventListener('mqs-pricing-modal-open',  () => setHidden(true));
   window.addEventListener('mqs-pricing-modal-close', () => setHidden(false));
 
-  // === Triggers (identiques à l'ancien banner) ===
+  // Re-mesure au resize (la bar peut changer de hauteur quand bar-copy-2 wrap).
+  window.addEventListener('resize', () => {
+    if (document.body.classList.contains('mqs-bar-active')) {
+      syncBarHeightVar();
+    }
+  });
+
+  // === Triggers ===
   function isOnboardingActive() {
     return !!document.querySelector('.mqs-pre-overlay, .mqs-onb-overlay');
   }

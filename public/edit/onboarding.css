@@ -143,6 +143,15 @@
     background: #c9a96e;
 }
 
+/* Décalage automatique quand la bar CTA MaQuickPage est mountée (banner.js
+   pose `body.mqs-bar-active` + expose `--mqs-bar-h` = hauteur réelle de la bar).
+   Le bouton "?" se positionne juste au-dessus de la bar avec 12px de marge,
+   uniquement pendant que la bar est visible. */
+body.mqs-bar-active .mqs-onb-help-btn {
+    bottom: calc(22px + var(--mqs-bar-h, 90px) + 12px);
+    transition: bottom 0.2s ease;
+}
+
 @media (max-width: 600px) {
     .mqs-onb-popup {
         max-width: calc(100vw - 32px);
@@ -154,5 +163,8 @@
     .mqs-onb-help-btn {
         bottom: 16px;
         right: 16px;
+    }
+    body.mqs-bar-active .mqs-onb-help-btn {
+        bottom: calc(16px + var(--mqs-bar-h, 96px) + 10px);
     }
 }

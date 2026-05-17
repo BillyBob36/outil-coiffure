@@ -141,6 +141,14 @@
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
 }
 
+/* Décalage automatique quand la bar CTA MaQuickPage est mountée (banner.js
+   pose `body.mqs-bar-active` + expose `--mqs-bar-h` = hauteur réelle de la bar).
+   Le FAB se positionne juste au-dessus de la bar avec 12px de marge, sans
+   bouger tant que la bar n'est pas affichée. */
+body.mqs-bar-active .mqs-pre-edit-btn {
+    bottom: calc(22px + var(--mqs-bar-h, 90px) + 12px);
+}
+
 @media (max-width: 600px) {
     .mqs-pre-popup {
         max-width: calc(100vw - 32px);
@@ -155,6 +163,9 @@
         height: 46px;
         padding: 0 16px;
         font-size: 0.85rem;
+    }
+    body.mqs-bar-active .mqs-pre-edit-btn {
+        bottom: calc(16px + var(--mqs-bar-h, 96px) + 10px);
     }
     .mqs-pre-edit-btn-label {
         display: none; /* sur mobile : juste l'icône, gain de place */
