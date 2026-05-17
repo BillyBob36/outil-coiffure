@@ -210,6 +210,10 @@ if (!TENANT_ONLY) {
 // au moment où un coiffeur passe LIVE). Auth par bearer token partagé.
 if (TENANT_ONLY) {
   app.use('/api', syncRouter); // expose POST /api/sync/:slug
+  // Caddy on-demand TLS "ask" endpoint — répond 200 si hostname autorisé,
+  // 4xx sinon. Interrogé par Caddy avant chaque demande de cert LE.
+  const { default: caddyRouter } = await import('./src/routes/caddy.js');
+  app.use('/api/caddy', caddyRouter); // expose GET /api/caddy/check-hostname?domain=xxx
 }
 
 // ====================================================================
