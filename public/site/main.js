@@ -510,10 +510,14 @@ function setupNavbar() {
 (async () => {
   setupNavbar();
   const slug = getSlugFromUrl();
-  if (!slug) return;
+  // Sur le custom hostname (Falkenstein), l'URL est `/` direct (pas `/preview/{slug}`),
+  // donc slug=null. Mais le SSR a déjà rendu tout le contenu → on ne fetch pas, on
+  // retire juste l'overlay. Sur /preview/{slug} (Helsinki), on fetch + render normalement.
   try {
-    const view = await fetchSalon(slug);
-    renderSalon(view);
+    if (slug) {
+      const view = await fetchSalon(slug);
+      renderSalon(view);
+    }
   } catch (e) {
     console.error('Erreur chargement salon:', e);
   } finally {
