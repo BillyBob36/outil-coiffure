@@ -229,16 +229,28 @@ router.post('/domain/check-custom', express.json(), async (req, res) => {
 
   // Normalise le hostname custom
   let hostname = String(rawHostname).trim().toLowerCase();
-  // Retire un éventuel http:// https:// www.
   hostname = hostname.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
-  // Si pas d'extension, on essaie .fr d'abord
   if (!hostname.includes('.')) hostname = `${hostname}.fr`;
-  // Validation simple (RFC 1123 simplifié)
   if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(hostname)) {
     return res.status(400).json({ error: 'Nom invalide. Caractères autorisés : a-z, 0-9, tirets et 1 point pour l\'extension.' });
   }
   if (hostname.length > 253) {
     return res.status(400).json({ error: 'Nom trop long (max 253 caractères)' });
+  }
+
+  // TEST bypass : si hostname est dans TEST_SKIP_OVH_REGISTER_HOSTNAMES,
+  // on retourne "available + offert" sans appeler OVH (le domaine est en
+  // réalité déjà à nous, OVH dirait "transfer-default" → unavailable).
+  const skipList = (process.env.TEST_SKIP_OVH_REGISTER_HOSTNAMES || '')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  if (skipList.includes(hostname)) {
+    console.log(`[TEST BYPASS] /domain/check-custom : ${hostname} → forcé available`);
+    return res.json({
+      hostname, available: true, priceEurHt: 0, priceEurTtc: 0, isPremium: false,
+      isIncluded: true, supplementEurTtc: 0,
+      plan: { key: planKey, monthlyPriceTtc: plan.monthlyPriceTtc },
+      reason: null, _bypass: true,
+    });
   }
 
   let check;
