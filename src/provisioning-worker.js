@@ -324,15 +324,19 @@ async function ovhRegisterDomain(hostname, years = 1) {
     }
   }
   // 4. Configure mandatory item options (owner contact)
-  // OVH demande un nichandle pour le owner. On utilise le compte par défaut (lm2236699-ovh).
-  // Récupérer le contact admin par défaut s'il existe
+  // OVH exige le chemin COMPLET du contact, format `/me/contact/{id}`.
+  // On récupère la liste des contacts du compte et on prend le premier (compte agence).
   const requirements = await ovhFetch('GET', `/order/cart/${cart.cartId}/item/${item.itemId}/requiredConfiguration`);
   const ownerContactReq = (requirements || []).find(r => r.label === 'OWNER_CONTACT');
   if (ownerContactReq) {
-    // Utilise le nichandle courant de l'agence
+    const contactIds = await ovhFetch('GET', '/me/contact');
+    if (!contactIds || !contactIds.length) {
+      throw new Error('OVH /me/contact returned empty — aucun nichandle utilisable pour OWNER_CONTACT');
+    }
+    const ownerContactPath = `/me/contact/${contactIds[0]}`;
     await ovhFetch('POST', `/order/cart/${cart.cartId}/item/${item.itemId}/configuration`, {
       label: 'OWNER_CONTACT',
-      value: '/me/contact', // référence relative = le contact root
+      value: ownerContactPath,
     });
   }
   // 5. Checkout
