@@ -354,7 +354,10 @@ app.get('/admin/:slug', (req, res, next) => {
   if (!TENANT_ONLY) {
     try {
       const r = db.prepare('SELECT live_hostname, subscription_status FROM salons WHERE slug = ?').get(slug);
-      if (r && r.live_hostname && (r.subscription_status === 'live' || r.subscription_status === 'active')) {
+      // Idem que /preview : on ne redirige que sur status='live' (provisioning terminé).
+      // Sur status='active' (= juste facturé), le custom hostname peut ne pas
+      // encore résoudre → 30 min de DNS_PROBE_FINISHED_NXDOMAIN si on redirige tôt.
+      if (r && r.live_hostname && r.subscription_status === 'live') {
         const token = req.query.token ? `?token=${encodeURIComponent(req.query.token)}` : '';
         return res.redirect(302, `https://${r.live_hostname}/admin/${encodeURIComponent(slug)}${token}`);
       }
@@ -421,9 +424,14 @@ app.get('/preview/:slug', (req, res) => {
   }
   if (!salon) return res.status(404).sendFile(join(SITE_DIR, '404.html'));
 
-  // Helsinki uniquement : si salon LIVE → 302 vers son custom hostname
-  if (!TENANT_ONLY && salon.live_hostname &&
-      (salon.subscription_status === 'live' || salon.subscription_status === 'active' || salon.subscription_status === 'trialing')) {
+  // Helsinki uniquement : si salon LIVE → 302 vers son custom hostname.
+  // IMPORTANT : on redirige UNIQUEMENT sur status='live' (= provisioning terminé,
+  // domaine résolvable, cert HTTPS prêt). 'active' = Stripe a facturé mais le
+  // provisioning peut ne pas être fini → si on redirige sur 'active', le client
+  // tombe sur DNS_PROBE_FINISHED_NXDOMAIN tant que la propagation .fr est en cours.
+  // Tant que status != 'live', on sert la SSR /preview qui charge waiting-screen.js
+  // pour poller /api/signup/status jusqu'à 'live' puis rediriger côté client.
+  if (!TENANT_ONLY && salon.live_hostname && salon.subscription_status === 'live') {
     return res.redirect(302, `https://${salon.live_hostname}/`);
   }
 
