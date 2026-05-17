@@ -633,12 +633,11 @@ router.get('/export-csv', (req, res) => {
         first_name: firstName,
         salon_name: (r.nom_clean && r.nom_clean.trim()) || r.nom || '',
         city: r.ville || '',
-        preview_url: `${publicBase}/preview/${r.slug}`,
-        // URL avec token pour le mailing : le coiffeur voit son site démo + le
-        // token est mémorisé en sessionStorage (cf preview-onboarding.js) →
-        // "Modifier mon site" fonctionne sans 401. À utiliser dans le mail
-        // type comme lien principal du coiffeur.
-        preview_url_authed: r.edit_token ? `${publicBase}/preview/${r.slug}?token=${r.edit_token}` : '',
+        // URL démo personnelle du coiffeur (token embarqué) : il voit son site
+        // comme un visiteur, et le token est mémorisé en sessionStorage par
+        // preview-onboarding.js → "Modifier mon site" fonctionne sans 401.
+        // Cette URL est destinée à l'email coiffeur — pas à partager publiquement.
+        preview_url: r.edit_token ? `${publicBase}/preview/${r.slug}?token=${r.edit_token}` : `${publicBase}/preview/${r.slug}`,
         preview_image_url: r.screenshot_path ? `${publicBase}${r.screenshot_path}` : '',
         admin_url: r.edit_token ? `${publicBase}/admin/${r.slug}?token=${r.edit_token}` : ''
       };
@@ -663,8 +662,8 @@ router.get('/export-csv', (req, res) => {
       lien_instagram: r.lien_instagram,
       lien_google_maps: r.lien_google_maps,
       csv_source: r.csv_source,
-      URL_landing: `${publicBase}/preview/${r.slug}`,
-      URL_landing_authed: r.edit_token ? `${publicBase}/preview/${r.slug}?token=${r.edit_token}` : '',
+      // URL démo perso (token embarqué) — usage mailing, pas à partager publiquement
+      URL_landing: r.edit_token ? `${publicBase}/preview/${r.slug}?token=${r.edit_token}` : `${publicBase}/preview/${r.slug}`,
       URL_edition: r.edit_token ? `${publicBase}/admin/${r.slug}?token=${r.edit_token}` : '',
       Capture_ecran: r.screenshot_path ? `${publicBase}${r.screenshot_path}` : ''
     }));
