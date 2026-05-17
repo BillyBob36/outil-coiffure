@@ -144,37 +144,48 @@ async function runProvisioning(job, params) {
     return;
   }
 
-  // === PRODUCTION FLOW (réel) ===
+  // === PRODUCTION FLOW V1 (Caddy on-demand TLS sur Falkenstein) ===
+  // Pas de Cloudflare for SaaS (chicken-and-egg HTTP-01). DNS A direct →
+  // Falkenstein. Caddy y fetch un cert LE on-demand pour chaque nouveau host.
+
   // Étape 1 : OVH register (toujours 1 an = P1Y)
   job.step = 'ovh_register';
   const orderInfo = await ovhRegisterDomain(hostname, 1);
   console.log(`[provisioning] ${slug} OVH order ${orderInfo.orderId} placed (P1Y)`);
 
-  // Étape 2 : poll OVH task domain jusqu'à "done"
+  // Étape 2 : poll OVH task domain jusqu'à "ok"
   job.step = 'ovh_poll';
   await pollOvhDomainReady(hostname);
   console.log(`[provisioning] ${slug} OVH domain READY`);
 
-  // Étape 3 : configure DNS du domaine OVH (CNAME @ → fallback)
+  // Étape 3 : configure DNS du domaine OVH (A apex + www → Falkenstein)
+  // pollOvhZoneReady inclus → résout le timing race (zone DNS pas prête juste
+  // après domain ok).
   job.step = 'ovh_dns';
-  await configureOvhDns(hostname, FALLBACK_ORIGIN);
-  console.log(`[provisioning] ${slug} OVH DNS A+AAAA → Cloudflare anycast`);
+  await configureOvhDns(hostname);
+  console.log(`[provisioning] ${slug} OVH DNS A → ${FALKENSTEIN_IP}`);
 
-  // Étape 4 : Cloudflare for SaaS — add custom hostname
-  job.step = 'cloudflare_add';
-  const cfHostname = await cloudflareAddCustomHostname(hostname);
-  console.log(`[provisioning] ${slug} CF custom_hostname id=${cfHostname.id} status=${cfHostname.status}`);
+  // Étape 4 : sync les data salon vers Falkenstein AVANT que Caddy serve.
+  // Sinon le 1er hit Caddy → Falkenstein → 404 (pas de salon avec ce hostname).
+  job.step = 'sync_falkenstein';
+  await syncSalonToFalkenstein(slug);
+  console.log(`[provisioning] ${slug} synced to Falkenstein`);
 
-  db.prepare(`
-    UPDATE salons SET cloudflare_hostname_id = ?, updated_at = datetime('now') WHERE slug = ?
-  `).run(cfHostname.id, slug);
+  // Étape 5 : poll HTTPS reachable. C'est le check de bout en bout :
+  //   - DNS .fr propagation publique (5-30 min)
+  //   - Caddy demande au check-hostname (qui voit le salon synced)
+  //   - Caddy fetch cert Let's Encrypt (5-30s)
+  //   - Caddy proxy → Node app → /health OK
+  // Si on arrive ici sans timeout, le site est VRAIMENT live.
+  job.step = 'verify_live';
+  console.log(`[provisioning] ${slug} polling https://${hostname}/health …`);
+  const reach = await pollHttpsReachable(hostname);
+  if (!reach.ok) {
+    throw new Error(`HTTPS reachable timeout (${reach.attempts} attempts). DNS propagation ou cert LE échoué.`);
+  }
+  console.log(`[provisioning] ${slug} HTTPS reachable after ${reach.attempts} attempts`);
 
-  // Étape 5 : poll Cloudflare status until active
-  job.step = 'cloudflare_poll';
-  const finalStatus = await pollCloudflareHostnameActive(cfHostname.id);
-  console.log(`[provisioning] ${slug} CF status=${finalStatus.status} ssl_status=${finalStatus.ssl?.status}`);
-
-  // Étape 6 : marque le salon LIVE
+  // Étape 6 : marque le salon LIVE en DB
   job.step = 'finalize';
   db.prepare(`
     UPDATE salons
@@ -183,12 +194,8 @@ async function runProvisioning(job, params) {
     WHERE slug=?
   `).run(hostname, slug);
 
-  // Étape 7 : sync vers Falkenstein (le site sera servi depuis là)
-  job.step = 'sync_falkenstein';
-  await syncSalonToFalkenstein(slug);
-  console.log(`[provisioning] ${slug} synced to Falkenstein`);
-
-  // Email confirmation (no-op gracieux si RESEND_API_KEY absent)
+  // Étape 7 : envoie l'email "site en ligne" (maintenant, et SEULEMENT
+  // maintenant que le site est vraiment accessible).
   await sendSignupConfirmation(slug, hostname);
 
   job.state = 'done';
@@ -376,20 +383,47 @@ async function pollOvhDomainReady(hostname, options = {}) {
   throw new Error(`OVH domain ${hostname} not ready within ${timeoutMs}ms`);
 }
 
-// Cloudflare anycast IPs (les mêmes que customers.monsitehq.com).
-// On ne peut PAS faire un CNAME sur l'apex (RFC 1912 §2.4, OVH refuse avec
-// "Subdomain is mandatory for CNAME"). On pousse donc 2× A (IPv4) + 2× AAAA (IPv6)
-// vers Cloudflare anycast pour l'apex ET pour www. Cloudflare for SaaS route
-// ensuite vers le fallback origin (customers.monsitehq.com → Falkenstein).
-const CF_SAAS_ANYCAST_IPV4 = ['188.114.97.2', '188.114.96.2'];
-const CF_SAAS_ANYCAST_IPV6 = ['2a06:98c1:3120::2', '2a06:98c1:3121::2'];
+// V1 architecture (Caddy on-demand TLS sur Falkenstein) :
+//   DNS apex + www → A record direct vers l'IP Falkenstein.
+//   Caddy sur Falkenstein détecte le nouveau hostname → demande à
+//   /api/caddy/check-hostname → si OK fetch cert Let's Encrypt → proxy
+//   vers le Node app. Aucun restart, zéro downtime pour les autres clients.
+//
+// IP par défaut = 138.201.152.222 (Falkenstein actuel). Override via
+// env var FALKENSTEIN_IP pour faciliter les migrations futures.
+const FALKENSTEIN_IP = process.env.FALKENSTEIN_IP || '138.201.152.222';
+
+// V2 (Cloudflare for SaaS) — non activé en V1. Si on veut y revenir plus tard,
+// passer PROVISIONING_USE_CLOUDFLARE_FOR_SAAS=1 + coder le handler challenge.
+const USE_CF_FOR_SAAS = process.env.PROVISIONING_USE_CLOUDFLARE_FOR_SAAS === '1';
+
+// Attend que la zone DNS OVH soit dispo (timing race : domain state=ok peut
+// arriver 30-60s avant que /domain/zone/{name}/record soit interrogeable).
+async function pollOvhZoneReady(hostname, timeoutMs = 120_000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      await ovhFetch('GET', `/domain/zone/${hostname}/record`);
+      return;
+    } catch (err) {
+      if (err.status === 404 || /This service does not exist/i.test(err.message || '')) {
+        await new Promise(r => setTimeout(r, 5000));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error(`OVH zone ${hostname} not ready within ${timeoutMs}ms`);
+}
 
 async function configureOvhDns(hostname, _fallbackOrigin) {
-  // _fallbackOrigin gardé en signature pour rétro-compat des callers,
-  // mais ignoré : on pointe DNS vers Cloudflare anycast (le fallback est géré
-  // côté Cloudflare for SaaS, pas côté DNS).
+  // V1 : DNS apex + www → A record vers IP Falkenstein.
+  // Le _fallbackOrigin (V2 CF for SaaS) est ignoré.
   try {
-    // 1. Lister tous les records et supprimer A/AAAA/CNAME sur apex + www
+    // 1. Attendre que la zone DNS soit créée par OVH (timing race)
+    await pollOvhZoneReady(hostname);
+
+    // 2. Supprimer les A/AAAA/CNAME existants sur apex + www
     const recordIds = await ovhFetch('GET', `/domain/zone/${hostname}/record`);
     for (const id of recordIds) {
       try {
@@ -400,24 +434,42 @@ async function configureOvhDns(hostname, _fallbackOrigin) {
         }
       } catch {}
     }
-    // 2. Pousser A + AAAA sur apex (= '') et sur www
+
+    // 3. Pousser A apex + www → Falkenstein IP
     for (const sub of ['', 'www']) {
-      for (const ip of CF_SAAS_ANYCAST_IPV4) {
-        await ovhFetch('POST', `/domain/zone/${hostname}/record`, {
-          fieldType: 'A', subDomain: sub, target: ip, ttl: 3600,
-        });
-      }
-      for (const ip of CF_SAAS_ANYCAST_IPV6) {
-        await ovhFetch('POST', `/domain/zone/${hostname}/record`, {
-          fieldType: 'AAAA', subDomain: sub, target: ip, ttl: 3600,
-        });
-      }
+      await ovhFetch('POST', `/domain/zone/${hostname}/record`, {
+        fieldType: 'A', subDomain: sub, target: FALKENSTEIN_IP, ttl: 3600,
+      });
     }
-    // 3. Refresh la zone (applique les changements côté NS OVH)
+
+    // 4. Refresh la zone (applique les changements côté NS OVH)
     await ovhFetch('POST', `/domain/zone/${hostname}/refresh`, {});
   } catch (err) {
     throw new Error(`OVH DNS config failed: ${err.message}`);
   }
+}
+
+// Polling reachability HTTPS : tente une requête sur https://{hostname}/health
+// (qui doit retourner 200 OK une fois que DNS a propagé + cert Let's Encrypt
+// délivré par Caddy on-demand). Garde le client en `provisioning` pendant cette
+// phase ; n'envoie l'email que si reachable.
+async function pollHttpsReachable(hostname, timeoutMs = 20 * 60 * 1000) {
+  const start = Date.now();
+  let attempt = 0;
+  while (Date.now() - start < timeoutMs) {
+    attempt++;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 10_000);
+      const res = await fetch(`https://${hostname}/health`, { signal: ctrl.signal });
+      clearTimeout(t);
+      if (res.ok) return { ok: true, attempts: attempt };
+    } catch (err) {
+      // DNS pas encore propagé, ou cert pas encore émis, ou timeout : on retry
+    }
+    await new Promise(r => setTimeout(r, 15_000));
+  }
+  return { ok: false, attempts: attempt };
 }
 
 // =============================================================================
