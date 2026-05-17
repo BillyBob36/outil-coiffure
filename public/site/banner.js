@@ -1,144 +1,219 @@
 /* =============================================================================
-   Banner sticky "Mettez ce site en ligne" — script standalone
+   Banner MaQuickPage — TOP RIBBON + BOTTOM BAR + PILL collapsed
+   Design adapté de "Sitely CTA combo" → vanilla JS.
+
    Comportement :
-     - Sur /preview/{slug} (= site visible par tous) :
-         INVISIBLE tant que le user n'a pas atteint le bloc .intro ("Notre Histoire")
-         Trigger : mouseenter (desktop) OU IntersectionObserver ≥ 30% (mobile + fallback)
-         Si l'onboarding était actif au moment du trigger, on attend sa fermeture
-     - Sur /admin/{slug} (= menu d'édition pour le coiffeur) :
-         VISIBLE dès l'ouverture du menu (pas de trigger scroll, pas d'onboarding)
-     - Closeable. Re-apparaît après 5s (peu importe le contexte).
+     - Sur /preview/{slug} :
+         INVISIBLE tant que le user n'a pas scrollé jusqu'à .intro
+         Trigger : mouseenter desktop OU IntersectionObserver ≥ 30% mobile
+         Attend la fermeture de l'onboarding si actif
+     - Sur /admin/{slug} :
+         VISIBLE immédiatement
+     - Closeable (bottom bar) → collapse en pill. Click pill → ré-ouvre.
      - N'apparaît PAS si :
-         - URL contient ?nocapture=1 (Puppeteer screenshots)
-         - URL contient ?banner=off (dev)
-         - localStorage 'mqs-banner-permadismissed' = '1' (V2)
-     - Click sur CTA → ouvre modal pricing (modal.js)
+         - URL ?nocapture=1 (Puppeteer screenshots)
+         - URL ?banner=off (dev)
+         - Host = custom (= site coiffeur payé, Falkenstein)
+     - CTA → ouvre la modal pricing via window.MqsPricingModal.open()
    ============================================================================= */
 
 (function () {
   'use strict';
 
-  // === Détection contexte : ne pas afficher pendant les screenshots ou debug ===
+  // === Détection contexte ===
   const params = new URLSearchParams(window.location.search);
-  if (params.has('nocapture') || params.get('banner') === 'off') {
-    return;
-  }
+  if (params.has('nocapture') || params.get('banner') === 'off') return;
+
   const path = window.location.pathname;
   const isPreview = path.indexOf('/preview/') === 0;
   const isAdmin = path.indexOf('/admin/') === 0;
-  if (!isPreview && !isAdmin) {
-    // On affiche le banner uniquement sur /preview/{slug} et /admin/{slug}
-    return;
-  }
-  // Bannière de vente affichée UNIQUEMENT sur les sites demo Helsinki
-  // (hostname maquickpage.fr). Sur Falkenstein (customers.* ou custom hostname
-  // coiffeur), le coiffeur a déjà payé → pas de bannière "9,90 €/mois" qui
-  // s'afficherait à ses propres clients. S'applique aussi bien à /preview qu'à /admin.
+  if (!isPreview && !isAdmin) return;
+
   const host = window.location.hostname;
   const isDemoHost = host === 'maquickpage.fr' || host === 'localhost' || host === '127.0.0.1';
   if (!isDemoHost) return;
-  // Note: ancien flag localStorage 'mqs-banner-permadismissed' supprimé — entraînait
-  // une perte de lead irréversible si l'user cliquait la croix une fois. La banner
-  // réapparait désormais toujours après REAPPEAR_AFTER_MS suite à un close.
 
-  const REAPPEAR_AFTER_MS = 5000;    // 5s après close (demande Johann)
+  const REAPPEAR_AFTER_MS = 5000;
 
-  let appeared = false;
+  let mounted = false;
+  let collapsed = false;
 
-  function buildBanner() {
-    const div = document.createElement('div');
-    div.id = 'mqs-banner';
-    div.setAttribute('role', 'complementary');
-    div.setAttribute('aria-label', 'Proposition commerciale');
-    div.innerHTML = `
-      <div id="mqs-banner-inner">
-        <div id="mqs-banner-text">
-          <p id="mqs-banner-text-line1">Vous aimez ce site&nbsp;? Mettez-le en ligne en 5 minutes.</p>
-          <p id="mqs-banner-text-line2">À partir de 9,90&nbsp;€/mois — sans frais de mise en place.</p>
+  // Helpers
+  function openPricingModal() {
+    if (typeof window.MqsPricingModal === 'object' && window.MqsPricingModal.open) {
+      window.MqsPricingModal.open();
+    } else {
+      console.warn('[mqs-banner] MqsPricingModal not loaded');
+    }
+  }
+
+  // Récupère le nom du salon depuis le DOM (id="hero-title") pour personnaliser
+  // le texte secondaire du ribbon.
+  function getSalonName() {
+    const el = document.getElementById('hero-title');
+    return (el && el.textContent && el.textContent.trim()) || 'votre site';
+  }
+
+  function buildRibbon() {
+    const r = document.createElement('div');
+    r.id = 'mqs-ribbon';
+    r.setAttribute('role', 'complementary');
+    r.innerHTML = `
+      <div class="mqs-ribbon-inner">
+        <div class="mqs-ribbon-left">
+          <span class="mqs-ribbon-chip">
+            <span class="mqs-ribbon-dot"></span>
+            DÉMO
+          </span>
+          <span class="mqs-ribbon-text">
+            Ce site a été créé avec <b>MaQuickPage</b>. Pas encore en ligne.
+          </span>
+          <span class="mqs-ribbon-text mqs-ribbon-text--sm">
+            Site de démonstration · ${getSalonName().replace(/[<>]/g, '')}
+          </span>
         </div>
-        <button id="mqs-banner-cta" type="button">Choisir mon offre →</button>
-        <button id="mqs-banner-close" type="button" aria-label="Fermer">
-          <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        <button class="mqs-ribbon-cta" type="button" aria-label="Créer le mien">
+          Créer le mien
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M2.5 6h7M6 2.5L9.5 6 6 9.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </button>
       </div>
     `;
-    return div;
+    r.querySelector('.mqs-ribbon-cta').addEventListener('click', openPricingModal);
+    return r;
   }
 
-  function showBanner() {
-    if (appeared) return;
-    appeared = true;
-
-    const banner = buildBanner();
-    document.body.appendChild(banner);
-
-    // Délai d'1 frame avant d'ajouter la classe pour déclencher la transition
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => banner.classList.add('mqs-show'));
+  function buildBar() {
+    const b = document.createElement('div');
+    b.id = 'mqs-bar-wrap';
+    b.innerHTML = `
+      <div class="mqs-bar" id="mqs-bar">
+        <button class="mqs-bar-min" type="button" aria-label="Réduire">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M3 6.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <div class="mqs-bar-inner">
+          <div class="mqs-bar-avatars" aria-hidden="true">
+            <div class="mqs-ava mqs-ava--1"></div>
+            <div class="mqs-ava mqs-ava--2"></div>
+            <div class="mqs-ava mqs-ava--3"></div>
+            <div class="mqs-ava mqs-ava--n">+2K</div>
+          </div>
+          <div class="mqs-bar-copy">
+            <div class="mqs-bar-copy-1"><b>2 847 sites</b> publiés ce mois sur MaQuickPage</div>
+            <div class="mqs-bar-copy-2">
+              <span class="mqs-price-chip">9,90 €/mois</span>
+              <span class="mqs-bar-sub">zero frais cachés · domaine inclus</span>
+            </div>
+          </div>
+          <button class="mqs-bar-cta" type="button">Publier mon site →</button>
+        </div>
+      </div>
+    `;
+    b.querySelector('.mqs-bar-cta').addEventListener('click', openPricingModal);
+    b.querySelector('.mqs-bar-min').addEventListener('click', () => {
+      collapsed = true;
+      b.remove();
+      mountPill();
     });
+    return b;
+  }
 
-    // Click sur le CTA → ouvrir la modal pricing
-    document.getElementById('mqs-banner-cta').addEventListener('click', () => {
-      if (typeof window.MqsPricingModal === 'object' && window.MqsPricingModal.open) {
-        window.MqsPricingModal.open();
-      } else {
-        // Fallback si modal pas encore chargée (cas réel : modal.js charge async)
-        console.warn('[mqs-banner] MqsPricingModal not loaded');
+  function buildPill() {
+    const p = document.createElement('div');
+    p.id = 'mqs-pill-wrap';
+    p.innerHTML = `
+      <button class="mqs-pill" type="button" aria-label="Publier mon site">
+        <span class="mqs-pill-price">9,90 €/mo</span>
+        <span class="mqs-pill-label">Publier mon site →</span>
+        <span class="mqs-pill-expand" role="presentation" aria-label="Agrandir">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+            <path d="M2 6.5L5.5 3 9 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      </button>
+    `;
+    const pillBtn = p.querySelector('.mqs-pill');
+    const expandIcon = p.querySelector('.mqs-pill-expand');
+    // Click sur la flèche d'expand → ré-ouvre la bar
+    expandIcon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      collapsed = false;
+      p.remove();
+      mountBar(true);
+    });
+    // Click sur le reste du pill → ouvre la modal pricing
+    pillBtn.addEventListener('click', openPricingModal);
+    return p;
+  }
+
+  function mountBar(pulse) {
+    const existing = document.getElementById('mqs-bar-wrap');
+    if (existing) existing.remove();
+    const bar = buildBar();
+    document.body.appendChild(bar);
+    if (pulse) {
+      const inner = bar.querySelector('.mqs-bar');
+      inner.classList.add('mqs-bar--pulse');
+      setTimeout(() => inner.classList.remove('mqs-bar--pulse'), 1200);
+    }
+  }
+
+  function mountPill() {
+    const existing = document.getElementById('mqs-pill-wrap');
+    if (existing) existing.remove();
+    const pill = buildPill();
+    document.body.appendChild(pill);
+    // Réapparition garantie de la bar après 5s
+    setTimeout(() => {
+      const stillPill = document.getElementById('mqs-pill-wrap');
+      if (stillPill && collapsed) {
+        collapsed = false;
+        stillPill.remove();
+        mountBar(true);
       }
-    });
-
-    // Close → cache le banner et re-affiche après REAPPEAR_AFTER_MS
-    document.getElementById('mqs-banner-close').addEventListener('click', () => {
-      banner.classList.remove('mqs-show');
-      setTimeout(() => banner.remove(), 500);
-      appeared = false;
-      // Réapparition garantie après 5s, peu importe le scroll
-      setTimeout(showBanner, REAPPEAR_AFTER_MS);
-    });
+    }, REAPPEAR_AFTER_MS);
   }
 
-  // Trigger : 1ère interaction avec le bloc .intro ("Notre Histoire" — premier
-  // bloc après le hero). Marche en desktop (mouseenter) ET mobile/desktop
-  // (IntersectionObserver quand le bloc entre dans la viewport).
+  function showAll() {
+    if (mounted) return;
+    mounted = true;
+
+    if (!document.getElementById('mqs-ribbon')) {
+      document.body.appendChild(buildRibbon());
+    }
+    mountBar(false);
+  }
+
+  // === Triggers (identiques à l'ancien banner) ===
   function isOnboardingActive() {
     return !!document.querySelector('.mqs-pre-overlay, .mqs-onb-overlay');
   }
 
   function tryShow() {
-    if (appeared) return;
+    if (mounted) return;
     if (isOnboardingActive()) return;
-    showBanner();
+    showAll();
   }
 
   function scheduleAppear() {
-    if (appeared) return;
+    if (mounted) return;
 
-    // === Mode ADMIN (menu d'édition coiffeur) ===
-    // Le coiffeur est déjà dans son espace d'édition : on ne joue pas le jeu du
-    // teasing scroll, on affiche tout de suite (mais on garde le close + 5s reappear).
     if (isAdmin) {
-      // Petit délai (300ms) pour laisser l'app d'édition se monter avant
-      // d'attirer l'œil du coiffeur sur l'offre commerciale.
       setTimeout(tryShow, 300);
       return;
     }
 
-    // === Mode PREVIEW (site public visible par tous) ===
-    // L'élément .intro peut ne pas être encore en DOM si le content est rendu async.
-    // On retry avec un petit polling jusqu'à 5s.
     let attempts = 0;
     const tryAttach = () => {
       const intro = document.querySelector('.intro');
       if (!intro) {
         if (attempts++ < 50) return setTimeout(tryAttach, 100);
-        return; // élément jamais trouvé, abandon silencieux
+        return;
       }
-
-      // Desktop : 1er survol du bloc
       intro.addEventListener('mouseenter', tryShow, { once: true });
-
-      // Mobile + fallback desktop : 1er fois que le bloc devient visible
-      // (au moins 30% dans la viewport).
       if (typeof IntersectionObserver === 'function') {
         const obs = new IntersectionObserver((entries) => {
           for (const entry of entries) {
@@ -154,9 +229,7 @@
     };
     tryAttach();
 
-    // Si l'onboarding cachait l'événement, on re-check à sa fermeture
     window.addEventListener('mqs-onboarding-closed', () => {
-      // Si .intro est déjà visible quand l'onboarding ferme → afficher
       const intro = document.querySelector('.intro');
       if (!intro) return;
       const rect = intro.getBoundingClientRect();
@@ -165,7 +238,6 @@
     });
   }
 
-  // === Boot ===
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', scheduleAppear, { once: true });
   } else {
