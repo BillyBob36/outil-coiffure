@@ -125,13 +125,15 @@
 
   let pollInterval = null;
   let elapsedSec = 0;
-  const TIMEOUT_SEC = 600; // 10 min max
+  // 25 min max (DNS .fr peut prendre jusqu'à 30 min de propagation publique,
+  // surtout en cas de cache OS résolveur obsolète chez les resolvers publics).
+  const TIMEOUT_SEC = 25 * 60;
 
   async function pollStatus() {
     elapsedSec += 4;
     if (elapsedSec > TIMEOUT_SEC) {
       clearInterval(pollInterval);
-      showError('Délai de configuration dépassé.');
+      showError('Configuration plus longue que prévu — vous recevrez un email dès que le site est en ligne (généralement 15-30 min). Vous pouvez fermer cette fenêtre.');
       return;
     }
 

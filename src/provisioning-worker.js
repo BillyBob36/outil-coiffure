@@ -200,7 +200,7 @@ async function runProvisioning(job, params) {
   }
   console.log(`[provisioning] ${slug} HTTPS reachable after ${reach.attempts} attempts`);
 
-  // Étape 6 : marque le salon LIVE en DB
+  // Étape 6 : marque le salon LIVE en DB Helsinki
   job.step = 'finalize';
   db.prepare(`
     UPDATE salons
@@ -209,7 +209,14 @@ async function runProvisioning(job, params) {
     WHERE slug=?
   `).run(hostname, slug);
 
-  // Étape 7 : envoie l'email "site en ligne" (maintenant, et SEULEMENT
+  // Étape 7 : re-sync vers Falkenstein avec status='live'.
+  // Le sync à l'étape 4 a poussé status='provisioning' → la suspension gate
+  // Falkenstein intercepterait les visiteurs avec "Site temporairement suspendu".
+  // Cette 2e sync met à jour le statut côté Falkenstein → site accessible.
+  await syncSalonToFalkenstein(slug);
+  console.log(`[provisioning] ${slug} re-synced to Falkenstein (status=live)`);
+
+  // Étape 8 : envoie l'email "site en ligne" (maintenant, et SEULEMENT
   // maintenant que le site est vraiment accessible).
   await sendSignupConfirmation(slug, hostname);
 
@@ -469,19 +476,45 @@ async function configureOvhDns(hostname, _fallbackOrigin) {
 // délivré par Caddy on-demand). Garde le client en `provisioning` pendant cette
 // phase ; n'envoie l'email que si reachable.
 async function pollHttpsReachable(hostname, timeoutMs = 20 * 60 * 1000) {
+  // Bug observé : fetch() utilise dns.lookup → cache OS systemd-resolved obsolète.
+  // Résultat : Helsinki résout ancien IP (213.186.33.5 default OVH) pendant
+  // jusqu'à 1h TTL. On bypass en faisant dns.resolve4 explicite vers 1.1.1.1 + 8.8.8.8
+  // (court-circuite le cache OS), puis on connecte sur l'IP avec SNI=hostname.
+  const dns = await import('node:dns');
+  const https = await import('node:https');
+  const resolver = new dns.promises.Resolver();
+  resolver.setServers(['1.1.1.1', '8.8.8.8']);
+
+  function checkOnce() {
+    return new Promise(async (resolve) => {
+      let ip;
+      try {
+        const addrs = await resolver.resolve4(hostname);
+        if (!addrs?.length) return resolve(false);
+        ip = addrs[0];
+      } catch { return resolve(false); }
+
+      const req = https.request({
+        host: ip, port: 443, path: '/health', method: 'GET',
+        servername: hostname,                  // SNI = hostname
+        headers: { Host: hostname },           // Host header pour le routing
+        timeout: 10_000,
+        rejectUnauthorized: true,              // cert LE doit être valide
+      }, (res) => {
+        res.on('data', () => {});
+        res.on('end', () => resolve(res.statusCode === 200));
+      });
+      req.on('error', () => resolve(false));
+      req.on('timeout', () => { req.destroy(); resolve(false); });
+      req.end();
+    });
+  }
+
   const start = Date.now();
   let attempt = 0;
   while (Date.now() - start < timeoutMs) {
     attempt++;
-    try {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 10_000);
-      const res = await fetch(`https://${hostname}/health`, { signal: ctrl.signal });
-      clearTimeout(t);
-      if (res.ok) return { ok: true, attempts: attempt };
-    } catch (err) {
-      // DNS pas encore propagé, ou cert pas encore émis, ou timeout : on retry
-    }
+    if (await checkOnce()) return { ok: true, attempts: attempt };
     await new Promise(r => setTimeout(r, 15_000));
   }
   return { ok: false, attempts: attempt };
