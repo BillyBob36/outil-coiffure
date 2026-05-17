@@ -54,6 +54,22 @@
     return (el && el.textContent && el.textContent.trim()) || 'votre site';
   }
 
+  // Compteur "X sites publiés ce mois" — déterministe et partagé entre toutes
+  // les démos. Baseline 802 au 18 mai 2026 00:00 UTC, +1 toutes les 2 heures
+  // (= 12 par jour). Tous les visiteurs voient la même valeur au même moment.
+  function getSitesPublishedCount() {
+    const REF_MS = Date.UTC(2026, 4, 18, 0, 0, 0); // mai = month 4 (0-indexed)
+    const REF_VALUE = 802;
+    const TWO_HOURS_MS = 2 * 3600 * 1000;
+    const diff = Date.now() - REF_MS;
+    if (diff < 0) return REF_VALUE;
+    return REF_VALUE + Math.floor(diff / TWO_HOURS_MS);
+  }
+  function formatCount(n) {
+    // "1234" → "1 234" (espace insécable comme séparateur de milliers, format FR)
+    return n.toLocaleString('fr-FR').replace(/\s/g, ' ');
+  }
+
   function buildRibbon() {
     const r = document.createElement('div');
     r.id = 'mqs-ribbon';
@@ -72,8 +88,8 @@
             Site de démonstration · ${getSalonName().replace(/[<>]/g, '')}
           </span>
         </div>
-        <button class="mqs-ribbon-cta" type="button" aria-label="Créer le mien">
-          Créer le mien
+        <button class="mqs-ribbon-cta" type="button" aria-label="Voir les tarifs">
+          Voir les tarifs
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
             <path d="M2.5 6h7M6 2.5L9.5 6 6 9.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -102,10 +118,11 @@
             <div class="mqs-ava mqs-ava--n">+2K</div>
           </div>
           <div class="mqs-bar-copy">
-            <div class="mqs-bar-copy-1"><b>2 847 sites</b> publiés ce mois sur MaQuickPage</div>
+            <div class="mqs-bar-copy-1"><b>${formatCount(getSitesPublishedCount())} sites</b> publiés ce mois sur MaQuickPage</div>
             <div class="mqs-bar-copy-2">
-              <span class="mqs-bar-from">à partir de</span>
+              <span class="mqs-bar-from">dès</span>
               <span class="mqs-price-chip">9,90 €/mois</span>
+              <span class="mqs-bar-extra">— installation et domaine offerts</span>
             </div>
           </div>
           <button class="mqs-bar-cta" type="button">Publier mon site →</button>
