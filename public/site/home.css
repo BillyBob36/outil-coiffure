@@ -224,13 +224,13 @@ button { font-family: inherit; }
   width: clamp(360px, 70vh, 720px);
   aspect-ratio: 1;
   background: url('/_assets/landing/pictos/quick-jaune.png') no-repeat center / contain;
-  opacity: 0.07;
+  opacity: 0.25;
   pointer-events: none;
   z-index: 1;
   mix-blend-mode: multiply;
 }
 @media (max-width: 720px) {
-  .hp-hero::before { width: min(90vw, 460px); opacity: 0.05; }
+  .hp-hero::before { width: min(90vw, 460px); opacity: 0.20; }
 }
 .hp-hero-content {
   max-width: 1100px;
