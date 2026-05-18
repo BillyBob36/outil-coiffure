@@ -7,7 +7,8 @@
  *   4xx     → Caddy refuse (hostname inconnu/non actif/banni)
  *
  * On accepte :
- *   - customers.monsitehq.com (= notre fallback FQDN historique)
+ *   - customers.maquickpage.fr (= notre fallback FQDN actuel)
+ *   - customers.monsitehq.com (= legacy, conservé tant que des sites pointent dessus)
  *   - n'importe quel hostname présent en DB avec subscription_status in (live, active, trialing)
  *
  * Sécurité :
@@ -27,8 +28,8 @@ const router = express.Router();
 // Hostnames de notre infra acceptés en plus de la DB salons
 // (= les FQDNs propres de Falkenstein, vu qu'on ne les a pas en table salons)
 const INFRA_HOSTNAMES = new Set([
-  'customers.monsitehq.com',
-  'customers.maquickpage.fr', // futur, si on migre
+  'customers.maquickpage.fr', // actuel
+  'customers.monsitehq.com',  // legacy, rétrocompat
 ]);
 
 // État de subscription qui autorise la délivrance du cert SSL

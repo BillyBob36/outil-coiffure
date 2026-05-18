@@ -38,7 +38,7 @@ async function ovhFetch(method, path, body=null) {
 // ===== Cloudflare fetch =====
 const CF_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const CF_ZONE = process.env.CLOUDFLARE_ZONE_ID;
-const FALLBACK = process.env.FALLBACK_INTERNAL_HOSTNAME || 'customers.monsitehq.com';
+const FALLBACK = process.env.FALLBACK_INTERNAL_HOSTNAME || 'customers.maquickpage.fr';
 async function cfFetch(method, path, body=null) {
   const r = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
     method,
@@ -65,10 +65,10 @@ async function step2_pollOvh() {
   throw new Error('Timeout polling OVH domain ready');
 }
 
-// Cloudflare anycast IPs (= les mêmes que customers.monsitehq.com utilise déjà).
+// Cloudflare anycast IPs (= les mêmes que customers.maquickpage.fr utilise déjà).
 // Un CNAME sur l'apex n'est pas valide DNS-wise et OVH refuse l'opération.
 // On pousse donc des A records vers Cloudflare ; CF for SaaS routera ensuite
-// vers le fallback origin (customers.monsitehq.com → Falkenstein).
+// vers le fallback origin (customers.maquickpage.fr → Falkenstein).
 const CF_ANYCAST_IPV4 = ['188.114.97.2', '188.114.96.2'];
 const CF_ANYCAST_IPV6 = ['2a06:98c1:3120::2', '2a06:98c1:3121::2'];
 

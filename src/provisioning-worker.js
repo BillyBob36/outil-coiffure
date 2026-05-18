@@ -4,7 +4,7 @@
  * Phases :
  *   1. OVH : register du domaine acheté (cart + checkout)
  *   2. OVH : poll task domain jusqu'à status="done"
- *   3. OVH : configure DNS (CNAME @ → customers.monsitehq.com)
+ *   3. OVH : configure DNS (CNAME @ → customers.maquickpage.fr)
  *   4. Cloudflare for SaaS : POST /custom_hostnames
  *   5. Cloudflare : poll status jusqu'à "active"
  *   6. (V2) Cross-DB write vers Postgres monquicksite — pour V1 on lit le tenant
@@ -32,7 +32,7 @@ import { generateRecoveryToken } from './routes/admin-recover.js';
 const CLOUDFLARE_API = 'https://api.cloudflare.com/client/v4';
 const CLOUDFLARE_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const CLOUDFLARE_ZONE_ID = process.env.CLOUDFLARE_ZONE_ID;
-const FALLBACK_ORIGIN = process.env.FALLBACK_INTERNAL_HOSTNAME || 'customers.monsitehq.com';
+const FALLBACK_ORIGIN = process.env.FALLBACK_INTERNAL_HOSTNAME || 'customers.maquickpage.fr';
 
 // Mode DRY_RUN : simule sans appeler vraiment OVH (achat domaine = vrai €).
 // Activé par défaut tant que PROVISIONING_DRY_RUN n'est pas explicitement = '0'
@@ -234,7 +234,7 @@ async function runProvisioning(job, params) {
  * En DRY_RUN : skip silencieusement si pas configuré.
  */
 export async function syncSalonToFalkenstein(slug) {
-  const FALKENSTEIN_URL = process.env.FALKENSTEIN_BASE_URL || 'https://customers.monsitehq.com';
+  const FALKENSTEIN_URL = process.env.FALKENSTEIN_BASE_URL || 'https://customers.maquickpage.fr';
   const SYNC_TOKEN = process.env.SYNC_BEARER_TOKEN;
   if (!SYNC_TOKEN) {
     console.warn(`[provisioning] ${slug} SYNC_BEARER_TOKEN absent → skip sync Falkenstein`);
