@@ -1355,20 +1355,21 @@ body {
 }
 
 /* ========================================
-   HERO COMPACT — noms de salon longs (>2 lignes)
+   HERO CONTENU COMPACT — noms de salon longs (>2 lignes)
    ========================================
    Activé via `body.hero-long-title` posée par main.js → syncHeroLongTitle()
-   après mesure du nombre de lignes du titre rendu. Le but : réduire
-   l'encombrement vertical d'environ 30 % pour que la zone reste agréable
-   quand le nom du salon force le titre à 3+ lignes.
+   après mesure du nombre de lignes du titre rendu.
 
-   Desktop UNIQUEMENT. Sur mobile/tablette, le hero reste tel quel pour
-   préserver la dramaturgie de la home page sur petits écrans. */
+   Le conteneur .hero garde sa hauteur 100vh / min-height 700px (pas touché).
+   Ce qu'on compresse c'est UNIQUEMENT le contenu central .hero-content
+   (tagline + titre + sous-titre + boutons) d'environ 30 % en jouant sur :
+     - la taille + line-height du titre
+     - les marges entre éléments
+   → la tagline ne déborde plus sous le header,
+     les boutons ne masquent plus la flèche "DÉCOUVRIR" en bas.
+
+   Desktop UNIQUEMENT. Sur mobile/tablette, le hero reste tel quel. */
 @media (min-width: 769px) {
-    body.hero-long-title .hero {
-        height: 70vh;
-        min-height: 490px;
-    }
     body.hero-long-title .hero-title {
         font-size: clamp(2rem, 5.5vw, 4.2rem);
         line-height: 1.05;
@@ -1379,8 +1380,5 @@ body {
     }
     body.hero-long-title .hero-subtitle {
         margin-bottom: 32px;
-    }
-    body.hero-long-title .hero-scroll {
-        bottom: 24px;
     }
 }
