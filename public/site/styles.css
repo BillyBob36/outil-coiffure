@@ -1370,16 +1370,16 @@ body {
 
    Sur mobile/tablette (<769px), .hero-content garde son flex centré normal. */
 
-:root {
-    --mqs-header-h: 80px;  /* bottom du header (navbar) par rapport au top du viewport */
-    --mqs-scroll-h: 90px;  /* espace réservé en bas pour la flèche DÉCOUVRIR */
-}
+/* Note : main.js → syncHeroBounds() pose top/bottom directement en JS sur
+   .hero-content (mesure dynamique de navbar + ribbon + flèche). Les valeurs
+   ci-dessous sont des fallback rendus AVANT que JS s'exécute, pour limiter
+   le flash visuel pendant le 1er paint. */
 
 @media (min-width: 769px) {
     .hero-content {
         position: absolute;
-        top: var(--mqs-header-h, 80px);
-        bottom: var(--mqs-scroll-h, 90px);
+        top: 107px;     /* navbar height (fallback) — JS override */
+        bottom: 93px;   /* flèche DÉCOUVRIR (fallback) — JS override */
         /* Centrage horizontal sans transform (l'animation fadeInUp utilisait
            transform: translateY qui interférait avec un translateX → on évite
            toute manip de transform sur le bloc lui-même). */

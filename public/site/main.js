@@ -345,22 +345,36 @@ function applyHeroImage(src) {
 }
 
 /* Mesure dynamique de la hauteur du "header" (navbar + ribbon éventuel) et
-   du "scroll bottom" (flèche DÉCOUVRIR), puis les expose en CSS variables.
-   `.hero-content` (desktop) utilise ces vars pour se caler entre les deux,
-   et son contenu interne se tasse automatiquement via container queries. */
+   du "scroll bottom" (flèche DÉCOUVRIR), puis pose top/bottom directement
+   sur .hero-content (desktop uniquement). Le contenu interne se tasse
+   ensuite automatiquement via container queries (cqh units).
+
+   Note : on a essayé d'exposer ces valeurs en CSS variables sur :root pour
+   laisser le CSS faire `top: var(--mqs-header-h)`, mais Chrome ne recalc
+   pas le `top` quand la var change si l'élément est en container-type:size
+   (bug de stale layout). On set donc top/bottom directement en JS — la
+   transition `transition: top, bottom` du CSS continue à animer le glissement. */
 function syncHeroBounds() {
   const nav = document.querySelector('.navbar');
   const ribbon = document.getElementById('mqs-ribbon');
   const scroll = document.querySelector('.hero-scroll');
+  const content = document.querySelector('.hero-content');
+  if (!content) return;
+  // Desktop only — on n'écrase pas le layout mobile.
+  if (window.matchMedia('(max-width: 768px)').matches) {
+    content.style.top = '';
+    content.style.bottom = '';
+    return;
+  }
   if (nav) {
     const navH = Math.round(nav.getBoundingClientRect().height);
     const ribbonH = ribbon ? Math.round(ribbon.getBoundingClientRect().height) : 0;
-    document.documentElement.style.setProperty('--mqs-header-h', `${navH + ribbonH}px`);
+    content.style.top = `${navH + ribbonH}px`;
   }
   if (scroll) {
     const scrollH = Math.round(scroll.getBoundingClientRect().height);
     const scrollBottom = parseInt(getComputedStyle(scroll).bottom, 10) || 40;
-    document.documentElement.style.setProperty('--mqs-scroll-h', `${scrollH + scrollBottom}px`);
+    content.style.bottom = `${scrollH + scrollBottom}px`;
   }
 }
 
