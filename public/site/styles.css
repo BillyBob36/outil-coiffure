@@ -1380,8 +1380,9 @@ body {
         position: absolute;
         top: var(--mqs-header-h, 80px);
         bottom: var(--mqs-scroll-h, 90px);
-        /* Centrage horizontal sans transform (l'animation fadeInUp utilise
-           déjà transform: translateY → on évite le conflit avec margin auto). */
+        /* Centrage horizontal sans transform (l'animation fadeInUp utilisait
+           transform: translateY qui interférait avec un translateX → on évite
+           toute manip de transform sur le bloc lui-même). */
         left: 0;
         right: 0;
         margin: 0 auto;
@@ -1396,6 +1397,14 @@ body {
         container-type: size;
         container-name: hero-content;
         transition: top 0.35s ease, bottom 0.35s ease;
+        /* Sur desktop on remplace fadeInUp (qui laisse un translateY résiduel
+           après animation) par une animation opacity-only — préserve les top/bottom
+           absolus calculés via les CSS variables. */
+        animation: heroContentFade 1s ease forwards;
+    }
+    @keyframes heroContentFade {
+        from { opacity: 0; }
+        to   { opacity: 1; }
     }
     /* Tassement automatique du contenu selon la hauteur du conteneur.
        cqh = container query height = % de la hauteur du nearest container. */
