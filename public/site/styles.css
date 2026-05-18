@@ -1353,3 +1353,34 @@ body {
     .stat-item { text-align: center; }
     .contact-wrapper { grid-template-columns: 1fr; }
 }
+
+/* ========================================
+   HERO COMPACT — noms de salon longs (>2 lignes)
+   ========================================
+   Activé via `body.hero-long-title` posée par main.js → syncHeroLongTitle()
+   après mesure du nombre de lignes du titre rendu. Le but : réduire
+   l'encombrement vertical d'environ 30 % pour que la zone reste agréable
+   quand le nom du salon force le titre à 3+ lignes.
+
+   Desktop UNIQUEMENT. Sur mobile/tablette, le hero reste tel quel pour
+   préserver la dramaturgie de la home page sur petits écrans. */
+@media (min-width: 769px) {
+    body.hero-long-title .hero {
+        height: 70vh;
+        min-height: 490px;
+    }
+    body.hero-long-title .hero-title {
+        font-size: clamp(2rem, 5.5vw, 4.2rem);
+        line-height: 1.05;
+        margin-bottom: 18px;
+    }
+    body.hero-long-title .hero-tagline {
+        margin-bottom: 16px;
+    }
+    body.hero-long-title .hero-subtitle {
+        margin-bottom: 32px;
+    }
+    body.hero-long-title .hero-scroll {
+        bottom: 24px;
+    }
+}

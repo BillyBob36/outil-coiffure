@@ -344,6 +344,37 @@ function applyHeroImage(src) {
   if (hero) hero.style.backgroundImage = `url('${src}')`;
 }
 
+/* Détecte si le nom du salon prend plus de 2 lignes dans le hero, et toggle
+   `body.hero-long-title` en conséquence. La règle CSS associée (uniquement
+   desktop, cf. styles.css) réduit la taille du titre + la hauteur du hero
+   d'environ 30 % pour compenser les noms très longs. À re-évaluer au resize.
+
+   On mesure après deux frames pour s'assurer que la police custom (Cormorant
+   Garamond) est chargée et que le layout est stabilisé. */
+function syncHeroLongTitle() {
+  const title = document.getElementById('hero-title');
+  if (!title) return;
+  const compute = () => {
+    const cs = getComputedStyle(title);
+    const lh = parseFloat(cs.lineHeight);
+    const h = title.getBoundingClientRect().height;
+    if (!lh || isNaN(lh) || !h) return;
+    const lines = Math.round(h / lh);
+    document.body.classList.toggle('hero-long-title', lines > 2);
+  };
+  requestAnimationFrame(() => requestAnimationFrame(compute));
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(compute).catch(() => {});
+  }
+}
+
+// Re-mesure au resize (la taille du titre dépend de clamp() + viewport-width).
+let _heroResizeTimer = null;
+window.addEventListener('resize', () => {
+  if (_heroResizeTimer) clearTimeout(_heroResizeTimer);
+  _heroResizeTimer = setTimeout(syncHeroLongTitle, 120);
+});
+
 function renderSalon(view) {
   const c = view.content;
   const shortName = buildShortName(c.hero.title || view.nom);
@@ -366,6 +397,10 @@ function renderSalon(view) {
   setText('hero-title', c.hero.title);
   setText('hero-subtitle', c.hero.subtitle);
   applyHeroImage(c.hero.backgroundImage);
+  // Compense les noms de salon longs (3 lignes ou +) : ajoute `body.hero-long-title`
+  // pour réduire l'encombrement vertical du hero sur DESKTOP uniquement
+  // (cf. styles.css → @media (min-width: 901px) body.hero-long-title .hero).
+  syncHeroLongTitle();
 
   // INTRO (note Google si >=4, sinon fallback commercial)
   setText('intro-title', c.intro.title);
