@@ -100,62 +100,87 @@ export async function sendSignupSuccessEmail({ to, salonName, liveHostname, plan
 
   const subject = `${salonName} — votre site est en ligne sur ${liveHostname}`;
 
+  // Template HTML avec wrapper <table> = standard email (Stripe, Linear, etc.).
+  // Évite que Gmail/Outlook "détachent" la signature logo du contenu.
   const html = `<!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 30px; color: #1a1a1a; background: #ffffff;">
-  <h1 style="font-size: 24px; margin: 0 0 16px;">Bonjour ${escapeHtml(salonName)},</h1>
-  <p style="font-size: 16px; line-height: 1.5; color: #4b5563;">
-    Votre site est maintenant <strong>en ligne</strong>. Bienvenue sur MaQuickPage.
-  </p>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a1a;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f5;">
+  <tr>
+    <td align="center" style="padding: 24px 12px;">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; width: 100%; background: #ffffff; border-radius: 12px; padding: 30px;">
+        <tr><td>
 
-  <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 24px 0;">
-    <p style="margin: 0 0 8px; font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">L'adresse de votre site</p>
-    <p style="margin: 0 0 16px; font-size: 18px; font-weight: 600;">
-      <a href="${liveUrl}" style="color: #0a0a0a; text-decoration: none;">${escapeHtml(liveHostname)}</a>
-    </p>
-    <a href="${liveUrl}" style="display: inline-block; background: #0a0a0a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 14px;">Voir mon site →</a>
-  </div>
+          <h1 style="font-size: 24px; margin: 0 0 16px; color: #1a1a1a;">Bonjour ${escapeHtml(salonName)},</h1>
+          <p style="font-size: 16px; line-height: 1.5; color: #4b5563; margin: 0 0 16px;">
+            Votre site est maintenant <strong>en ligne</strong>. Bienvenue sur MaQuickPage.
+          </p>
 
-  <div style="background: #FAF6EC; border-left: 4px solid #F4A300; border-radius: 0 8px 8px 0; padding: 18px 20px; margin: 24px 0;">
-    <p style="margin: 0 0 8px; font-size: 13px; color: #002FA7; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Modifier votre site</p>
-    <p style="margin: 0 0 12px; font-size: 14px; color: #4b5563; line-height: 1.5;">
-      Cliquez ci-dessous pour accéder à votre espace (textes, photos, prestations, horaires…). Le lien est <strong>valable 24 heures</strong>. Passé ce délai, demandez-en un nouveau directement sur votre espace.
-    </p>
-    <a href="${adminUrl}" style="display: inline-block; background: #0a0a0a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 14px;">Accéder à mon espace →</a>
-  </div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; margin: 24px 0;">
+            <tr><td style="padding: 20px;">
+              <p style="margin: 0 0 8px; font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">L'adresse de votre site</p>
+              <p style="margin: 0 0 16px; font-size: 18px; font-weight: 600;">
+                <a href="${liveUrl}" style="color: #0a0a0a; text-decoration: none;">${escapeHtml(liveHostname)}</a>
+              </p>
+              <a href="${liveUrl}" style="display: inline-block; background: #0a0a0a; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 14px;">Voir mon site →</a>
+            </td></tr>
+          </table>
 
-  <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">
-    <strong>Récapitulatif :</strong><br>
-    Plan : ${escapeHtml(planLabel)}<br>
-    Domaine : <a href="${liveUrl}" style="color: #0a0a0a;">${escapeHtml(liveHostname)}</a> (offert pour 1 an)<br>
-    Hébergement : Hetzner (Allemagne, UE)
-  </p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #FAF6EC; border-left: 4px solid #F4A300; border-radius: 0 8px 8px 0; margin: 24px 0;">
+            <tr><td style="padding: 18px 20px;">
+              <p style="margin: 0 0 8px; font-size: 13px; color: #002FA7; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Modifier votre site</p>
+              <p style="margin: 0 0 12px; font-size: 14px; color: #4b5563; line-height: 1.5;">
+                Cliquez ci-dessous pour accéder à votre espace (textes, photos, prestations, horaires…). Le lien est <strong>valable 24 heures</strong>. Passé ce délai, demandez-en un nouveau directement sur votre espace.
+              </p>
+              <a href="${adminUrl}" style="display: inline-block; background: #0a0a0a; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 14px;">Accéder à mon espace →</a>
+            </td></tr>
+          </table>
 
-  <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 28px 0;">
+          <p style="font-size: 14px; color: #6b7280; line-height: 1.6; margin: 0 0 16px;">
+            <strong>Récapitulatif :</strong><br>
+            Plan : ${escapeHtml(planLabel)}<br>
+            Domaine : <a href="${liveUrl}" style="color: #0a0a0a;">${escapeHtml(liveHostname)}</a> (offert pour 1 an)<br>
+            Hébergement : Hetzner (Allemagne, UE)
+          </p>
 
-  <p style="font-size: 13px; color: #6b7280; line-height: 1.5;">
-    <strong>Comment vous connecter plus tard ?</strong><br>
-    Allez sur <a href="${recoverPageUrl}" style="color: #0a0a0a;">${escapeHtml(liveHostname)}/admin</a>, entrez votre adresse e-mail, et vous recevrez un nouveau lien de connexion sécurisé (valable 10 minutes). Aucun mot de passe à retenir.
-  </p>
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 28px 0;">
 
-  <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 28px 0;">
+          <p style="font-size: 13px; color: #6b7280; line-height: 1.5; margin: 0 0 16px;">
+            <strong>Comment vous connecter plus tard ?</strong><br>
+            Allez sur <a href="${recoverPageUrl}" style="color: #0a0a0a;">${escapeHtml(liveHostname)}/admin</a>, entrez votre adresse e-mail, et vous recevrez un nouveau lien de connexion sécurisé (valable 10 minutes). Aucun mot de passe à retenir.
+          </p>
 
-  <p style="font-size: 12px; color: #9ca3af; line-height: 1.5; margin: 0;">
-    Une question ? Répondez à cet email ou écrivez à <a href="mailto:contact@maquickpage.fr" style="color: #6b7280;">contact@maquickpage.fr</a>.<br>
-    MaQuickPage — KAISER CO · KAISER JOHANN, Entrepreneur individuel · SIREN 791 069 610 · 61 rue de Lyon, 75012 Paris<br>
-    <a href="https://maquickpage.fr/legal/cgv.html" style="color: #9ca3af;">CGV</a> ·
-    <a href="https://maquickpage.fr/legal/mentions-legales.html" style="color: #9ca3af;">Mentions légales</a> ·
-    <a href="https://maquickpage.fr/legal/privacy.html" style="color: #9ca3af;">Confidentialité</a>
-  </p>
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 28px 0;">
 
-  <div style="text-align: center; margin: 36px 0 8px;">
-    <a href="https://maquickpage.fr/" style="text-decoration: none; border: 0;">
-      <img src="https://maquickpage.fr/_assets/email/logo-signature.png"
-           alt="MaQuickPage"
-           width="120"
-           style="display: inline-block; max-width: 120px; height: auto; border: 0; outline: none; text-decoration: none;">
-    </a>
-  </div>
+          <p style="font-size: 12px; color: #9ca3af; line-height: 1.5; margin: 0 0 24px;">
+            Une question ? Répondez à cet email ou écrivez à <a href="mailto:contact@maquickpage.fr" style="color: #6b7280;">contact@maquickpage.fr</a>.<br>
+            MaQuickPage — KAISER CO · KAISER JOHANN, Entrepreneur individuel · SIREN 791 069 610 · 61 rue de Lyon, 75012 Paris<br>
+            <a href="https://maquickpage.fr/legal/cgv.html" style="color: #9ca3af;">CGV</a> ·
+            <a href="https://maquickpage.fr/legal/mentions-legales.html" style="color: #9ca3af;">Mentions légales</a> ·
+            <a href="https://maquickpage.fr/legal/privacy.html" style="color: #9ca3af;">Confidentialité</a>
+          </p>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td align="center" style="padding-top: 12px;">
+              <a href="https://maquickpage.fr/" style="text-decoration: none; border: 0;">
+                <img src="https://maquickpage.fr/_assets/email/logo-signature.png"
+                     alt="MaQuickPage"
+                     width="100"
+                     height="100"
+                     style="display: block; width: 100px; height: 100px; border: 0; outline: none; text-decoration: none;">
+              </a>
+            </td></tr>
+          </table>
+
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
 </body></html>`;
 
   const text = `Bonjour ${salonName},
