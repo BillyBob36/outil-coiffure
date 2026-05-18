@@ -375,7 +375,12 @@ app.get('/admin/:slug', (req, res, next) => {
     } catch {}
   }
 
-  // === Sites LIVE (Falkenstein) : cookie session ============================
+  // === Sites LIVE (Falkenstein) : Magic Link Only ===========================
+  // Auth = cookie session 30 j, posé par un magic link single-use.
+  //   - setup_token (24 h)  : 1er lien dans l'email post-paiement
+  //   - recovery_token (10 min) : magic link demandé via le form 401
+  // Aucune valeur permanente : pas de fallback sur edit_token. Le token URL
+  // est forcément consommé et lié à une expiry stricte.
   if (TENANT_ONLY) {
     // 1. Cookie valide ?
     const cookieSlug = readSessionCookie(req);
@@ -383,29 +388,18 @@ app.get('/admin/:slug', (req, res, next) => {
       return res.status(200).sendFile(join(__dirname, 'public/edit/index.html'));
     }
 
-    // 2. session_token (= magic link one-time)
-    const sessionToken = req.query.session_token;
-    if (sessionToken) {
-      const tokenSlug = consumeSessionToken(sessionToken);
+    // 2. Magic link (token query param ou session_token legacy) → single-use
+    const magicToken = req.query.token || req.query.session_token;
+    if (magicToken) {
+      const tokenSlug = consumeSessionToken(magicToken);
       if (tokenSlug === slug) {
         setSessionCookie(res, slug);
         return res.redirect(302, `/admin/${encodeURIComponent(slug)}`);
       }
     }
 
-    // 3. edit_token (= 1ère ouverture depuis email post-paiement)
-    const editToken = req.query.token;
-    if (editToken) {
-      try {
-        const r = db.prepare('SELECT 1 FROM salons WHERE slug = ? AND edit_token = ?').get(slug, editToken);
-        if (r) {
-          setSessionCookie(res, slug);
-          return res.redirect(302, `/admin/${encodeURIComponent(slug)}`);
-        }
-      } catch {}
-    }
-
-    // 4. Aucune auth → 401 + UI affichera le form magic link
+    // 3. Aucune auth (cookie expiré, lien périmé/consommé) → 401, l'UI
+    //    affiche le form "Saisissez votre email" pour recevoir un nouveau lien.
     return res.status(401).sendFile(join(__dirname, 'public/edit/index.html'));
   }
 

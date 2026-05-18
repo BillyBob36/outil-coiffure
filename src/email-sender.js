@@ -79,21 +79,24 @@ function escapeHtml(s) {
 /**
  * Email envoyé après que le site est passé LIVE (provisioning OK).
  *
- * IMPORTANT : l'admin URL contient le edit_token (clé privée du coiffeur).
- * Cet email est la SEULE manière dont le coiffeur reçoit son token la première fois.
- * Si l'email est perdu, il peut le récupérer via la page /recover (magic link).
+ * Modèle Magic Link Only :
+ *   - setupToken : token unique single-use valide 24 h, posé en DB par le
+ *     worker juste avant l'envoi de l'email (cf. provisioning-worker.js
+ *     → generateRecoveryToken(slug, 24*60)).
+ *   - À l'ouverture du lien : token consommé → cookie 30 j posé → URL clean.
+ *   - Si le coiffeur perd cet email ou attend > 24 h, il va sur l'URL admin
+ *     de son site et reçoit un nouveau magic link par email (auto-service).
+ *   - Aucune valeur permanente dans l'URL.
  */
-export async function sendSignupSuccessEmail({ to, salonName, liveHostname, plan, slug, editToken }) {
+export async function sendSignupSuccessEmail({ to, salonName, liveHostname, plan, slug, setupToken }) {
   const planLabels = { TWO_YEAR: '9,90 € TTC/mois (engagement 24 mois)', ONE_YEAR: '17,90 € TTC/mois (engagement 12 mois)', FLEX: '29 € TTC/mois (sans engagement)' };
   const planLabel = planLabels[plan] || plan;
   const liveUrl = `https://${liveHostname}`;
-  // Admin URL pointe directement sur le custom hostname avec le token.
-  // Helsinki redirige automatiquement /admin/{slug} → custom hostname,
-  // mais on évite le hop intermédiaire en linkant directement.
-  const adminUrl = editToken
-    ? `https://${liveHostname}/admin/${encodeURIComponent(slug)}?token=${encodeURIComponent(editToken)}`
+  // Admin URL = lien magique single-use valide 24h.
+  const adminUrl = setupToken
+    ? `https://${liveHostname}/admin/${encodeURIComponent(slug)}?token=${encodeURIComponent(setupToken)}`
     : `https://${liveHostname}/admin/${encodeURIComponent(slug)}`;
-  const recoverUrl = `https://maquickpage.fr/recover`;
+  const recoverPageUrl = `https://${liveHostname}/admin/${encodeURIComponent(slug)}`;
 
   const subject = `${salonName} — votre site est en ligne sur ${liveHostname}`;
 
@@ -116,12 +119,9 @@ export async function sendSignupSuccessEmail({ to, salonName, liveHostname, plan
   <div style="background: #FAF6EC; border-left: 4px solid #F4A300; border-radius: 0 8px 8px 0; padding: 18px 20px; margin: 24px 0;">
     <p style="margin: 0 0 8px; font-size: 13px; color: #002FA7; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Modifier votre site</p>
     <p style="margin: 0 0 12px; font-size: 14px; color: #4b5563; line-height: 1.5;">
-      Cliquez sur le bouton ci-dessous pour accéder à votre espace de modification (textes, photos, prestations, horaires…).
+      Cliquez ci-dessous pour accéder à votre espace (textes, photos, prestations, horaires…). Le lien est <strong>valable 24 heures</strong>. Passé ce délai, demandez-en un nouveau directement sur votre espace.
     </p>
-    <a href="${adminUrl}" style="display: inline-block; background: #0a0a0a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 14px;">Modifier mon site →</a>
-    <p style="margin: 12px 0 0; font-size: 12px; color: #15130E;">
-      <strong>Important :</strong> ce lien contient votre clé d'accès personnelle. Conservez cet email.
-    </p>
+    <a href="${adminUrl}" style="display: inline-block; background: #0a0a0a; color: white; padding: 10px 20px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 14px;">Accéder à mon espace →</a>
   </div>
 
   <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">
@@ -134,8 +134,8 @@ export async function sendSignupSuccessEmail({ to, salonName, liveHostname, plan
   <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 28px 0;">
 
   <p style="font-size: 13px; color: #6b7280; line-height: 1.5;">
-    <strong>Vous avez perdu cet email ?</strong><br>
-    Pas de panique. Allez sur <a href="${recoverUrl}" style="color: #0a0a0a;">${recoverUrl}</a>, entrez l'adresse e-mail avec laquelle vous vous êtes inscrit, vous recevrez un nouveau lien.
+    <strong>Comment vous connecter plus tard ?</strong><br>
+    Allez sur <a href="${recoverPageUrl}" style="color: #0a0a0a;">${escapeHtml(liveHostname)}/admin</a>, entrez votre adresse e-mail, et vous recevrez un nouveau lien de connexion sécurisé (valable 10 minutes). Aucun mot de passe à retenir.
   </p>
 
   <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 28px 0;">
@@ -156,7 +156,7 @@ Votre site est maintenant en ligne. Bienvenue sur MaQuickPage.
 ADRESSE DE VOTRE SITE
 ${liveUrl}
 
-MODIFIER VOTRE SITE (lien personnel — conservez cet email)
+ACCÉDER À VOTRE ESPACE (lien valable 24 h)
 ${adminUrl}
 
 RÉCAPITULATIF
@@ -164,8 +164,8 @@ Plan : ${planLabel}
 Domaine : ${liveHostname} (offert pour 1 an)
 Hébergement : Hetzner (Allemagne, UE)
 
-VOUS AVEZ PERDU CET EMAIL ?
-Allez sur ${recoverUrl}, entrez votre adresse e-mail d'inscription, vous recevrez un nouveau lien.
+COMMENT VOUS CONNECTER PLUS TARD ?
+Allez sur ${recoverPageUrl}, entrez votre adresse e-mail, vous recevrez un nouveau lien de connexion sécurisé. Aucun mot de passe à retenir.
 
 Une question ? Répondez à cet email ou écrivez à contact@maquickpage.fr
 

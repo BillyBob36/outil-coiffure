@@ -16,12 +16,17 @@ const upload = multer({
   limits: { fileSize: 12 * 1024 * 1024 } // 12 MB max upload (sera compresse cote serveur)
 });
 
-// Auth : 2 mécanismes possibles selon le contexte
-//   1. Cookie session signé `mqs_session` (utilisé sur les sites LIVE Falkenstein,
-//      après l'ouverture initiale du lien email — token retiré de l'URL)
-//   2. Token edit_token en query/header/body (utilisé sur les démos Helsinki +
-//      compatibilité avec les anciens liens)
+// Auth :
+//   - Sites LIVE (Falkenstein, TENANT_ONLY=1) : cookie session SEULEMENT.
+//     Pas de fallback edit_token URL — l'URL admin n'a plus de token permanent
+//     depuis la migration Magic Link Only. Le cookie est posé par /admin/{slug}
+//     après consommation d'un magic link single-use (24 h post-paiement ou
+//     10 min via recovery form).
+//   - Démos Helsinki (TENANT_ONLY=0) : cookie OU edit_token URL/header/body
+//     (pour l'agence qui ouvre les démos avec un lien interne).
 import { readSessionCookie } from '../admin-auth.js';
+
+const TENANT_ONLY = process.env.TENANT_ONLY === '1';
 
 function requireToken(req, res, next) {
   const slug = req.params.slug;
@@ -36,7 +41,12 @@ function requireToken(req, res, next) {
     return next();
   }
 
-  // 2. Token URL/header/body (= compat ancien flux + démos)
+  // 2. Sur Falkenstein, plus de fallback : 401 → l'UI demande un magic link.
+  if (TENANT_ONLY) {
+    return res.status(401).json({ error: 'Authentification requise' });
+  }
+
+  // 3. Helsinki uniquement : edit_token URL/header/body (démos agence).
   const token = req.query.token || req.headers['x-edit-token'] || req.body?.token;
   if (!token) return res.status(401).json({ error: 'Authentification requise' });
 

@@ -129,6 +129,29 @@ router.post('/auth/request-magic-link', express.json({ limit: '1kb' }), async (r
 });
 
 /**
+ * Génère un token unique signé en base, single-use, avec TTL paramétrable.
+ * Utilisé pour :
+ *  - Setup link post-paiement (TTL 24h, envoyé dans l'email "site en ligne")
+ *  - Magic link de récupération (TTL 10 min, envoyé via /api/auth/request-magic-link)
+ *
+ * Retourne le token (string) qui doit être inclus dans l'URL d'accès admin :
+ *   https://{liveHostname}/admin/{slug}?token={returnedToken}
+ *
+ * Le token est consommé lors du 1er clic (cf. consumeSessionToken).
+ */
+export function generateRecoveryToken(slug, ttlMinutes) {
+  const token = crypto.randomBytes(24).toString('base64url');
+  const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000)
+    .toISOString().replace('T', ' ').substring(0, 19);
+  db.prepare(`
+    UPDATE salons
+    SET recovery_token=?, recovery_token_expires_at=?, updated_at=datetime('now')
+    WHERE slug=?
+  `).run(token, expiresAt, slug);
+  return token;
+}
+
+/**
  * Helper : vérifie un session_token et retourne le slug si valide.
  * Single-use : on supprime le token de la DB après usage.
  */

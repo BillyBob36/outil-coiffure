@@ -27,6 +27,7 @@
 import db from './db.js';
 import { ovhFetch } from './ovh-client.js';
 import { sendSignupSuccessEmail, sendProvisioningErrorEmail } from './email-sender.js';
+import { generateRecoveryToken } from './routes/admin-recover.js';
 
 const CLOUDFLARE_API = 'https://api.cloudflare.com/client/v4';
 const CLOUDFLARE_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
@@ -294,20 +295,24 @@ async function notifyAdminOfError(slug, hostname, errorMessage) {
 async function sendSignupConfirmation(slug, hostname) {
   try {
     const row = db.prepare(`
-      SELECT slug, nom_clean, nom, owner_email, plan, edit_token
+      SELECT slug, nom_clean, nom, owner_email, plan
       FROM salons WHERE slug = ?
     `).get(slug);
     if (!row || !row.owner_email) {
       console.log(`[provisioning] ${slug} pas d'owner_email, skip email`);
       return;
     }
+    // Auth Magic Link Only : on génère un token single-use valide 24 h pour le
+    // premier clic depuis l'email. Passé 24 h ou après usage, le coiffeur
+    // demande un nouveau magic link via le form "/admin/{slug}".
+    const setupToken = generateRecoveryToken(slug, 24 * 60); // 24h
     const result = await sendSignupSuccessEmail({
       to: row.owner_email,
       salonName: row.nom_clean || row.nom || 'votre salon',
       liveHostname: hostname,
       plan: row.plan,
       slug,
-      editToken: row.edit_token,
+      setupToken,
     });
     if (result.ok) {
       console.log(`[provisioning] ${slug} confirmation email sent → ${row.owner_email}`);
