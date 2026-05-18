@@ -175,6 +175,10 @@
     // personnaliser son site — le ribbon serait redondant et visuellement parasite.
     if (isPreview && !document.getElementById('mqs-ribbon')) {
       document.body.appendChild(buildRibbon());
+      // Le ribbon pousse la navbar de 36px (cf. banner.css → body:has(#mqs-ribbon))
+      // Mise à jour de --mqs-header-h pour que .hero-content (positionné en
+      // absolute top: var(--mqs-header-h)) suive la navbar avec animation.
+      document.documentElement.style.setProperty('--mqs-header-h', '116px');
     }
     mountBar();
   }

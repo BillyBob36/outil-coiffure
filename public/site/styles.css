@@ -1355,30 +1355,63 @@ body {
 }
 
 /* ========================================
-   HERO CONTENU COMPACT — noms de salon longs (>2 lignes)
+   HERO CONTENT AUTO-FIT — desktop uniquement
    ========================================
-   Activé via `body.hero-long-title` posée par main.js → syncHeroLongTitle()
-   après mesure du nombre de lignes du titre rendu.
+   Le .hero-content se cale précisément entre le bottom du header et le top
+   de la flèche "DÉCOUVRIR" via positionnement absolu + CSS variables.
+   Quand le ribbon CTA apparaît (banner.js → --mqs-header-h passe 80→116px),
+   l'espace dispo se réduit ; le contenu interne se tasse automatiquement
+   grâce aux container queries (cqh units) sur la hauteur du conteneur.
 
-   Le conteneur .hero garde sa hauteur 100vh / min-height 700px (pas touché).
-   Ce qu'on compresse c'est UNIQUEMENT le contenu central .hero-content
-   (tagline + titre + sous-titre + boutons) d'environ 30 % en jouant sur :
-     - la taille + line-height du titre
-     - les marges entre éléments
-   → la tagline ne déborde plus sous le header,
-     les boutons ne masquent plus la flèche "DÉCOUVRIR" en bas.
+   → La tagline ne passe jamais sous le header
+   → Les boutons ne masquent jamais la flèche "DÉCOUVRIR"
+   → Le titre/marges se tassent fluidement, avec un floor `min` dans clamp()
+     pour préserver la lisibilité dans les cas extrêmes.
 
-   Desktop UNIQUEMENT. Sur mobile/tablette, le hero reste tel quel. */
+   Sur mobile/tablette (<769px), .hero-content garde son flex centré normal. */
+
+:root {
+    --mqs-header-h: 80px;  /* bottom du header (navbar) par rapport au top du viewport */
+    --mqs-scroll-h: 90px;  /* espace réservé en bas pour la flèche DÉCOUVRIR */
+}
+
 @media (min-width: 769px) {
-    body.hero-long-title .hero-title {
-        font-size: clamp(2rem, 5.5vw, 4.2rem);
+    .hero-content {
+        position: absolute;
+        top: var(--mqs-header-h, 80px);
+        bottom: var(--mqs-scroll-h, 90px);
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(800px, calc(100% - 48px));
+        max-width: none;
+        padding: 0 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        container-type: size;
+        container-name: hero-content;
+        transition: top 0.35s ease, bottom 0.35s ease;
+    }
+    /* Tassement automatique du contenu selon la hauteur du conteneur.
+       cqh = container query height = % de la hauteur du nearest container. */
+    .hero-tagline {
+        font-size: clamp(0.65rem, 1.5cqh, 0.9rem);
+        margin-bottom: clamp(8px, 3cqh, 24px);
+        letter-spacing: clamp(2px, 0.8cqh, 5px);
+    }
+    .hero-title {
+        font-size: clamp(1.5rem, 12cqh, 6rem);
         line-height: 1.05;
-        margin-bottom: 18px;
+        margin-bottom: clamp(10px, 3cqh, 24px);
+        letter-spacing: clamp(1px, 0.5cqh, 3px);
     }
-    body.hero-long-title .hero-tagline {
-        margin-bottom: 16px;
+    .hero-subtitle {
+        font-size: clamp(0.9rem, 3cqh, 1.5rem);
+        margin-bottom: clamp(16px, 6cqh, 48px);
     }
-    body.hero-long-title .hero-subtitle {
-        margin-bottom: 32px;
+    .hero-buttons {
+        gap: clamp(8px, 2cqh, 20px);
     }
 }
