@@ -566,11 +566,15 @@ function setupNavbar() {
 (async () => {
   setupNavbar();
   const slug = getSlugFromUrl();
-  // Sur le custom hostname (Falkenstein), l'URL est `/` direct (pas `/preview/{slug}`),
-  // donc slug=null. Mais le SSR a déjà rendu tout le contenu → on ne fetch pas, on
-  // retire juste l'overlay. Sur /preview/{slug} (Helsinki), on fetch + render normalement.
+  // Stratégie de chargement de la vue salon :
+  //   1. Si SSR a injecté window.__SALON_VIEW__ (= custom hostname Falkenstein) :
+  //      on l'utilise directement, pas de fetch (rendering instantané).
+  //   2. Si slug dans URL (= /preview/{slug} sur Helsinki) : fetch /api/salon/{slug}.
+  //   3. Sinon (= landing maquickpage.fr root) : on ne rend rien (pas un salon).
   try {
-    if (slug) {
+    if (window.__SALON_VIEW__) {
+      renderSalon(window.__SALON_VIEW__);
+    } else if (slug) {
       const view = await fetchSalon(slug);
       renderSalon(view);
     }

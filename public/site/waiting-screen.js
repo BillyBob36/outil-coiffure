@@ -91,7 +91,7 @@
       <div class="mqs-success-icon">
         <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="#10B981" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
-      <h2 class="mqs-waiting-title">Votre site est en ligne 🎉</h2>
+      <h2 class="mqs-waiting-title">Votre site est en ligne</h2>
       <p class="mqs-waiting-sub">
         Votre site est accessible à : <strong>${escapeHtml('https://' + liveHostname)}</strong>
       </p>

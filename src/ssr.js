@@ -213,6 +213,16 @@ export function renderSalonHtml(view, options = {}) {
   const footerTagline = `Votre salon de coiffure${view.ville ? ` à ${view.ville}` : ''}`;
   html = replaceElementByIdHtml(html, 'footer-tagline', escapeHtml(footerTagline));
 
+  // Inject la view complète en JS global pour que main.js puisse render les
+  // sections répétitives (services, gallery, testimonials, hours…) sans avoir
+  // à refaire un fetch /api/salon. Indispensable sur custom hostnames
+  // (Falkenstein) où l'URL est `/` et où main.js ne peut pas inférer un slug.
+  // Le SSR a déjà inscrit les champs simples (hero-title, contact NAP, etc.)
+  // via replaceElementById ; ce <script> permet à main.js de remplir le reste.
+  const safeView = JSON.stringify(view).replace(/</g, '\\u003c').replace(/-->/g, '--\\u003e');
+  const viewScript = `<script>window.__SALON_VIEW__=${safeView};</script>`;
+  html = html.replace(/<\/body>/i, `${viewScript}</body>`);
+
   return html;
 }
 
