@@ -152,8 +152,29 @@ export function generateRecoveryToken(slug, ttlMinutes) {
 }
 
 /**
- * Helper : vérifie un session_token et retourne le slug si valide.
- * Single-use : on supprime le token de la DB après usage.
+ * Vérifie qu'un magic link token est valide (= existe en DB et pas expiré).
+ *
+ * Comportement MULTI-USE : le token reste valide jusqu'à expiration de sa
+ * TTL. Plusieurs clics sur le même lien marchent → le coiffeur peut cliquer
+ * depuis son mobile PUIS son ordi pendant la fenêtre de validité.
+ *
+ * Le token est invalidé naturellement dans 2 cas :
+ *   - Sa TTL expire (recovery_token_expires_at < now)
+ *   - Un nouveau token est généré pour le même slug (écrasement DB via
+ *     generateRecoveryToken)
+ *
+ * TTLs distinctes selon contexte :
+ *   - setup_token : 24h (post-paiement, généré par provisioning-worker)
+ *   - recovery_token : 10 min (form 401, généré par /api/auth/request-magic-link)
+ *
+ * La sécurité repose sur la TTL courte + rotation. Single-use historique
+ * apportait peu de protection réelle (un attaquant interceptant l'email
+ * pouvait toujours cliquer avant le coiffeur dans la fenêtre TTL).
+ *
+ * Le nom "consumeSessionToken" reste pour rétro-compat ; sémantique réelle
+ * = "verifySessionToken".
+ *
+ * Retourne le slug si valide, null sinon.
  */
 export function consumeSessionToken(token) {
   if (!token || typeof token !== 'string' || token.length > 200) return null;
@@ -172,15 +193,6 @@ export function consumeSessionToken(token) {
   if (!salon.recovery_token_expires_at) return null;
   const expMs = Date.parse(salon.recovery_token_expires_at + 'Z') || Date.parse(salon.recovery_token_expires_at);
   if (!expMs || expMs < Date.now()) return null;
-
-  // Single-use : on retire le token
-  try {
-    db.prepare(`
-      UPDATE salons
-      SET recovery_token=NULL, recovery_token_expires_at=NULL, updated_at=datetime('now')
-      WHERE slug=?
-    `).run(salon.slug);
-  } catch {}
   return salon.slug;
 }
 

@@ -134,7 +134,7 @@ export async function sendSignupSuccessEmail({ to, salonName, liveHostname, plan
             <tr><td style="padding: 18px 20px;">
               <p style="margin: 0 0 8px; font-size: 13px; color: #002FA7; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Modifier votre site</p>
               <p style="margin: 0 0 12px; font-size: 14px; color: #4b5563; line-height: 1.5;">
-                Cliquez ci-dessous pour accéder à votre espace (textes, photos, prestations, horaires…). Le lien est <strong>valable 24 heures</strong>. Passé ce délai, demandez-en un nouveau directement sur votre espace.
+                Cliquez ci-dessous pour accéder à votre espace de modification (textes, photos, prestations, horaires…). Le lien est <strong>valable 24 heures</strong> et fonctionne sur tous vos appareils. Une fois cliqué, vous restez connecté(e) <strong>30 jours</strong>.
               </p>
               <a href="${adminUrl}" style="display: inline-block; background: #0a0a0a; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 14px;">Accéder à mon espace →</a>
             </td></tr>
@@ -230,7 +230,7 @@ export async function sendRecoveryEmail({ to, salonName, recoverConfirmUrl }) {
     <a href="${recoverConfirmUrl}" style="display: inline-block; background: #0a0a0a; color: white; padding: 14px 32px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 15px;">Accéder à mon espace →</a>
   </p>
   <p style="font-size: 13px; color: #6b7280; line-height: 1.5;">
-    Ce lien est valable <strong>10 minutes</strong> et ne peut être utilisé qu'une seule fois.
+    Ce lien est valable <strong>10 minutes</strong> et fonctionne sur tous vos appareils pendant cette fenêtre.
     Si vous n'avez pas demandé cet email, vous pouvez l'ignorer en toute sécurité.
   </p>
   <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 28px 0;">
@@ -246,7 +246,7 @@ Cliquez sur le lien ci-dessous pour vous y connecter automatiquement :
 
 ${recoverConfirmUrl}
 
-Ce lien est valable 10 minutes et ne peut être utilisé qu'une seule fois.
+Ce lien est valable 10 minutes et fonctionne sur tous vos appareils pendant cette fenêtre.
 Si vous n'avez pas demandé cet email, ignorez-le.
 
 MaQuickPage — contact@maquickpage.fr`;
