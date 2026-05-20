@@ -276,13 +276,35 @@
     return null;
   }
 
+  // === Détection LIVE vs DEMO ===
+  // En mode LIVE (custom hostname coiffeur payé), le tuto ne se lance JAMAIS
+  // automatiquement — seulement via le bouton "?" en bas à droite.
+  // En mode DEMO (maquickpage.fr/admin), le tuto auto-démarre à la 1ère ouverture.
+  function isLiveSite() {
+    const host = (window.location.hostname || '').toLowerCase();
+    return host !== 'maquickpage.fr'
+        && host !== 'www.maquickpage.fr'
+        && host !== 'localhost'
+        && host !== '127.0.0.1';
+  }
+
   // === Bootstrap ===
   function init() {
     injectHelpButton();
-    if (!isDone()) {
-      // Léger délai pour laisser l'app se monter
+
+    // En LIVE, jamais d'auto-launch (= le coiffeur a déjà vu le tuto à son
+    // 1er accès en DEMO, pas la peine de le forcer à chaque connexion).
+    if (isLiveSite()) return;
+
+    // En DEMO, on attend l'event 'mqs-editor-ready' (dispatché par edit.js
+    // après le 1er render réussi de l'éditeur) avant de démarrer le tour.
+    // Cela évite que le tour démarre sur la page 401 (= form recovery),
+    // qui sert le même HTML mais sans données salon.
+    if (isDone()) return;
+
+    window.addEventListener('mqs-editor-ready', () => {
       setTimeout(start, 600);
-    }
+    }, { once: true });
   }
 
   if (document.readyState === 'loading') {

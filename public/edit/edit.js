@@ -220,10 +220,22 @@ async function compressImageFile(file, maxDim = 1600, quality = 0.82) {
 function renderAll() {
   const c = state.draft;
   $('edit-brand-name').textContent = state.view.nom || c.hero.title || 'Mon salon';
-  // On propage le token via l'URL → permet au coiffeur de revenir vers
-  // /admin/{slug} via le bouton "Modifier mon site" même après navigation
-  // aller-retour (sinon sessionStorage perdu si onglet rouvert).
-  $('preview-link').href = `${getPublicBaseUrl()}/preview/${state.slug}?token=${encodeURIComponent(state.token)}`;
+
+  // Bouton "Voir mon site" : comportement différent selon contexte
+  //   - DEMO (maquickpage.fr/admin) : href vers /preview/{slug}?token=...
+  //     (même onglet, ce qui permet de revenir via "Modifier mon site")
+  //   - LIVE (custom hostname) : href vers / direct (= root canonique),
+  //     OUVRE UN NOUVEL ONGLET pour ne pas perdre la session admin du coiffeur.
+  const previewLink = $('preview-link');
+  if (isLiveSite()) {
+    previewLink.href = `${getPublicBaseUrl()}/`;
+    previewLink.target = '_blank';
+    previewLink.rel = 'noopener noreferrer';
+  } else {
+    previewLink.href = `${getPublicBaseUrl()}/preview/${state.slug}?token=${encodeURIComponent(state.token)}`;
+    previewLink.removeAttribute('target');
+    previewLink.removeAttribute('rel');
+  }
 
   renderHero(c.hero);
   renderIntro(c.intro);
@@ -231,6 +243,22 @@ function renderAll() {
   renderGallery(c.gallery);
   renderTestimonials(c.testimonials);
   renderContact(c.contact, c.socials);
+
+  // Signal à l'onboarding qu'on est dans le VRAI éditeur (= pas la page 401
+  // qui sert le même HTML mais sans données). Sur DEMO, le tuto auto-démarre
+  // après cet event. Sur LIVE, l'event est ignoré (no auto-launch).
+  window.dispatchEvent(new CustomEvent('mqs-editor-ready'));
+}
+
+// Helper : détecte si on est sur un site coiffeur LIVE (custom hostname Falkenstein)
+// vs DEMO (maquickpage.fr). Utilisé par renderAll() pour adapter le preview-link
+// et par onboarding.js pour décider du auto-launch du tuto.
+function isLiveSite() {
+  const host = (window.location.hostname || '').toLowerCase();
+  return host !== 'maquickpage.fr'
+      && host !== 'www.maquickpage.fr'
+      && host !== 'localhost'
+      && host !== '127.0.0.1';
 }
 
 function getPublicBaseUrl() {
