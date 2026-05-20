@@ -13,7 +13,7 @@ const ACCENT_MAP = {
   'œ':'oe','æ':'ae'
 };
 
-function slugify(input) {
+export function slugify(input) {
   if (!input) return '';
   let s = String(input).toLowerCase().trim();
   s = s.replace(/[àáâäãåąèéêëęìíîïòóôöõøùúûüýÿñńçčßœæ]/g, ch => ACCENT_MAP[ch] || ch);

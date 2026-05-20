@@ -12,6 +12,7 @@ import { startCorrectPresentation, getPresentationJob } from '../presentation-cl
 import { startDomainSuggestions, getDomainSuggestionsJob } from '../domain-suggester.js';
 import { captureBatchParallel } from '../screenshot-worker.js';
 import { startProvisioning, getProvisioningStatus } from '../provisioning-worker.js';
+import { slugify } from '../slug-generator.js';
 
 const router = express.Router();
 const UPLOAD_DIR = './data/csv-uploads';
@@ -628,11 +629,15 @@ router.get('/export-csv', (req, res) => {
         firstName = String(original["Prénom de l'email individuel"] || '').trim();
       } catch {}
 
+      const salonName = (r.nom_clean && r.nom_clean.trim()) || r.nom || '';
       return {
         email: r.email || '',
         first_name: firstName,
-        salon_name: (r.nom_clean && r.nom_clean.trim()) || r.nom || '',
+        salon_name: salonName,
         city: r.ville || '',
+        // Slug du nom final (= nom_clean ou nom à défaut). Utile pour générer
+        // des URLs personnalisées côté Smartlead (templates email avec variable).
+        salon_slug: slugify(salonName),
         // URL démo personnelle du coiffeur (token embarqué) : il voit son site
         // comme un visiteur, et le token est mémorisé en sessionStorage par
         // preview-onboarding.js → "Modifier mon site" fonctionne sans 401.
