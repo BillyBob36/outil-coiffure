@@ -32,8 +32,18 @@ const INFRA_HOSTNAMES = new Set([
   'customers.monsitehq.com',  // legacy, rétrocompat
 ]);
 
-// État de subscription qui autorise la délivrance du cert SSL
-const ACTIVE_STATUSES = new Set(['live', 'active', 'trialing']);
+// État de subscription qui autorise la délivrance du cert SSL.
+//
+// IMPORTANT : 'provisioning' est inclus, sinon DEADLOCK :
+//   1. Webhook Stripe → salon.subscription_status='provisioning'
+//   2. Helsinki poll https://hostname/health pour confirmer que tout marche
+//   3. Caddy reçoit la requête → demande à ask-endpoint si autorisé
+//   4. Si 'provisioning' pas dans ACTIVE → ask retourne 403 → Caddy refuse
+//      le cert → TLS handshake fail → poll Helsinki KO → status reste
+//      'provisioning' éternellement → site jamais en ligne.
+// → On accepte 'provisioning' (= le coiffeur a payé, on est en cours de setup),
+//   ce qui permet à Caddy d'obtenir le cert PENDANT le provisioning.
+const ACTIVE_STATUSES = new Set(['live', 'active', 'trialing', 'provisioning']);
 
 router.get('/check-hostname', (req, res) => {
   const domain = (req.query.domain || '').toString().toLowerCase().trim();
