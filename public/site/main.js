@@ -460,9 +460,23 @@ function renderSalon(view) {
   // CONTACT
   setText('contact-title', c.contact.title);
   setText('contact-description', c.contact.description);
+
+  // Mode salon vs coiffeur à domicile (défaut : 'address' = comportement historique).
+  // Si mode === 'zone' : on affiche serviceArea au lieu de l'adresse + on adapte le label.
+  // Code défensif : 10 k salons scrapés historiques n'ont aucun de ces fields → 'address'.
+  const contactMode = c.contact?.mode === 'zone' ? 'zone' : 'address';
   const addr = c.contact.address;
   const addr2 = c.contact.addressLine2;
-  setHtml('contact-address', [addr, addr2].filter(Boolean).map(escapeHtml).join('<br>') || 'Adresse non renseignée');
+  // Toujours re-set explicitement le label (sinon un re-render après bascule
+  // zone → address garderait l'ancien libellé "Zone d'intervention").
+  const labelStrong = $('contact-address-block')?.querySelector('strong');
+  if (labelStrong) labelStrong.textContent = (contactMode === 'zone') ? 'Zone d\'intervention' : 'Adresse';
+  if (contactMode === 'zone') {
+    const serviceArea = c.contact.serviceArea || '';
+    setHtml('contact-address', escapeHtml(serviceArea) || 'Sur demande');
+  } else {
+    setHtml('contact-address', [addr, addr2].filter(Boolean).map(escapeHtml).join('<br>') || 'Adresse non renseignée');
+  }
 
   if (c.contact.phone) {
     const phoneEl = $('contact-phone');
@@ -504,13 +518,22 @@ function renderSalon(view) {
   setHtml('social-icons', socials);
   setHtml('footer-social', socials);
 
-  // MAP
+  // MAP : masquer entièrement le container si mode='zone' + hideMap=true
+  // (coiffeur à domicile sans intérêt à montrer un point géo fixe).
+  // Sinon comportement historique : iframe pointe sur lat/lng ou adresse.
+  const mapContainer = document.querySelector('.contact-map');
   const mapIframe = $('map-iframe');
-  if (mapIframe) {
-    if (c.contact.latitude && c.contact.longitude) {
-      mapIframe.src = `https://maps.google.com/maps?q=${c.contact.latitude},${c.contact.longitude}&z=15&output=embed`;
-    } else if (addr || addr2) {
-      mapIframe.src = `https://maps.google.com/maps?q=${encodeURIComponent([addr, addr2].filter(Boolean).join(', '))}&z=15&output=embed`;
+  if (contactMode === 'zone' && c.contact?.hideMap) {
+    if (mapContainer) mapContainer.style.display = 'none';
+    if (mapIframe) mapIframe.removeAttribute('src');
+  } else {
+    if (mapContainer) mapContainer.style.display = '';
+    if (mapIframe) {
+      if (c.contact.latitude && c.contact.longitude) {
+        mapIframe.src = `https://maps.google.com/maps?q=${c.contact.latitude},${c.contact.longitude}&z=15&output=embed`;
+      } else if (addr || addr2) {
+        mapIframe.src = `https://maps.google.com/maps?q=${encodeURIComponent([addr, addr2].filter(Boolean).join(', '))}&z=15&output=embed`;
+      }
     }
   }
 }

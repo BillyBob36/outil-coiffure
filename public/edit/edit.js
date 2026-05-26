@@ -656,6 +656,17 @@ function collectTestimonials() {
 
 // ----- CONTACT + SOCIALS -----
 function renderContact(contact, socials) {
+  // Mode salon vs domicile (défaut: 'address' = comportement historique).
+  // Cf. quick win coiffeur à domicile : data.contact.mode + .serviceArea + .hideMap
+  // sont des champs optionnels ajoutés en mai 2026. Les ~10 k salons scrapés
+  // historiques n'ont aucun de ces fields → fallback sur 'address' = no-op visuel.
+  const mode = contact.mode === 'zone' ? 'zone' : 'address';
+  const modeRadio = document.querySelector(`input[name="contact-mode"][value="${mode}"]`);
+  if (modeRadio) modeRadio.checked = true;
+  if ($('contact-service-area')) $('contact-service-area').value = contact.serviceArea || '';
+  if ($('contact-hide-map')) $('contact-hide-map').checked = !!contact.hideMap;
+  applyContactModeUI(mode);
+
   $('contact-address').value = contact.address || '';
   $('contact-address2').value = contact.addressLine2 || '';
   $('contact-phone').value = contact.phone || '';
@@ -689,19 +700,40 @@ function collectContact() {
     const v = inp.value.trim();
     hours[inp.dataset.day] = v && v.toLowerCase() !== 'fermé' && v.toLowerCase() !== 'ferme' ? v : 'closed';
   });
+  // Mode : 'address' (défaut) | 'zone' (coiffeur à domicile)
+  const checkedMode = document.querySelector('input[name="contact-mode"]:checked');
+  const mode = checkedMode?.value === 'zone' ? 'zone' : 'address';
   return {
+    mode,
+    serviceArea: ($('contact-service-area')?.value || '').trim(),
+    hideMap: !!$('contact-hide-map')?.checked,
     address: $('contact-address').value.trim(),
     addressLine2: $('contact-address2').value.trim(),
     phone: $('contact-phone').value.trim(),
     email: $('contact-email').value.trim(),
     bookingUrl: ($('contact-booking-url')?.value || '').trim(),
     hours,
-    title: 'Venez nous rendre visite',
+    title: state.draft.contact.title || 'Venez nous rendre visite',
     description: state.draft.contact.description,
     latitude: state.draft.contact.latitude,
     longitude: state.draft.contact.longitude
   };
 }
+
+// Montre/cache le champ "Zone d'intervention" + le toggle "Masquer la carte"
+// selon le radio "Type d'activité". Garantit l'invariant : si le coiffeur
+// passe en mode 'zone', il VOIT le champ serviceArea et peut le remplir
+// avant de sauvegarder.
+function applyContactModeUI(mode) {
+  const areaField = document.getElementById('contact-service-area-field');
+  const hideMapField = document.getElementById('contact-hide-map-field');
+  const show = mode === 'zone';
+  if (areaField) areaField.style.display = show ? '' : 'none';
+  if (hideMapField) hideMapField.style.display = show ? '' : 'none';
+}
+document.querySelectorAll('input[name="contact-mode"]').forEach(radio => {
+  radio.addEventListener('change', () => applyContactModeUI(radio.value));
+});
 
 function collectSocials() {
   const out = {};

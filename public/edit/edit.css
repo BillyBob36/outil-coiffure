@@ -602,6 +602,44 @@ button {
 .edit-toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
 .toggle-label { font-size: 0.92rem; }
 .edit-toggle.compact { gap: 8px; padding: 0; }
+.edit-toggle.inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+/* Radio "Type d'activité" — Coiffeur en salon vs à domicile */
+.contact-mode-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 6px;
+}
+.contact-mode-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: background 0.15s, border-color 0.15s;
+}
+.contact-mode-option:hover { background: rgba(0,0,0,0.02); }
+.contact-mode-option input[type="radio"]:checked ~ span,
+.contact-mode-option:has(input[type="radio"]:checked) {
+    border-color: var(--gold-dark);
+    background: rgba(244,163,0,0.06);
+}
+.contact-mode-option input[type="radio"] {
+    accent-color: var(--gold-dark);
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+.mode-hint { color: #6b7280; font-size: 0.85rem; margin-left: 4px; }
 
 /* SERVICES LIST */
 .services-list { padding: 12px; }
