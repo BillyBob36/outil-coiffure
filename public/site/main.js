@@ -518,9 +518,14 @@ function renderSalon(view) {
   setHtml('social-icons', socials);
   setHtml('footer-social', socials);
 
-  // MAP : masquer entièrement le container si mode='zone' + hideMap=true
-  // (coiffeur à domicile sans intérêt à montrer un point géo fixe).
-  // Sinon comportement historique : iframe pointe sur lat/lng ou adresse.
+  // MAP : trois cas de figure
+  //   1. mode='zone' + hideMap=true → carte masquée complètement (opt-in)
+  //   2. mode='zone' (par défaut) → carte centrée sur la VILLE (addressLine2)
+  //      avec un zoom plus large (z=12) pour voir la ville + alentours.
+  //      Pas de marker sur une adresse précise : on protège la vie privée du
+  //      coiffeur à domicile, tout en confirmant visuellement sa zone géo.
+  //   3. mode='address' (défaut historique) → carte sur lat/lng OU adresse
+  //      complète avec zoom rapproché (z=15). Comportement inchangé.
   const mapContainer = document.querySelector('.contact-map');
   const mapIframe = $('map-iframe');
   if (contactMode === 'zone' && c.contact?.hideMap) {
@@ -529,7 +534,16 @@ function renderSalon(view) {
   } else {
     if (mapContainer) mapContainer.style.display = '';
     if (mapIframe) {
-      if (c.contact.latitude && c.contact.longitude) {
+      if (contactMode === 'zone') {
+        // Focaliser sur la ville (addressLine2 contient typiquement
+        // "69380 Chasselay") avec zoom large pour vue de la zone.
+        const cityOnly = (addr2 || '').trim();
+        if (cityOnly) {
+          mapIframe.src = `https://maps.google.com/maps?q=${encodeURIComponent(cityOnly)}&z=12&output=embed`;
+        } else if (c.contact.latitude && c.contact.longitude) {
+          mapIframe.src = `https://maps.google.com/maps?q=${c.contact.latitude},${c.contact.longitude}&z=12&output=embed`;
+        }
+      } else if (c.contact.latitude && c.contact.longitude) {
         mapIframe.src = `https://maps.google.com/maps?q=${c.contact.latitude},${c.contact.longitude}&z=15&output=embed`;
       } else if (addr || addr2) {
         mapIframe.src = `https://maps.google.com/maps?q=${encodeURIComponent([addr, addr2].filter(Boolean).join(', '))}&z=15&output=embed`;
