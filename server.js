@@ -259,6 +259,20 @@ app.use((req, res, next) => {
   next();
 });
 
+// === Outil démo individuel (demo.maquickpage.fr) — module ISOLÉ, additif ===
+// Intercepte ENTIÈREMENT le hostname démo avant toute autre logique de routing.
+// Uniquement sur Helsinki (TOOLS). Le router gère ses propres paths (gated par
+// URL secrète) + un catch-all 404 → aucune fuite vers les autres routes.
+// Ne modifie RIEN au reste : si le host n'est pas le host démo, on next() direct.
+if (!TENANT_ONLY) {
+  const { default: demoToolRouter } = await import('./src/routes/demo-tool.js');
+  const DEMO_HOST = (process.env.DEMO_TOOL_HOST || 'demo.maquickpage.fr').toLowerCase();
+  app.use((req, res, next) => {
+    if ((req.hostname || '').toLowerCase() !== DEMO_HOST) return next();
+    return demoToolRouter(req, res, next);
+  });
+}
+
 app.use((req, res, next) => {
   const host = (req.hostname || '').toLowerCase();
   const isAdminHost = adminHost && host === adminHost;
