@@ -51,7 +51,10 @@ function clientIp(req) {
 // Middleware serveur — log non-bloquant, uniquement sur le host public (prospects).
 export function trackingMiddleware(req, res, next) {
   try {
-    if (req.routingMode === 'public') {
+    // maquickpage.fr = routingMode 'landing' (LANDING_BASE_URL défaute sur
+    // PUBLIC_BASE_URL et 'landing' est testé avant 'public'). On accepte les
+    // deux = tout le funnel prospect, en excluant 'admin' (agence) et 'mixed'.
+    if (req.routingMode === 'public' || req.routingMode === 'landing') {
       const m = req.method, p = req.path;
       if (m === 'GET') {
         let mm = p.match(/^\/preview\/([^/?#]+)/);
