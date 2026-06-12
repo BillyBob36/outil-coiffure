@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>MaQuickPage · Suivi des maquettes</title>
+<style>
+  :root {
+    --gold:#C8A24B; --gold-d:#A8842F; --ink:#15130E; --bg:#f6f4ef; --card:#fff;
+    --border:#e7e2d6; --muted:#8a8270; --blue:#002FA7; --ok:#138a36; --warn:#b8860b;
+    --hot:#c0392b; --cool:#5b6470;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.4;padding-bottom:40px;}
+  header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border);padding:14px 16px;}
+  .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px;}
+  .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--gold);}
+  .spacer{flex:1;}
+  .updated{font-size:12px;color:var(--muted);}
+  button.act{border:1px solid var(--border);background:#fff;color:var(--ink);padding:8px 13px;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  button.act:active{transform:scale(.97);}
+  button.primary{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;}
+  .controls input[type=search]{flex:1;min-width:160px;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:15px;outline:none;}
+  .controls input:focus{border-color:var(--gold);}
+  .toggle{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--cool);cursor:pointer;user-select:none;}
+  main{padding:16px;max-width:1100px;margin:0 auto;}
+  .msg{text-align:center;color:var(--muted);padding:50px 20px;font-size:15px;}
+  .msg a{color:var(--blue);font-weight:600;}
+  /* KPI cards */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;}
+  .kpi .v{font-size:28px;font-weight:800;line-height:1;}
+  .kpi .l{font-size:12.5px;color:var(--muted);margin-top:6px;font-weight:600;}
+  .kpi .sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .kpi.hot .v{color:var(--hot);} .kpi.ok .v{color:var(--ok);} .kpi.gold .v{color:var(--gold-d);}
+  /* Funnel */
+  .section-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:24px 0 10px;}
+  .funnel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;}
+  .frow{display:flex;align-items:center;gap:12px;margin-bottom:9px;}
+  .frow:last-child{margin-bottom:0;}
+  .fname{width:150px;flex-shrink:0;font-size:13.5px;font-weight:600;}
+  .fbar-wrap{flex:1;background:#efeada;border-radius:8px;overflow:hidden;height:26px;position:relative;}
+  .fbar{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-d));border-radius:8px;min-width:2px;transition:width .4s;}
+  .fval{position:absolute;right:10px;top:0;height:26px;display:flex;align-items:center;font-size:12.5px;font-weight:700;color:var(--ink);}
+  /* Table */
+  .tbl-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th{text-align:left;padding:11px 12px;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;}
+  th:hover{color:var(--ink);}
+  td{padding:11px 12px;border-bottom:1px solid #f0ece1;vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .salon{font-weight:700;}
+  .loc{font-size:12px;color:var(--muted);}
+  .email{font-size:12.5px;color:var(--cool);}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;}
+  .b-client{background:#dcfce7;color:#14532d;}
+  .b-hot{background:#fde2e0;color:#9b2c22;}
+  .b-warm{background:#fef3c7;color:#92400e;}
+  .b-tiede{background:#e0e7ff;color:#3730a3;}
+  .b-cold{background:#eef0f2;color:#5b6470;}
+  .when{font-size:12px;color:var(--muted);white-space:nowrap;}
+  .tlink{color:var(--blue);text-decoration:none;font-weight:600;font-size:13px;}
+  .scrollbar{height:6px;background:#efeada;border-radius:4px;width:60px;overflow:hidden;display:inline-block;vertical-align:middle;}
+  .scrollbar>i{display:block;height:100%;background:var(--gold-d);}
+  @media(max-width:680px){
+    .fname{width:110px;font-size:12px;}
+    td,th{padding:9px 8px;}
+    .hide-sm{display:none;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div class="brand"><span class="dot"></span> Suivi des maquettes</div>
+    <span class="spacer"></span>
+    <span class="updated" id="updated"></span>
+    <button class="act" id="refresh">↻ Actualiser</button>
+    <button class="act" id="export">⬇ CSV</button>
+  </div>
+  <div class="controls">
+    <input type="search" id="q" placeholder="Rechercher salon, ville, email…" autocomplete="off">
+    <label class="toggle"><input type="checkbox" id="humansOnly" checked> Humains seulement</label>
+    <label class="toggle"><input type="checkbox" id="autorefresh"> Auto (60s)</label>
+  </div>
+</header>
+<main>
+  <div id="content"><div class="msg">Chargement…</div></div>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  var CSV_URL='/admin/api/preview-visits.csv';
+  var PREVIEW_BASE='https://maquickpage.fr/preview/';
+  var $=function(id){return document.getElementById(id);};
+  var raw=[];        // events bruts
+  var sortKey='heat', sortDir=-1;
+  var autoTimer=null;
+
+  // ---- CSV parser (gère guillemets + "" échappés + BOM) ----
+  function parseCSV(text){
+    if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+    var rows=[],row=[],cur='',q=false,i=0,c;
+    for(;i<text.length;i++){c=text[i];
+      if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+      else { if(c==='"')q=true; else if(c===','){row.push(cur);cur='';} else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur='';} else if(c==='\r'){} else cur+=c; }
+    }
+    if(cur!==''||row.length){row.push(cur);rows.push(row);}
+    if(!rows.length)return [];
+    var head=rows[0],out=[];
+    for(var r=1;r<rows.length;r++){ if(rows[r].length===1&&rows[r][0]==='')continue; var o={}; for(var k=0;k<head.length;k++)o[head[k]]=rows[r][k]||''; out.push(o); }
+    return out;
+  }
+
+  // ---- Détection bot ----
+  var BOT_RE=/bot|crawl|spider|slurp|curl|wget|python|http-client|headless|phantom|preview|scan|proofpoint|mimecast|barracuda|safelinks|googleimageproxy|facebookexternalhit|whatsapp|bingpreview|yandex|ahrefs|semrush|monitor/i;
+  function isBot(ua){ return !ua || BOT_RE.test(ua); }
+
+  // ---- Agrégation par salon ----
+  var STAGE={ preview_ouvert:1, scroll_max:1, editeur_ouvert:2, pricing_ouvert:2, etape_domaine:3, etape_email:4, editeur_modifie:5, paiement_initie:5 };
+  function stageLabel(score, isClient){
+    if(isClient) return ['b-client','✅ Client'];
+    if(score>=5) return ['b-hot','🔥 Presque client'];
+    if(score>=4) return ['b-warm','Chaud · étape email'];
+    if(score>=3) return ['b-warm','Intéressé · a vu domaines'];
+    if(score>=2) return ['b-tiede','A vu les tarifs'];
+    return ['b-cold','A visité'];
+  }
+
+  function aggregate(events){
+    var bySlug={};
+    events.forEach(function(e){
+      var slug=e.slug; if(!slug)return;
+      var s=bySlug[slug]||(bySlug[slug]={slug:slug,salon:e.salon||slug,ville:e.ville||'',email:e.email||'',status:e.subscription_status||'',sent:e.cold_mail_sent_at||'',heat:0,last:'',visits:0,scroll:0,events:{}});
+      if(e.salon)s.salon=e.salon; if(e.ville)s.ville=e.ville; if(e.email)s.email=e.email; if(e.subscription_status)s.status=e.subscription_status;
+      var st=STAGE[e.event]||0; if(st>s.heat)s.heat=st;
+      s.events[e.event]=(s.events[e.event]||0)+1;
+      if(e.event==='preview_ouvert')s.visits++;
+      if(e.event==='scroll_max'&&e.meta){ try{var m=JSON.parse(e.meta); if(m.pct>s.scroll)s.scroll=m.pct;}catch(x){} }
+      if(e.ts>s.last)s.last=e.ts;
+    });
+    return Object.keys(bySlug).map(function(k){return bySlug[k];});
+  }
+
+  function isClient(s){ return s.status==='live'||s.status==='active'||s.status==='trialing'; }
+
+  function fmtWhen(ts){
+    if(!ts)return '—';
+    var d=ts.replace(' ','T')+'Z'; var t=Date.parse(d); if(isNaN(t))return ts;
+    var diff=(Date.now()-t)/1000;
+    if(diff<3600)return Math.max(1,Math.round(diff/60))+' min';
+    if(diff<86400)return Math.round(diff/3600)+' h';
+    return Math.round(diff/86400)+' j';
+  }
+  function esc(s){return s==null?'':String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  function render(){
+    var humansOnly=$('humansOnly').checked;
+    var events=humansOnly?raw.filter(function(e){return !isBot(e.user_agent);}):raw;
+    var salons=aggregate(events);
+    var q=($('q').value||'').toLowerCase().trim();
+    if(q){ salons=salons.filter(function(s){return (s.salon+' '+s.ville+' '+s.email).toLowerCase().indexOf(q)>=0;}); }
+
+    // KPIs
+    var visited=salons.length;
+    var pricing=salons.filter(function(s){return s.heat>=2;}).length;
+    var domains=salons.filter(function(s){return s.heat>=3;}).length;
+    var pay=salons.filter(function(s){return s.events['paiement_initie'];}).length;
+    var edited=salons.filter(function(s){return s.events['editeur_modifie'];}).length;
+    var clients=salons.filter(isClient).length;
+    var totalEvents=raw.length, botEvents=raw.filter(function(e){return isBot(e.user_agent);}).length;
+    var humanPct=totalEvents?Math.round((totalEvents-botEvents)/totalEvents*100):0;
+
+    var html='';
+    html+='<div class="kpis">';
+    html+=kpi(visited,'Salons visités','','');
+    html+=kpi(pricing,'Ont vu les tarifs','','gold');
+    html+=kpi(domains,'Ont vu les domaines','','gold');
+    html+=kpi(edited,'Ont édité leur démo','signal très chaud','hot');
+    html+=kpi(pay,'Paiement initié','','hot');
+    html+=kpi(clients,'Devenus clients','','ok');
+    html+=kpi(humanPct+'%','Trafic humain',botEvents+' bots filtrés','');
+    html+='</div>';
+
+    // Funnel
+    var maxF=Math.max(visited,1);
+    html+='<div class="section-title">Entonnoir comportemental</div><div class="funnel">';
+    html+=frow('Visité la maquette',visited,maxF);
+    html+=frow('A vu les tarifs',pricing,maxF);
+    html+=frow('A vu les domaines',domains,maxF);
+    html+=frow('Paiement initié',pay,maxF);
+    html+=frow('Devenu client',clients,maxF);
+    html+='</div>';
+
+    // Table — tri
+    salons.sort(function(a,b){
+      var av,bv;
+      if(sortKey==='heat'){ av=(isClient(a)?6:a.heat); bv=(isClient(b)?6:b.heat); if(av===bv){av=a.last;bv=b.last;} }
+      else if(sortKey==='salon'){av=a.salon.toLowerCase();bv=b.salon.toLowerCase();}
+      else if(sortKey==='ville'){av=a.ville.toLowerCase();bv=b.ville.toLowerCase();}
+      else if(sortKey==='last'){av=a.last;bv=b.last;}
+      else if(sortKey==='visits'){av=a.visits;bv=b.visits;}
+      else {av=a.last;bv=b.last;}
+      return av<bv?-1*sortDir:(av>bv?1*sortDir:0);
+    });
+
+    html+='<div class="section-title">À rappeler ('+salons.length+')</div>';
+    if(!salons.length){ html+='<div class="msg">Aucune visite pour le moment.</div>'; }
+    else{
+      html+='<div class="tbl-wrap"><table><thead><tr>'
+        +'<th data-k="salon">Salon</th>'
+        +'<th data-k="heat">Niveau</th>'
+        +'<th data-k="visits" class="hide-sm">Visites</th>'
+        +'<th class="hide-sm">Scroll</th>'
+        +'<th data-k="last">Dernière activité</th>'
+        +'<th></th></tr></thead><tbody>';
+      salons.forEach(function(s){
+        var sl=stageLabel(s.heat,isClient(s));
+        html+='<tr>'
+          +'<td><div class="salon">'+esc(s.salon)+'</div><div class="loc">'+esc(s.ville)+'</div>'+(s.email?'<div class="email">'+esc(s.email)+'</div>':'')+'</td>'
+          +'<td><span class="badge '+sl[0]+'">'+sl[1]+'</span></td>'
+          +'<td class="hide-sm">'+s.visits+'</td>'
+          +'<td class="hide-sm"><span class="scrollbar"><i style="width:'+(s.scroll||0)+'%"></i></span> '+(s.scroll||0)+'%</td>'
+          +'<td class="when">'+fmtWhen(s.last)+'</td>'
+          +'<td><a class="tlink" href="'+PREVIEW_BASE+encodeURIComponent(s.slug)+'" target="_blank" rel="noopener">Voir →</a></td>'
+          +'</tr>';
+      });
+      html+='</tbody></table></div>';
+    }
+    $('content').innerHTML=html;
+
+    // bind tri
+    Array.prototype.forEach.call(document.querySelectorAll('th[data-k]'),function(th){
+      th.onclick=function(){ var k=th.getAttribute('data-k'); if(sortKey===k)sortDir*=-1; else {sortKey=k;sortDir=(k==='salon'||k==='ville')?1:-1;} render(); };
+    });
+  }
+  function kpi(v,l,sub,cls){ return '<div class="kpi '+(cls||'')+'"><div class="v">'+v+'</div><div class="l">'+l+'</div>'+(sub?'<div class="sub">'+sub+'</div>':'')+'</div>'; }
+  function frow(name,val,max){ var pct=Math.round(val/max*100); return '<div class="frow"><div class="fname">'+name+'</div><div class="fbar-wrap"><div class="fbar" style="width:'+pct+'%"></div><span class="fval">'+val+'</span></div></div>'; }
+
+  function load(){
+    $('updated').textContent='…';
+    fetch(CSV_URL,{credentials:'same-origin'}).then(function(r){
+      if(r.status===401||r.status===302||r.redirected){ throw new Error('auth'); }
+      if(!r.ok)throw new Error('http '+r.status);
+      return r.text();
+    }).then(function(txt){
+      if(/<!doctype html|<html/i.test(txt.slice(0,200))){ throw new Error('auth'); } // page login renvoyée
+      raw=parseCSV(txt);
+      var now=new Date();
+      $('updated').textContent='maj '+now.getHours()+'h'+('0'+now.getMinutes()).slice(-2);
+      render();
+    }).catch(function(e){
+      if(e.message==='auth'){ $('content').innerHTML='<div class="msg">Connecte-toi d\'abord à l\'admin, puis recharge cette page.<br><br><a href="/admin/login">→ Se connecter</a></div>'; }
+      else { $('content').innerHTML='<div class="msg">Erreur de chargement : '+esc(e.message)+'</div>'; }
+      $('updated').textContent='';
+    });
+  }
+
+  $('refresh').onclick=load;
+  $('export').onclick=function(){ window.open(CSV_URL,'_blank'); };
+  $('q').addEventListener('input',function(){ if(raw.length)render(); });
+  $('humansOnly').addEventListener('change',function(){ if(raw.length)render(); });
+  $('autorefresh').addEventListener('change',function(){ if(this.checked){autoTimer=setInterval(load,60000);}else{clearInterval(autoTimer);} });
+  load();
+})();
+</script>
+</body>
+</html>
