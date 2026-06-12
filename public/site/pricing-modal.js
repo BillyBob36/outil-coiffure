@@ -520,6 +520,10 @@
       if (cgvCheckbox) {
         cgvCheckbox.addEventListener('change', () => {
           state.cgvAccepted = cgvCheckbox.checked;
+          // Tracking (best-effort) : a coché "J'ai lu et accepté les CGV".
+          if (cgvCheckbox.checked) {
+            try { window.mqsTrack && window.mqsTrack('cgv_accepte', { plan: state.selectedPlan }); } catch (e) {}
+          }
           refreshSubmitState();
         });
       }

@@ -10,18 +10,20 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;}
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.4;padding-bottom:40px;}
-  header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border);padding:14px 16px;}
-  .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px;}
-  .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--gold);}
+  header{position:sticky;top:0;z-index:20;}
+  .topbar{background:#1a1a1a;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:14px 0;}
+  .topbar-inner{max-width:1100px;margin:0 auto;padding:0 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .brand{font-weight:500;font-size:1.3rem;color:#c9a96e;letter-spacing:-.01em;}
   .spacer{flex:1;}
-  .updated{font-size:12px;color:var(--muted);}
+  .updated{font-size:12px;color:rgba(255,255,255,.6);}
   .lang-switcher{display:inline-flex;gap:4px;}
-  .lang-btn{border:1px solid var(--border);background:#fff;color:var(--cool);padding:5px 9px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;}
-  .lang-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
-  button.act{border:1px solid var(--border);background:#fff;color:var(--ink);padding:8px 13px;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;}
-  button.act:active{transform:scale(.97);}
-  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;}
+  .lang-btn{border:1px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.85);padding:5px 9px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;}
+  .lang-btn.active{background:#c9a96e;color:#1a1a1a;border-color:#c9a96e;}
+  .hbtn{border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;padding:7px 13px;border-radius:8px;font-size:13.5px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+  .hbtn:hover{background:rgba(255,255,255,.12);}
+  .hbtn.gold{background:#c9a96e;color:#1a1a1a;border-color:#c9a96e;}
+  .controls{background:#fff;border-bottom:1px solid var(--border);padding:12px 0;}
+  .controls-inner{max-width:1100px;margin:0 auto;padding:0 18px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
   .controls input[type=search]{flex:1;min-width:160px;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:15px;outline:none;}
   .controls input:focus{border-color:var(--gold);}
   .toggle{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--cool);cursor:pointer;user-select:none;}
@@ -69,22 +71,27 @@
 </head>
 <body>
 <header>
-  <div class="top">
-    <div class="brand"><span class="dot"></span> <span id="t-brand">Suivi des maquettes</span></div>
-    <span class="spacer"></span>
-    <span class="lang-switcher">
-      <button class="lang-btn" data-lang="fr" type="button">FR</button>
-      <button class="lang-btn" data-lang="en" type="button">EN</button>
-      <button class="lang-btn" data-lang="zh" type="button">中</button>
-    </span>
-    <span class="updated" id="updated"></span>
-    <button class="act" id="refresh">↻ Actualiser</button>
-    <button class="act" id="export">⬇ CSV</button>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <span class="brand" id="t-brand">Suivi des maquettes</span>
+      <span class="spacer"></span>
+      <span class="lang-switcher">
+        <button class="lang-btn" data-lang="fr" type="button">FR</button>
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+        <button class="lang-btn" data-lang="zh" type="button">中</button>
+      </span>
+      <span class="updated" id="updated"></span>
+      <a class="hbtn" href="/admin/" id="back-admin">← Admin</a>
+      <button class="hbtn" id="refresh">↻ Actualiser</button>
+      <button class="hbtn gold" id="export">⬇ CSV</button>
+    </div>
   </div>
   <div class="controls">
-    <input type="search" id="q" placeholder="Rechercher…" autocomplete="off">
-    <label class="toggle"><input type="checkbox" id="humansOnly" checked> <span id="t-humans">Humains seulement</span></label>
-    <label class="toggle"><input type="checkbox" id="autorefresh"> <span id="t-auto">Auto (60s)</span></label>
+    <div class="controls-inner">
+      <input type="search" id="q" placeholder="Rechercher…" autocomplete="off">
+      <label class="toggle"><input type="checkbox" id="humansOnly" checked> <span id="t-humans">Humains seulement</span></label>
+      <label class="toggle"><input type="checkbox" id="autorefresh"> <span id="t-auto">Auto (60s)</span></label>
+    </div>
   </div>
 </header>
 <main><div id="content"><div class="msg" id="t-loading">Chargement…</div></div></main>
@@ -97,28 +104,28 @@
   var raw=[], sortKey='heat', sortDir=-1, autoTimer=null, expanded={};
 
   var T={
-    fr:{brand:'Suivi des maquettes',refresh:'Actualiser',exp:'CSV',maj:'maj',search:'Rechercher salon, ville, email…',humans:'Humains seulement',auto:'Auto (60s)',loading:'Chargement…',
-      k_visited:'Salons visités',k_pricing:'Ont vu les tarifs',k_domains:'Ont vu les domaines',k_custom:'Domaine perso tapé',k_edited:'Ont édité leur démo',k_pay:'Paiement initié',k_clients:'Devenus clients',k_human:'Trafic humain',k_human_sub:'{n} bots filtrés',
-      funnel_title:'Entonnoir comportemental',f_visited:'Visité la maquette',f_pricing:'A vu les tarifs',f_domains:'A vu les domaines',f_pay:'Paiement initié',f_client:'Devenu client',
+    fr:{brand:'Suivi des maquettes',refresh:'Actualiser',exp:'CSV',maj:'maj',back:'← Admin',search:'Rechercher salon, ville, email…',humans:'Humains seulement',auto:'Auto (60s)',loading:'Chargement…',
+      k_visited:'Salons visités',k_pricing:'Ont vu les tarifs',k_domains:'Ont vu les domaines',k_custom:'Domaine perso tapé',k_edited:'Ont édité leur démo',k_cgv:'CGV acceptées',k_pay:'Paiement initié',k_clients:'Devenus clients',k_human:'Trafic humain',k_human_sub:'{n} bots filtrés',
+      funnel_title:'Entonnoir comportemental',f_visited:'Visité la maquette',f_pricing:'Étape 1/3 · Tarifs',f_domains:'Étape 2/3 · Domaines',f_pay:'Paiement initié',f_client:'Devenu client',
       recall:'À rappeler',th_salon:'Salon',th_level:'Niveau atteint',th_count:'Nb',th_scroll:'Scroll',th_date:'Dernière activité',
-      st_client:'✅ Client',st_pay:'🔥 Paiement initié',st_editsave:'🔥 A édité sa démo',st_editopen:'A ouvert l\'éditeur',st_custom:'Domaine perso tapé',st_email:'Étape email',st_domains:'A vu les domaines',st_pricing:'A vu les tarifs',st_scroll:'A scrollé',st_view:'A vu la page',
-      e_view:'Vue page',e_scroll:'Scroll',e_pricing:'Tarifs',e_domains:'Domaines',e_custom:'Domaine perso',e_email:'Étape email',e_editopen:'Éditeur ouvert',e_editsave:'Démo éditée',e_pay:'Paiement initié',
+      st_client:'✅ Client',st_pay:'🔥 Procéder au paiement',st_cgv:'🔥 CGV acceptées',st_editsave:'🔥 A édité sa démo',st_editopen:'A ouvert l\'éditeur',st_custom:'Domaine perso tapé',st_email:'Étape 3/3 · Email',st_domains:'Étape 2/3 · Domaines',st_pricing:'Étape 1/3 · Tarifs',st_scroll:'A scrollé',st_view:'A vu la page',
+      e_view:'Vue page',e_scroll:'Scroll',e_pricing:'Étape 1/3 · Tarifs',e_domains:'Étape 2/3 · Domaines',e_custom:'Domaine perso',e_email:'Étape 3/3 · Email',e_cgv:'CGV acceptées',e_editopen:'Éditeur ouvert',e_editsave:'Démo éditée',e_pay:'Procéder au paiement',
       d_events:'Événements',d_ip:'IP',d_device:'Appareil',d_plan:'Plan choisi',
       see:'Voir →',none:'Aucune visite pour le moment.',auth:'Connecte-toi d\'abord à l\'admin, puis recharge cette page.',signin:'→ Se connecter',err:'Erreur de chargement : ',u_min:'min',u_h:'h',u_d:'j'},
-    en:{brand:'Mockup tracking',refresh:'Refresh',exp:'CSV',maj:'upd.',search:'Search salon, city, email…',humans:'Humans only',auto:'Auto (60s)',loading:'Loading…',
-      k_visited:'Salons visited',k_pricing:'Saw pricing',k_domains:'Saw domains',k_custom:'Typed custom domain',k_edited:'Edited demo',k_pay:'Payment started',k_clients:'Became clients',k_human:'Human traffic',k_human_sub:'{n} bots filtered',
-      funnel_title:'Behavioral funnel',f_visited:'Visited the mockup',f_pricing:'Saw pricing',f_domains:'Saw domains',f_pay:'Payment started',f_client:'Became client',
+    en:{brand:'Mockup tracking',refresh:'Refresh',exp:'CSV',maj:'upd.',back:'← Admin',search:'Search salon, city, email…',humans:'Humans only',auto:'Auto (60s)',loading:'Loading…',
+      k_visited:'Salons visited',k_pricing:'Saw pricing',k_domains:'Saw domains',k_custom:'Typed custom domain',k_edited:'Edited demo',k_cgv:'Accepted terms',k_pay:'Clicked pay',k_clients:'Became clients',k_human:'Human traffic',k_human_sub:'{n} bots filtered',
+      funnel_title:'Behavioral funnel',f_visited:'Visited the mockup',f_pricing:'Step 1/3 · Pricing',f_domains:'Step 2/3 · Domains',f_pay:'Clicked pay',f_client:'Became client',
       recall:'To call',th_salon:'Salon',th_level:'Stage reached',th_count:'#',th_scroll:'Scroll',th_date:'Last activity',
-      st_client:'✅ Client',st_pay:'🔥 Payment started',st_editsave:'🔥 Edited demo',st_editopen:'Opened editor',st_custom:'Typed custom domain',st_email:'Email step',st_domains:'Saw domains',st_pricing:'Saw pricing',st_scroll:'Scrolled',st_view:'Viewed page',
-      e_view:'Page view',e_scroll:'Scroll',e_pricing:'Pricing',e_domains:'Domains',e_custom:'Custom domain',e_email:'Email step',e_editopen:'Editor opened',e_editsave:'Demo edited',e_pay:'Payment started',
+      st_client:'✅ Client',st_pay:'🔥 Clicked pay',st_cgv:'🔥 Accepted terms',st_editsave:'🔥 Edited demo',st_editopen:'Opened editor',st_custom:'Typed custom domain',st_email:'Step 3/3 · Email',st_domains:'Step 2/3 · Domains',st_pricing:'Step 1/3 · Pricing',st_scroll:'Scrolled',st_view:'Viewed page',
+      e_view:'Page view',e_scroll:'Scroll',e_pricing:'Step 1/3 · Pricing',e_domains:'Step 2/3 · Domains',e_custom:'Custom domain',e_email:'Step 3/3 · Email',e_cgv:'Accepted terms',e_editopen:'Editor opened',e_editsave:'Demo edited',e_pay:'Clicked pay',
       d_events:'Events',d_ip:'IP',d_device:'Device',d_plan:'Chosen plan',
       see:'View →',none:'No visits yet.',auth:'Log into the admin first, then reload this page.',signin:'→ Sign in',err:'Load error: ',u_min:'min',u_h:'h',u_d:'d'},
-    zh:{brand:'样板追踪',refresh:'刷新',exp:'CSV',maj:'更新',search:'搜索沙龙、城市、邮箱…',humans:'仅真人',auto:'自动 (60秒)',loading:'加载中…',
-      k_visited:'已访问的沙龙',k_pricing:'查看了价格',k_domains:'查看了域名',k_custom:'输入了自定义域名',k_edited:'编辑了样板',k_pay:'已发起付款',k_clients:'已成为客户',k_human:'真人流量',k_human_sub:'已过滤 {n} 个机器人',
-      funnel_title:'行为漏斗',f_visited:'访问了样板',f_pricing:'查看了价格',f_domains:'查看了域名',f_pay:'已发起付款',f_client:'已成为客户',
+    zh:{brand:'样板追踪',refresh:'刷新',exp:'CSV',maj:'更新',back:'← 后台',search:'搜索沙龙、城市、邮箱…',humans:'仅真人',auto:'自动 (60秒)',loading:'加载中…',
+      k_visited:'已访问的沙龙',k_pricing:'查看了价格',k_domains:'查看了域名',k_custom:'输入了自定义域名',k_edited:'编辑了样板',k_cgv:'已接受条款',k_pay:'点击了付款',k_clients:'已成为客户',k_human:'真人流量',k_human_sub:'已过滤 {n} 个机器人',
+      funnel_title:'行为漏斗',f_visited:'访问了样板',f_pricing:'步骤 1/3 · 价格',f_domains:'步骤 2/3 · 域名',f_pay:'点击了付款',f_client:'已成为客户',
       recall:'待联系',th_salon:'沙龙',th_level:'最高阶段',th_count:'次数',th_scroll:'滚动',th_date:'最近活动',
-      st_client:'✅ 客户',st_pay:'🔥 已发起付款',st_editsave:'🔥 编辑了样板',st_editopen:'打开了编辑器',st_custom:'输入了自定义域名',st_email:'邮箱步骤',st_domains:'查看了域名',st_pricing:'查看了价格',st_scroll:'已滚动',st_view:'查看了页面',
-      e_view:'页面浏览',e_scroll:'滚动',e_pricing:'价格',e_domains:'域名',e_custom:'自定义域名',e_email:'邮箱步骤',e_editopen:'打开编辑器',e_editsave:'编辑样板',e_pay:'发起付款',
+      st_client:'✅ 客户',st_pay:'🔥 点击了付款',st_cgv:'🔥 已接受条款',st_editsave:'🔥 编辑了样板',st_editopen:'打开了编辑器',st_custom:'输入了自定义域名',st_email:'步骤 3/3 · 邮箱',st_domains:'步骤 2/3 · 域名',st_pricing:'步骤 1/3 · 价格',st_scroll:'已滚动',st_view:'查看了页面',
+      e_view:'页面浏览',e_scroll:'滚动',e_pricing:'步骤 1/3 · 价格',e_domains:'步骤 2/3 · 域名',e_custom:'自定义域名',e_email:'步骤 3/3 · 邮箱',e_cgv:'已接受条款',e_editopen:'打开编辑器',e_editsave:'编辑样板',e_pay:'点击了付款',
       d_events:'事件',d_ip:'IP',d_device:'设备',d_plan:'所选套餐',
       see:'查看 →',none:'暂无访问。',auth:'请先登录管理后台，然后刷新此页面。',signin:'→ 登录',err:'加载错误：',u_min:'分钟',u_h:'小时',u_d:'天'}
   };
@@ -128,15 +135,16 @@
   function applyStatic(){
     document.documentElement.lang=lang==='zh'?'zh-CN':lang;
     $('t-brand').textContent=t('brand');$('refresh').textContent='↻ '+t('refresh');$('export').textContent='⬇ '+t('exp');
+    $('back-admin').textContent=t('back');
     $('q').placeholder=t('search');$('t-humans').textContent=t('humans');$('t-auto').textContent=t('auto');
     Array.prototype.forEach.call(document.querySelectorAll('.lang-btn'),function(b){b.classList.toggle('active',b.dataset.lang===lang);});
   }
   function setLang(l){if(!T[l])return;lang=l;try{localStorage.setItem('outil-coiffure-lang',l);}catch(e){}applyStatic();if(raw.length)render();}
 
-  var STAGE={preview_ouvert:1,pricing_ouvert:3,etape_domaine:4,etape_email:5,domaine_perso:6,editeur_ouvert:7,editeur_modifie:8,paiement_initie:9};
+  var STAGE={preview_ouvert:1,pricing_ouvert:3,etape_domaine:4,etape_email:5,domaine_perso:6,editeur_ouvert:7,editeur_modifie:8,cgv_accepte:9,paiement_initie:10};
   var PLAN={TWO_YEAR:'9,90€ · 24 mois',ONE_YEAR:'17,90€ · 12 mois',FLEX:'29€ · sans engagement'};
-  var EVENT_KEY={preview_ouvert:'e_view',scroll_max:'e_scroll',pricing_ouvert:'e_pricing',etape_domaine:'e_domains',domaine_perso:'e_custom',etape_email:'e_email',editeur_ouvert:'e_editopen',editeur_modifie:'e_editsave',paiement_initie:'e_pay'};
-  var HEATLBL={9:['b-hot','st_pay'],8:['b-hot','st_editsave'],7:['b-warm','st_editopen'],6:['b-warm','st_custom'],5:['b-warm','st_email'],4:['b-tiede','st_domains'],3:['b-tiede','st_pricing'],2:['b-cold','st_scroll'],1:['b-cold','st_view']};
+  var EVENT_KEY={preview_ouvert:'e_view',scroll_max:'e_scroll',pricing_ouvert:'e_pricing',etape_domaine:'e_domains',domaine_perso:'e_custom',etape_email:'e_email',editeur_ouvert:'e_editopen',editeur_modifie:'e_editsave',cgv_accepte:'e_cgv',paiement_initie:'e_pay'};
+  var HEATLBL={10:['b-hot','st_pay'],9:['b-hot','st_cgv'],8:['b-hot','st_editsave'],7:['b-warm','st_editopen'],6:['b-warm','st_custom'],5:['b-warm','st_email'],4:['b-tiede','st_domains'],3:['b-tiede','st_pricing'],2:['b-cold','st_scroll'],1:['b-cold','st_view']};
   function stageLabel(score,client){if(client)return['b-client',t('st_client')];var h=HEATLBL[score]||HEATLBL[1];return[h[0],t(h[1])];}
   var BOT_RE=/bot|crawl|spider|slurp|curl|wget|python|http-client|headless|phantom|preview|scan|proofpoint|mimecast|barracuda|safelinks|googleimageproxy|facebookexternalhit|whatsapp|bingpreview|yandex|ahrefs|semrush|monitor/i;
   function isBot(ua){return !ua||BOT_RE.test(ua);}
@@ -156,8 +164,9 @@
   function aggregate(events){
     var bySlug={};
     events.forEach(function(e){var slug=e.slug;if(!slug)return;
-      var s=bySlug[slug]||(bySlug[slug]={slug:slug,salon:e.salon||slug,ville:e.ville||'',email:e.email||'',status:e.subscription_status||'',plan:'',heat:0,last:'',count:0,scroll:0,events:{},ips:{},uas:{}});
+      var s=bySlug[slug]||(bySlug[slug]={slug:slug,salon:e.salon||slug,ville:e.ville||'',email:e.email||'',status:e.subscription_status||'',plan:'',token:'',heat:0,last:'',count:0,scroll:0,events:{},ips:{},uas:{}});
       if(e.salon)s.salon=e.salon;if(e.ville)s.ville=e.ville;if(e.email)s.email=e.email;if(e.subscription_status)s.status=e.subscription_status;
+      if(e.edit_token&&!s.token)s.token=e.edit_token;
       var st=STAGE[e.event]||0;if(st>s.heat)s.heat=st;s.count++;
       var ev=s.events[e.event]||(s.events[e.event]={n:0,last:''});ev.n++;if(e.ts>ev.last)ev.last=e.ts;
       if(e.event==='scroll_max'&&e.meta){try{var m=JSON.parse(e.meta);if(m.pct>s.scroll)s.scroll=m.pct;}catch(x){}}
@@ -204,6 +213,7 @@
     var domains=salons.filter(function(s){return s.heat>=4;}).length;
     var custom=salons.filter(function(s){return s.events['domaine_perso'];}).length;
     var edited=salons.filter(function(s){return s.events['editeur_modifie'];}).length;
+    var cgv=salons.filter(function(s){return s.events['cgv_accepte'];}).length;
     var pay=salons.filter(function(s){return s.events['paiement_initie'];}).length;
     var clients=salons.filter(isClient).length;
     var totalEvents=raw.length,botEvents=raw.filter(function(e){return isBot(e.user_agent);}).length;
@@ -215,6 +225,7 @@
     html+=kpi(domains,t('k_domains'),'','gold');
     html+=kpi(custom,t('k_custom'),'','hot');
     html+=kpi(edited,t('k_edited'),'','hot');
+    html+=kpi(cgv,t('k_cgv'),'','hot');
     html+=kpi(pay,t('k_pay'),'','hot');
     html+=kpi(clients,t('k_clients'),'','ok');
     html+=kpi(humanPct+'%',t('k_human'),t('k_human_sub',{n:botEvents}),'');
@@ -249,7 +260,7 @@
           +'<td class="num">'+s.count+'</td>'
           +'<td class="hide-sm"><span class="scrollbar"><i style="width:'+(s.scroll||0)+'%"></i></span> '+(s.scroll||0)+'%</td>'
           +'<td class="when" title="'+esc(s.last)+'">'+fmtDate(s.last)+'<div style="font-size:11px">'+fmtWhen(s.last)+'</div></td>'
-          +'<td><a class="tlink" href="'+PREVIEW_BASE+encodeURIComponent(s.slug)+'" target="_blank" rel="noopener" data-stop="1">'+t('see')+'</a></td></tr>';
+          +'<td><a class="tlink" href="'+PREVIEW_BASE+encodeURIComponent(s.slug)+(s.token?'?token='+encodeURIComponent(s.token):'')+'" target="_blank" rel="noopener" data-stop="1">'+t('see')+'</a></td></tr>';
         if(open)html+=detailRow(s);
       });
       html+='</tbody></table></div>';

@@ -80,7 +80,7 @@ router.get('/api/preview-visits.csv', (req, res) => {
     rows = db.prepare(`
       SELECT e.ts, e.event, e.slug, e.token, e.src, e.meta, e.ip, e.user_agent,
              s.nom_clean, s.nom, s.ville, s.code_postal, s.email,
-             s.subscription_status, s.cold_mail_sent_at
+             s.subscription_status, s.cold_mail_sent_at, s.edit_token
       FROM preview_events e
       LEFT JOIN salons s ON s.slug = e.slug
       ORDER BY e.ts DESC
@@ -89,11 +89,11 @@ router.get('/api/preview-visits.csv', (req, res) => {
   } catch (e) {
     return res.status(500).send('error: ' + e.message);
   }
-  const headers = ['ts', 'event', 'slug', 'salon', 'ville', 'code_postal', 'email', 'subscription_status', 'cold_mail_sent_at', 'src', 'ip', 'user_agent', 'meta'];
+  const headers = ['ts', 'event', 'slug', 'salon', 'ville', 'code_postal', 'email', 'subscription_status', 'cold_mail_sent_at', 'src', 'ip', 'user_agent', 'meta', 'edit_token'];
   const lines = [headers.join(',')];
   for (const r of rows) {
     const salon = (r.nom_clean && r.nom_clean.trim()) || r.nom || '';
-    lines.push([r.ts, r.event, r.slug, salon, r.ville, r.code_postal, r.email, r.subscription_status, r.cold_mail_sent_at, r.src, r.ip, r.user_agent, r.meta].map(csvEscape).join(','));
+    lines.push([r.ts, r.event, r.slug, salon, r.ville, r.code_postal, r.email, r.subscription_status, r.cold_mail_sent_at, r.src, r.ip, r.user_agent, r.meta, r.edit_token].map(csvEscape).join(','));
   }
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="preview-visits.csv"');
