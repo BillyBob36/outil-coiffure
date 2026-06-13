@@ -104,6 +104,8 @@
   #pm-foot select{padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:#fff;}
   .pm-btn{border:1.5px solid var(--border);background:#fff;border-radius:9px;padding:8px 14px;font-size:13.5px;font-weight:700;cursor:pointer;}
   .pm-btn.gold{background:var(--gold);border-color:var(--gold);color:#fff;}
+  .pm-btn.danger{color:var(--hot);border-color:#e3b4ae;}
+  .pm-btn.danger:hover{background:#fdecea;border-color:var(--hot);}
   .pm-btn:disabled{opacity:.45;cursor:not-allowed;}
   #pm-status{font-size:12.5px;color:var(--muted);}
   #pm-zoom{position:fixed;inset:0;background:rgba(10,10,10,.9);display:none;align-items:center;justify-content:center;z-index:110;cursor:zoom-out;padding:18px;}
@@ -152,6 +154,7 @@
     <div id="pm-foot">
       <select id="pm-pos"><option value="centre">Cadrage héro : centre</option><option value="haut">Cadrage héro : haut</option><option value="bas">Cadrage héro : bas</option></select>
       <button class="pm-btn" id="pm-ai">🤖 Avis de l'IA</button>
+      <button class="pm-btn danger" id="pm-reset" title="Remet le héro et la galerie aux images du mode démo (retire les photos Google appliquées)">↺ Réinitialiser</button>
       <span class="spacer" style="flex:1"></span>
       <span id="pm-status"></span>
       <button class="pm-btn" id="pm-gal-replace" disabled title="Ne garde que les photos cochées (retire les photos du mode démo)">Remplacer la galerie (0)</button>
@@ -486,6 +489,17 @@
   }
   $('pm-gal-add').onclick=function(){applyGalleryMode('append');};
   $('pm-gal-replace').onclick=function(){applyGalleryMode('replace');};
+  $('pm-reset').onclick=function(){
+    if(!confirm('Réinitialiser les photos de ce salon ?\n\nLe héro et la galerie repassent aux images du mode démo, et les photos Google que tu as appliquées sont retirées.\n\n(Les autres réglages du site — services, avis, contact — ne changent pas.)'))return;
+    var b=$('pm-reset');b.disabled=true;b.textContent='Réinitialisation…';
+    $('pm-status').textContent='Retour aux images de démo…';
+    pmApi('/admin/api/picker/salon/'+encodeURIComponent(pmState.slug)+'/reset-images',{method:'POST'})
+      .then(function(r){
+        stToast(r.changed?'Photos réinitialisées (mode démo) ✓ — screenshot en recapture':'Déjà en mode démo, rien à réinitialiser');
+        openPhotoModal(pmState.slug,$('pm-nm').textContent); // recharge l'état démo dans la modale
+      })
+      .catch(function(e){stToast('Erreur : '+e.message);$('pm-status').textContent='';b.disabled=false;b.textContent='↺ Réinitialiser';});
+  };
   $('pm-ai').onclick=function(){
     var b=$('pm-ai');b.disabled=true;b.textContent='🤖 Analyse en cours…';
     $('pm-status').textContent='L\'IA examine les photos (~15-30 s)…';

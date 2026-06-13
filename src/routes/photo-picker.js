@@ -24,7 +24,7 @@ import db from '../db.js';
 import { SALON_PHOTOS_DIR, dedupPhotosByPhash, describeAndEmbedPhoto, photoLgPath } from '../picker-core.js';
 import { callEmbedding, isPickerAiConfigured } from '../picker-azure.js';
 import { scoreSalonPhotos, pickNextUnscoredSalon, getActiveCriteria } from '../picker-scorer.js';
-import { applyHero, applyGallery } from '../photo-apply.js';
+import { applyHero, applyGallery, resetImages } from '../photo-apply.js';
 
 const router = express.Router();
 router.use(express.json({ limit: '2mb' }));
@@ -404,6 +404,16 @@ router.post('/api/picker/salon/:slug/gallery', async (req, res) => {
   const { photo_ids, mode } = req.body || {};
   try {
     const result = await applyGallery({ slug: req.params.slug, photoIds: photo_ids, mode: mode === 'append' ? 'append' : 'replace' });
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Réinitialise héro + galerie aux images du mode démo (retire les photos Google)
+router.post('/api/picker/salon/:slug/reset-images', (req, res) => {
+  try {
+    const result = resetImages({ slug: req.params.slug });
     res.json({ ok: true, ...result });
   } catch (e) {
     res.status(500).json({ error: e.message });

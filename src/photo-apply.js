@@ -144,3 +144,46 @@ export async function applyGallery({ slug, photoIds, mode = 'replace', googleId 
   recaptureAsync(slug);
   return { slug, count: finalImages.length, added: urls.length, mode, urls };
 }
+
+/**
+ * Réinitialise les IMAGES d'un salon : retire le fond héro custom + la galerie
+ * custom (photos Google appliquées) → le site retombe sur les images du mode démo
+ * (DEFAULT_HERO_IMAGE + DEFAULT_GALLERY_IMAGES).
+ * Ne touche PAS aux autres overrides (services, avis, contact, textes héro…).
+ * @param {Object} p { slug }
+ */
+export function resetImages({ slug }) {
+  const salon = getSalonOrThrow(slug);
+  let overrides = {};
+  try { overrides = JSON.parse(salon.overrides_json || '{}') || {}; } catch {}
+
+  let changed = false;
+  // Héro : on retire uniquement l'image de fond custom (on garde les textes
+  // héro si le coiffeur les a personnalisés).
+  if (overrides.hero && (overrides.hero.backgroundImage || overrides.hero.backgroundImageSource)) {
+    delete overrides.hero.backgroundImage;
+    delete overrides.hero.backgroundImageSource;
+    delete overrides.hero.backgroundImageUpdatedAt;
+    if (Object.keys(overrides.hero).length === 0) delete overrides.hero;
+    changed = true;
+  }
+  // Galerie : on retire tout l'override → retombe sur DEFAULT_GALLERY_IMAGES.
+  if (overrides.gallery) {
+    delete overrides.gallery;
+    changed = true;
+  }
+
+  if (Object.keys(overrides).length === 0) {
+    // Plus aucun override → NULL (cohérent avec le reset de l'éditeur coiffeur).
+    db.prepare(`
+      UPDATE salons
+      SET overrides_json = NULL, overrides_updated_at = datetime('now'), updated_at = datetime('now'),
+          screenshot_path = NULL, screenshot_generated_at = NULL
+      WHERE id = ?
+    `).run(salon.id);
+  } else {
+    saveOverrides(salon.id, overrides);
+  }
+  if (changed) recaptureAsync(slug);
+  return { slug, changed };
+}
