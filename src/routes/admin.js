@@ -13,6 +13,7 @@ import { startDomainSuggestions, getDomainSuggestionsJob } from '../domain-sugge
 import { captureBatchParallel } from '../screenshot-worker.js';
 import { startProvisioning, getProvisioningStatus } from '../provisioning-worker.js';
 import { slugify } from '../slug-generator.js';
+import photoPickerRouter from './photo-picker.js';
 
 const router = express.Router();
 const UPLOAD_DIR = './data/csv-uploads';
@@ -65,6 +66,10 @@ router.get('/me', (req, res) => {
 });
 
 router.use(requireAuth);
+
+// Photo-picker (photos Google scrapées + scoring IA) — derrière requireAuth.
+// Expose /admin/api/picker/* + /admin/photos-files/* (renditions _th/_lg).
+router.use(photoPickerRouter);
 
 // === Export CSV du suivi des visites maquettes (funnel) ===
 // Enrichi : chaque event joint aux infos salon (nom, ville, email, statut).

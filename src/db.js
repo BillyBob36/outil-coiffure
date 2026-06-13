@@ -219,6 +219,104 @@ export function initSchema() {
   // 4. Backfill : nom_clean doit TOUJOURS etre rempli (initialement = nom).
   //    Cela rend la colonne "Nom final" editable de facon homogene cote admin.
   db.exec("UPDATE salons SET nom_clean = nom WHERE nom_clean IS NULL OR nom_clean = ''");
+
+  // === Photo picker (2026-06-13) : photos Google scrapées + scoring IA ===
+  // google_id était jusqu'ici uniquement dans data_json → colonne dédiée pour
+  // joindre salons ↔ salon_photos (index photos servies depuis /data/salon-photos).
+  if (!cols.includes('google_id')) db.exec("ALTER TABLE salons ADD COLUMN google_id TEXT");
+  db.exec("UPDATE salons SET google_id = json_extract(data_json, '$.google_id') WHERE (google_id IS NULL OR google_id = '') AND data_json IS NOT NULL");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_salons_google_id ON salons(google_id) WHERE google_id IS NOT NULL");
+
+  db.exec(`
+    -- Index des photos scrapées (1 ligne = 1 photo, renditions _lg/_th sur le volume).
+    -- Rempli depuis /data/salon-photos/photos-index.json (import au boot ou via API).
+    CREATE TABLE IF NOT EXISTS salon_photos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      google_id TEXT NOT NULL,
+      dir TEXT NOT NULL,                -- nom du dossier (= google_id avec ':' -> '_')
+      photo_id TEXT NOT NULL,
+      kind TEXT,                        -- 'place' | 'ugc' | 'legacy'
+      position INTEGER,
+      w INTEGER, h INTEGER,
+      lowdef INTEGER DEFAULT 0,         -- 1 si côté long < 1000px (à éviter en héro)
+      lg_kb INTEGER, th_kb INTEGER,
+      phash TEXT,                       -- dHash sharp, calculé à la demande (dédup visuelle)
+      nom TEXT, ville TEXT, csv_source TEXT,
+      UNIQUE(google_id, photo_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_salon_photos_gid ON salon_photos(google_id);
+
+    -- 1 scoring = 1 run gpt-4o vision sur les photos d'un salon
+    CREATE TABLE IF NOT EXISTS picker_scorings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      google_id TEXT NOT NULL,
+      slug TEXT,                        -- slug du salon en DB au moment du scoring (si matché)
+      selected_photo_id TEXT,           -- NULL si "aucune ne convient"
+      overall_score REAL,
+      reasoning TEXT,
+      per_photo_scores TEXT,            -- JSON [{photo_id, score, main_strength, main_weakness}]
+      criteria_version_id INTEGER,
+      rag_examples_used INTEGER DEFAULT 0,
+      model_used TEXT,
+      tokens_input INTEGER, tokens_output INTEGER,
+      cost_eur REAL, latency_ms INTEGER,
+      applied_hero_at TEXT,             -- date d'application comme héro (si fait)
+      error TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_picker_scorings_gid ON picker_scorings(google_id);
+    CREATE INDEX IF NOT EXISTS idx_picker_scorings_created ON picker_scorings(created_at DESC);
+
+    -- Feedback humain (👍/👎/✏️ + commentaire) → enrichit le RAG few-shot
+    CREATE TABLE IF NOT EXISTS picker_feedback (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      scoring_id INTEGER NOT NULL,
+      google_id TEXT NOT NULL,
+      photo_id TEXT,
+      rating TEXT NOT NULL,             -- 'good' | 'bad' | 'edit'
+      comment TEXT,
+      corrected_photo_id TEXT,
+      embedding_json TEXT,
+      embedding_dims INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (scoring_id) REFERENCES picker_scorings(id) ON DELETE CASCADE
+    );
+
+    -- Critères versionnés (une seule version active)
+    CREATE TABLE IF NOT EXISTS picker_criteria (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      label TEXT,
+      rubric_json TEXT NOT NULL,
+      is_active INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- Descriptions visuelles + embeddings (cache, 1 fois par photo)
+    CREATE TABLE IF NOT EXISTS picker_photo_desc (
+      photo_db_id INTEGER PRIMARY KEY,  -- = salon_photos.id
+      description TEXT NOT NULL,
+      tags_json TEXT,
+      embedding_json TEXT,
+      embedding_dims INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (photo_db_id) REFERENCES salon_photos(id) ON DELETE CASCADE
+    );
+  `);
+
+  // Seed des critères par défaut (mêmes 6 critères que salon-hero-picker local)
+  const critCount = db.prepare('SELECT COUNT(*) AS c FROM picker_criteria').get();
+  if (critCount.c === 0) {
+    const defaults = [
+      { name: 'sujet_intérieur_salon', weight: 30, description: "La photo montre l'intérieur, la vitrine, la déco ou l'ambiance du salon. PAS un selfie/portrait, PAS un avant/après coiffure, PAS un mannequin de tête isolé." },
+      { name: 'format_paysage', weight: 25, description: "La composition fonctionne en paysage 16:9 pour un fond hero. Capable d'être cropée largement sans perdre le sujet. Pas un portrait étroit, pas un sujet centré bord-à-bord." },
+      { name: 'pas_de_visage_reconnaissable', weight: 15, description: "Pas de visage reconnaissable de client ou employé en gros plan (problème RGPD + neutralité). Dos, silhouette, mannequin OK." },
+      { name: 'lumière_correcte', weight: 15, description: "Lumière équilibrée. Pas trop sombre ni surexposée. Pas de zones brûlées ou noires marquées." },
+      { name: 'qualité_technique', weight: 10, description: "Image nette, pas floue, pas pixelisée. Pas de filtre Instagram extrême ni de texte/watermark gênant." },
+      { name: 'ambiance_marque', weight: 5, description: "Vibe pro et chaleureuse, cohérente avec une marque de salon. Évite les photos trop personnelles ou tristes." }
+    ];
+    db.prepare('INSERT INTO picker_criteria (label, rubric_json, is_active) VALUES (?, ?, 1)')
+      .run('v1 initial — 6 critères défaut', JSON.stringify(defaults));
+  }
 }
 
 initSchema();

@@ -336,7 +336,8 @@ const RESERVED_ADMIN_PATHS = new Set([
   'admin.css', 'admin.js', 'i18n.js',
   'upload-csv', 'export-csv', 'screenshot-batch', 'clean-names',
   'salon', 'csv-source', 'screenshot', 'job',
-  'groups', 'reset-clean-name'
+  'groups', 'reset-clean-name',
+  'stats.html', 'photos.html', 'photos-files', 'api'
 ]);
 
 const RESERVED_PATHS = new Set(['favicon.ico', 'robots.txt', 'sitemap.xml']);

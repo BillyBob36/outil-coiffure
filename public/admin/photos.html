@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>MaQuickPage · Photos IA</title>
+<style>
+  :root{--gold:#C8A24B;--gold-d:#A8842F;--ink:#15130E;--bg:#f6f4ef;--card:#fff;--border:#e7e2d6;--muted:#8a8270;--blue:#002FA7;--ok:#138a36;--hot:#c0392b;--cool:#5b6470;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.4;padding-bottom:60px;}
+  header{position:sticky;top:0;z-index:20;}
+  .topbar{background:#1a1a1a;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:14px 0;}
+  .topbar-inner{max-width:1200px;margin:0 auto;padding:0 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .brand{font-weight:500;font-size:1.3rem;color:#c9a96e;letter-spacing:-.01em;}
+  .spacer{flex:1;}
+  .hbtn{border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;padding:7px 13px;border-radius:8px;font-size:13.5px;font-weight:500;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+  .hbtn:hover{background:rgba(255,255,255,.12);}
+  .hbtn.gold{background:#c9a96e;color:#1a1a1a;border-color:#c9a96e;}
+  main{padding:16px;max-width:1200px;margin:0 auto;}
+  .msg{text-align:center;color:var(--muted);padding:50px 20px;font-size:15px;}
+  .msg a{color:var(--blue);font-weight:600;}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+  .kpi .v{font-size:22px;font-weight:800;line-height:1;}
+  .kpi .l{font-size:11.5px;color:var(--muted);margin-top:5px;font-weight:600;}
+  .kpi.ok .v{color:var(--ok);}.kpi.gold .v{color:var(--gold-d);}.kpi.hot .v{color:var(--hot);}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;}
+  .panel h3{margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);}
+  .btn{border:1.5px solid var(--border);background:#fff;color:var(--ink);padding:8px 16px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn:hover{border-color:var(--gold);}
+  .btn.primary{background:var(--gold);border-color:var(--gold);color:#fff;}
+  .btn.primary:hover{background:var(--gold-d);}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .btn.sm{padding:5px 10px;font-size:12.5px;border-radius:7px;}
+  .batchrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .jobbar{margin-top:10px;font-size:13.5px;color:var(--cool);display:none;}
+  .jobbar.on{display:block;}
+  .jobbar .prog{height:8px;background:#efeada;border-radius:5px;overflow:hidden;margin-top:6px;}
+  .jobbar .prog>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-d));transition:width .4s;}
+  details.criteria{margin-bottom:16px;background:var(--card);border:1px solid var(--border);border-radius:14px;}
+  details.criteria>summary{list-style:none;cursor:pointer;padding:13px 16px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;}
+  details.criteria>summary::-webkit-details-marker{display:none;}
+  details.criteria[open]>summary{border-bottom:1px solid var(--border);}
+  .crit-body{padding:14px 16px;}
+  .crit-row{display:grid;grid-template-columns:190px 64px 1fr 30px;gap:8px;margin-bottom:8px;align-items:start;}
+  .crit-row input,.crit-row textarea{width:100%;padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;}
+  .crit-row textarea{resize:vertical;min-height:38px;}
+  .crit-del{border:none;background:none;color:var(--hot);font-size:17px;cursor:pointer;padding-top:6px;}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .tab{border:1.5px solid var(--border);background:#fff;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;color:var(--cool);}
+  .tab.active{background:var(--ink);border-color:var(--ink);color:#fff;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;}
+  .card-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+  .card-head .nm{font-weight:800;font-size:16px;}
+  .card-head .vl{color:var(--muted);font-size:13px;}
+  .card-head .meta{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap;}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;}
+  .b-pick{background:#fdf3dc;color:#8a6914;}
+  .b-none{background:#eef0f2;color:#5b6470;}
+  .b-applied{background:#dcfce7;color:#14532d;}
+  .b-good{background:#dcfce7;color:#14532d;}
+  .b-bad{background:#fde2e0;color:#9b2c22;}
+  .b-err{background:#fde2e0;color:#9b2c22;}
+  .reason{font-size:13.5px;color:var(--cool);margin:6px 0 10px;font-style:italic;}
+  .strip{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px;}
+  .ph{position:relative;flex:0 0 auto;width:132px;height:99px;border-radius:9px;overflow:hidden;border:2.5px solid transparent;cursor:zoom-in;background:#eee;}
+  .ph img{width:100%;height:100%;object-fit:cover;display:block;}
+  .ph.sel{border-color:var(--gold);box-shadow:0 0 0 2px rgba(200,162,75,.35);}
+  .ph .star{position:absolute;top:4px;left:5px;font-size:15px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6));}
+  .ph .sc{position:absolute;bottom:4px;right:5px;background:rgba(0,0,0,.65);color:#fff;border-radius:6px;padding:1px 6px;font-size:11px;font-weight:700;}
+  .ph .ld{position:absolute;bottom:4px;left:5px;background:rgba(192,57,43,.85);color:#fff;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;}
+  .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+  .fb{display:inline-flex;gap:4px;}
+  .fbtn{border:1.5px solid var(--border);background:#fff;border-radius:8px;padding:6px 11px;font-size:15px;cursor:pointer;}
+  .fbtn:hover{border-color:var(--gold);}
+  .fbtn.on-good{background:#dcfce7;border-color:#16a34a;}
+  .fbtn.on-bad{background:#fde2e0;border-color:#dc2626;}
+  .cmt{display:none;margin-top:8px;gap:8px;}
+  .cmt.on{display:flex;}
+  .cmt input{flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13.5px;}
+  select.pos{padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:#fff;}
+  .tlink{color:var(--blue);text-decoration:none;font-weight:600;font-size:13px;}
+  .more{display:block;margin:10px auto 0;}
+  /* Lightbox */
+  #lb{position:fixed;inset:0;background:rgba(10,10,10,.88);display:none;align-items:center;justify-content:center;z-index:100;cursor:zoom-out;padding:20px;}
+  #lb.on{display:flex;}
+  #lb img{max-width:96vw;max-height:92vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5);}
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);background:#1a1a1a;color:#fff;padding:11px 20px;border-radius:11px;font-size:14px;font-weight:600;transition:transform .25s;z-index:120;max-width:90vw;}
+  #toast.on{transform:translateX(-50%) translateY(0);}
+  @media(max-width:680px){.crit-row{grid-template-columns:1fr 60px;}.crit-row textarea{grid-column:1/-1;}}
+</style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <span class="brand">📷 Photos IA</span>
+      <span class="spacer"></span>
+      <a class="hbtn" href="/admin/">← Admin</a>
+      <a class="hbtn" href="/admin/stats.html">Suivi</a>
+      <span class="hbtn gold">Photos IA</span>
+    </div>
+  </div>
+</header>
+<main>
+  <div id="content"><div class="msg">Chargement…</div></div>
+</main>
+
+<div id="lb" onclick="this.classList.remove('on')"><img id="lb-img" src="" alt=""></div>
+<div id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id);};
+var stats=null, criteria=null, filter='feedback_pending', rows=[], total=0, offset=0, LIMIT=15;
+var jobTimer=null, currentJob=null;
+
+function esc(s){return s==null?'':String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function toast(m,ms){var t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('on');},ms||3200);}
+function api(path,opts){
+  return fetch(path,Object.assign({credentials:'same-origin'},opts||{})).then(function(r){
+    if(r.status===401)throw new Error('auth');
+    return r.json().then(function(j){if(!r.ok)throw new Error(j.error||('http '+r.status));return j;});
+  });
+}
+
+function authMsg(){
+  $('content').innerHTML='<div class="msg">Connecte-toi d\'abord à l\'admin, puis recharge cette page.<br><br><a href="/admin/login">→ Se connecter</a></div>';
+}
+
+// ============ RENDER ============
+function kpi(v,l,cls){return '<div class="kpi '+(cls||'')+'"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>';}
+
+function renderShell(){
+  var h='';
+  // KPIs
+  h+='<div class="kpis">';
+  h+=kpi(stats.salons_in_db_with_photos.toLocaleString('fr-FR'),'Salons en BDD avec photos','');
+  h+=kpi(stats.photos_total.toLocaleString('fr-FR'),'Photos indexées','');
+  h+=kpi(stats.scorings_with_pick,'Choix IA faits','gold');
+  h+=kpi(stats.scorings_no_suitable,'« Aucune ne convient »','');
+  h+=kpi(stats.heroes_applied,'Héros appliqués','ok');
+  h+=kpi(stats.feedback_good+' 👍 / '+stats.feedback_bad+' 👎','Feedbacks','');
+  h+=kpi(stats.total_cost_eur.toFixed(2)+' €','Coût IA total','');
+  h+='</div>';
+
+  if(!stats.ai_configured){
+    h+='<div class="panel" style="border-color:#dc2626;color:#9b2c22"><b>⚠ Azure OpenAI non configuré</b> — le scoring est désactivé (la navigation photos marche quand même).</div>';
+  }
+  if(stats.photos_total===0){
+    h+='<div class="panel"><b>Aucune photo indexée.</b> L\'upload des renditions est peut-être encore en cours. <button class="btn sm" id="btn-import">Importer l\'index maintenant</button></div>';
+  }
+
+  // Batch
+  h+='<div class="panel"><h3>Scorer des salons (IA choisit le meilleur héro)</h3><div class="batchrow">';
+  h+='<button class="btn primary" data-batch="1">Scorer 1 salon</button>';
+  h+='<button class="btn" data-batch="10">Scorer 10</button>';
+  h+='<button class="btn" data-batch="100">Scorer 100</button>';
+  h+='<span style="font-size:12.5px;color:var(--muted)">~0,01-0,02 €/salon · priorité aux salons présents en BDD jamais scorés</span>';
+  h+='</div><div class="jobbar" id="jobbar"><span id="jobtxt"></span><div class="prog"><i id="jobprog" style="width:0%"></i></div></div></div>';
+
+  // Critères
+  h+='<details class="criteria"><summary>⚙️ Critères de sélection (version active : '+esc(criteria?criteria.label:'—')+')</summary><div class="crit-body" id="crit-body"></div></details>';
+
+  // Tabs
+  var tabs=[['feedback_pending','À valider'],['pick','Choix fait'],['no_suitable','Aucune ne convient'],['applied','Héros appliqués'],['errors','Erreurs'],['all','Tous']];
+  h+='<div class="tabs">'+tabs.map(function(t){return '<button class="tab'+(filter===t[0]?' active':'')+'" data-f="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
+
+  h+='<div id="results"></div>';
+  $('content').innerHTML=h;
+
+  renderCriteria();
+  renderResults(true);
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-batch]'),function(b){
+    b.onclick=function(){launchBatch(parseInt(b.getAttribute('data-batch'),10));};
+    if(!stats.ai_configured)b.disabled=true;
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(b){
+    b.onclick=function(){filter=b.getAttribute('data-f');offset=0;rows=[];loadResults().then(function(){renderShell();});};
+  });
+  var bi=$('btn-import');if(bi)bi.onclick=function(){bi.disabled=true;api('/admin/api/picker/import-index',{method:'POST'}).then(function(r){toast('Index importé : '+r.salons+' salons, '+r.photos+' photos');return refreshAll();}).catch(function(e){toast('Erreur : '+e.message);bi.disabled=false;});};
+}
+
+function renderCriteria(){
+  var el=$('crit-body');if(!el)return;
+  var rub=(criteria&&criteria.rubric)||[];
+  var h='<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Modifier crée une <b>nouvelle version active</b> (les anciens scorings gardent la leur). Les poids doivent totaliser ~100.</div>';
+  rub.forEach(function(c,i){
+    h+='<div class="crit-row" data-i="'+i+'">'
+      +'<input class="c-name" value="'+esc(c.name)+'" placeholder="nom_du_critère">'
+      +'<input class="c-w" type="number" value="'+esc(c.weight)+'" min="0" max="100">'
+      +'<textarea class="c-desc" rows="2">'+esc(c.description)+'</textarea>'
+      +'<button class="crit-del" title="Supprimer">✕</button></div>';
+  });
+  h+='<div style="display:flex;gap:8px;margin-top:10px"><button class="btn sm" id="crit-add">+ Ajouter un critère</button><span class="spacer" style="flex:1"></span><button class="btn primary sm" id="crit-save">💾 Enregistrer (nouvelle version)</button></div>';
+  el.innerHTML=h;
+  el.querySelectorAll('.crit-del').forEach(function(b){b.onclick=function(){b.closest('.crit-row').remove();};});
+  $('crit-add').onclick=function(){
+    var d=document.createElement('div');d.className='crit-row';
+    d.innerHTML='<input class="c-name" placeholder="nom_du_critère"><input class="c-w" type="number" value="10" min="0" max="100"><textarea class="c-desc" rows="2"></textarea><button class="crit-del">✕</button>';
+    d.querySelector('.crit-del').onclick=function(){d.remove();};
+    el.insertBefore(d,el.querySelector('#crit-add').parentNode);
+  };
+  $('crit-save').onclick=function(){
+    var rub=[];
+    el.querySelectorAll('.crit-row').forEach(function(r){
+      var n=r.querySelector('.c-name').value.trim();
+      if(!n)return;
+      rub.push({name:n,weight:parseInt(r.querySelector('.c-w').value,10)||0,description:r.querySelector('.c-desc').value.trim()});
+    });
+    if(!rub.length)return toast('Au moins 1 critère requis');
+    api('/admin/api/picker/criteria',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({label:'v'+new Date().toISOString().slice(0,16).replace('T',' '),rubric:rub})})
+      .then(function(){toast('Critères enregistrés ✓');return api('/admin/api/picker/criteria');})
+      .then(function(c){criteria=c;renderShell();})
+      .catch(function(e){toast('Erreur : '+e.message);});
+  };
+}
+
+function cardHtml(r){
+  var h='<div class="card" data-sid="'+r.scoring_id+'">';
+  h+='<div class="card-head"><span class="nm">'+esc(r.nom)+'</span><span class="vl">'+esc(r.ville||'')+'</span>';
+  if(r.error)h+='<span class="badge b-err">erreur</span>';
+  else if(r.selected_photo_id)h+='<span class="badge b-pick">⭐ choix fait'+(r.overall_score!=null?' · '+r.overall_score+'/3':'')+'</span>';
+  else h+='<span class="badge b-none">aucune ne convient</span>';
+  if(r.applied_hero_at)h+='<span class="badge b-applied">✓ héro appliqué</span>';
+  if(r.feedback_rating==='good')h+='<span class="badge b-good">👍</span>';
+  if(r.feedback_rating==='bad')h+='<span class="badge b-bad">👎</span>';
+  if(r.feedback_rating==='edit')h+='<span class="badge b-bad">✏️</span>';
+  h+='<span class="meta">'+esc((r.created_at||'').slice(5,16))+' · '+(r.cost_eur!=null?(r.cost_eur*100).toFixed(1)+' c€':'')+(r.rag_examples_used?' · RAG×'+r.rag_examples_used:'')+'</span></div>';
+  if(r.reasoning)h+='<div class="reason">«&nbsp;'+esc(r.reasoning)+'&nbsp;»</div>';
+  if(r.error)h+='<div class="reason" style="color:var(--hot)">'+esc(r.error)+'</div>';
+  if(r.photos&&r.photos.length){
+    h+='<div class="strip">';
+    r.photos.forEach(function(p){
+      var sel=p.photo_id===r.selected_photo_id;
+      h+='<div class="ph'+(sel?' sel':'')+'" data-lg="'+esc(p.lg)+'">'
+        +'<img loading="lazy" src="'+esc(p.th)+'" alt="">'
+        +(sel?'<span class="star">⭐</span>':'')
+        +(p.score!=null?'<span class="sc">'+p.score+'/3</span>':'')
+        +(p.lowdef?'<span class="ld">basse déf</span>':'')
+        +'</div>';
+    });
+    h+='</div>';
+  }
+  h+='<div class="actions">';
+  h+='<span class="fb"><button class="fbtn'+(r.feedback_rating==='good'?' on-good':'')+'" data-fb="good" title="Bon choix">👍</button>'
+    +'<button class="fbtn'+(r.feedback_rating==='bad'?' on-bad':'')+'" data-fb="bad" title="Mauvais choix">👎</button></span>';
+  if(r.selected_photo_id&&r.slug&&!r.applied_hero_at){
+    h+='<select class="pos"><option value="centre">Cadrage centre</option><option value="haut">Cadrage haut</option><option value="bas">Cadrage bas</option></select>';
+    h+='<button class="btn primary sm" data-apply="1">Appliquer comme héro</button>';
+  }
+  if(r.selected_photo_id&&!r.slug)h+='<span style="font-size:12px;color:var(--muted)">salon hors BDD démos — héro non applicable</span>';
+  if(r.slug)h+='<a class="tlink" href="https://maquickpage.fr/preview/'+encodeURIComponent(r.slug)+'" target="_blank" rel="noopener">Voir la démo ↗</a>';
+  h+='</div>';
+  h+='<div class="cmt" id="cmt-'+r.scoring_id+'"><input placeholder="Pourquoi ? (alimente l\'apprentissage IA — optionnel mais recommandé)"><button class="btn sm primary">Envoyer</button></div>';
+  h+='</div>';
+  return h;
+}
+
+function renderResults(reset){
+  var el=$('results');if(!el)return;
+  var h=rows.map(cardHtml).join('');
+  if(!rows.length)h='<div class="msg">Aucun résultat pour ce filtre.</div>';
+  else if(rows.length<total)h+='<button class="btn more" id="more">Charger plus ('+rows.length+'/'+total+')</button>';
+  el.innerHTML=h;
+  bindCards();
+  var m=$('more');if(m)m.onclick=function(){offset+=LIMIT;loadResults().then(function(){renderResults();});};
+}
+
+function bindCards(){
+  document.querySelectorAll('.card').forEach(function(card){
+    var sid=parseInt(card.getAttribute('data-sid'),10);
+    var r=rows.find(function(x){return x.scoring_id===sid;});
+    card.querySelectorAll('.ph').forEach(function(ph){
+      ph.onclick=function(){$('lb-img').src=ph.getAttribute('data-lg');$('lb').classList.add('on');};
+    });
+    card.querySelectorAll('[data-fb]').forEach(function(b){
+      b.onclick=function(){
+        var rating=b.getAttribute('data-fb');
+        var cmt=card.querySelector('.cmt');
+        cmt.classList.add('on');
+        cmt.dataset.rating=rating;
+        cmt.querySelector('input').focus();
+        // envoi immédiat sans commentaire si re-clic
+        if(cmt.dataset.armed===rating){sendFeedback(sid,rating,'',card);}
+        cmt.dataset.armed=rating;
+      };
+    });
+    var cmt=card.querySelector('.cmt');
+    if(cmt){
+      cmt.querySelector('button').onclick=function(){
+        sendFeedback(sid,cmt.dataset.rating||'good',cmt.querySelector('input').value.trim(),card);
+      };
+      cmt.querySelector('input').addEventListener('keydown',function(e){
+        if(e.key==='Enter')sendFeedback(sid,cmt.dataset.rating||'good',this.value.trim(),card);
+      });
+    }
+    var ap=card.querySelector('[data-apply]');
+    if(ap){
+      ap.onclick=function(){
+        ap.disabled=true;ap.textContent='Application…';
+        var pos=card.querySelector('select.pos').value;
+        api('/admin/api/picker/apply-hero',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scoring_id:sid,position:pos})})
+          .then(function(res){toast('Héro appliqué ✓ — screenshot en cours de recapture');r.applied_hero_at=new Date().toISOString();renderResults();refreshStats();})
+          .catch(function(e){toast('Erreur : '+e.message);ap.disabled=false;ap.textContent='Appliquer comme héro';});
+      };
+    }
+  });
+}
+
+function sendFeedback(sid,rating,comment,card){
+  api('/admin/api/picker/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scoring_id:sid,rating:rating,comment:comment})})
+    .then(function(){
+      toast(comment?'Feedback + commentaire enregistrés ✓ (RAG enrichi)':'Feedback enregistré ✓');
+      var r=rows.find(function(x){return x.scoring_id===sid;});
+      if(r)r.feedback_rating=rating;
+      renderResults();refreshStats();
+    })
+    .catch(function(e){toast('Erreur : '+e.message);});
+}
+
+// ============ DATA ============
+function loadResults(){
+  return api('/admin/api/picker/results?filter='+filter+'&limit='+LIMIT+'&offset='+offset).then(function(j){
+    total=j.total;
+    if(offset===0)rows=j.rows;else rows=rows.concat(j.rows);
+  });
+}
+function refreshStats(){
+  return api('/admin/api/picker/stats').then(function(s){stats=s;});
+}
+function refreshAll(){
+  return Promise.all([refreshStats(),api('/admin/api/picker/criteria').catch(function(){return null;}),loadResults()])
+    .then(function(res){criteria=res[1];renderShell();});
+}
+
+// ============ BATCH ============
+function launchBatch(size){
+  api('/admin/api/picker/batch?size='+size,{method:'POST'}).then(function(j){
+    currentJob=j.job_id;
+    $('jobbar').classList.add('on');
+    pollJob(size);
+    toast('Scoring lancé ('+size+' salon'+(size>1?'s':'')+')');
+  }).catch(function(e){toast('Erreur : '+e.message);});
+}
+function pollJob(size){
+  clearInterval(jobTimer);
+  jobTimer=setInterval(function(){
+    api('/admin/api/picker/batch/'+currentJob).then(function(j){
+      var pct=Math.round(j.done/j.size*100);
+      $('jobtxt').textContent='Scoring '+j.done+'/'+j.size+' — ✓ '+j.success+' choix · ∅ '+j.no_suitable+' aucune · ⚠ '+j.errors+' err · '+(j.cost_total_eur*100).toFixed(1)+' c€'+(j.exhausted?' · plus de salons à scorer':'');
+      $('jobprog').style.width=pct+'%';
+      if(j.finished_at){
+        clearInterval(jobTimer);
+        toast('Batch terminé : '+j.success+' choix faits'+(j.no_suitable?', '+j.no_suitable+' sans photo adaptée':''));
+        offset=0;refreshAll();
+      }
+    }).catch(function(){clearInterval(jobTimer);});
+  },2500);
+}
+
+// ============ INIT ============
+refreshAll().catch(function(e){
+  if(e.message==='auth')authMsg();
+  else $('content').innerHTML='<div class="msg">Erreur de chargement : '+esc(e.message)+'</div>';
+});
+})();
+</script>
+</body>
+</html>
