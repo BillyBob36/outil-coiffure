@@ -54,6 +54,19 @@
   .salon{font-weight:700;}.loc{font-size:12px;color:var(--muted);}.email{font-size:12.5px;color:var(--cool);}
   .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;}
   .b-client{background:#dcfce7;color:#14532d;}.b-hot{background:#fde2e0;color:#9b2c22;}.b-warm{background:#fef3c7;color:#92400e;}.b-tiede{background:#e0e7ff;color:#3730a3;}.b-cold{background:#eef0f2;color:#5b6470;}
+  /* Tags comportementaux (signaux parallèles, plus écrasés par l'étape max) */
+  .tags{display:flex;flex-wrap:wrap;gap:4px;}
+  .tag{display:inline-block;padding:2px 8px;border-radius:7px;font-size:11.5px;font-weight:600;background:#eef0f2;color:#5b6470;white-space:nowrap;}
+  .tag.t-hot{background:#fde2e0;color:#9b2c22;}
+  .tag.t-warm{background:#fef3c7;color:#92400e;}
+  /* Barre de filtres par statut (= liste d'appels en 1 clic) */
+  .filterbar{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px;}
+  .fbtn{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);background:#fff;color:var(--ink);padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;}
+  .fbtn:hover{border-color:var(--gold);}
+  .fbtn.on{background:var(--gold);border-color:var(--gold);color:#fff;}
+  .fbtn .c{font-variant-numeric:tabular-nums;font-weight:700;opacity:.7;}
+  .fbtn.on .c{opacity:.95;}
+  .fdot{width:9px;height:9px;border-radius:50%;display:inline-block;}
   .when{font-size:12.5px;color:var(--muted);white-space:nowrap;}
   .num{text-align:center;font-variant-numeric:tabular-nums;}
   .tlink{color:var(--blue);text-decoration:none;font-weight:600;font-size:13px;}
@@ -170,13 +183,15 @@
   'use strict';
   var CSV_URL='/admin/api/preview-visits.csv', PREVIEW_BASE='https://maquickpage.fr/preview/';
   var $=function(id){return document.getElementById(id);};
-  var raw=[], sortKey='heat', sortDir=-1, autoTimer=null, expanded={};
+  var raw=[], sortKey='status', sortDir=-1, statusFilter='all', autoTimer=null, expanded={};
 
   var T={
     fr:{brand:'Suivi des maquettes',refresh:'Actualiser',exp:'CSV',maj:'maj',back:'← Admin',search:'Rechercher salon, ville, email…',humans:'Humains seulement',auto:'Auto (60s)',loading:'Chargement…',
       k_visited:'Salons visités',k_pricing:'Ont vu les tarifs',k_domains:'Ont vu les domaines',k_custom:'Domaine perso tapé',k_edited:'Ont édité leur démo',k_cgv:'CGV acceptées',k_pay:'Paiement initié',k_clients:'Devenus clients',k_human:'Trafic humain',k_human_sub:'{n} bots filtrés',
       funnel_title:'Entonnoir comportemental',f_visited:'Visité la maquette',f_pricing:'Étape 1/3 · Tarifs',f_domains:'Étape 2/3 · Domaines',f_pay:'Paiement initié',f_client:'Devenu client',
-      recall:'À rappeler',th_salon:'Salon',th_level:'Niveau atteint',th_count:'Nb',th_scroll:'Scroll',th_date:'Dernière activité',
+      recall:'À rappeler',th_salon:'Salon',th_level:'Niveau atteint',th_status:'Statut',th_signals:'Signaux',th_count:'Nb',th_scroll:'Scroll',th_date:'Dernière activité',
+      f_all:'Tous',stt_client:'✅ Client',stt_hot:'🔥 Chaud',stt_engaged:'Engagé',stt_interested:'Intéressé',stt_curious:'Curieux',
+      tg_pay:'Paiement',tg_cgv:'CGV',tg_email:'Email 3/3',tg_domains:'Domaines 2/3',tg_pricing:'Tarifs 1/3',tg_custom:'Domaine perso',tg_edited:'Démo éditée',tg_editor:'Éditeur ouvert',tg_devices:'{n} appareils',tg_scroll:'scroll {n}%',
       st_client:'✅ Client',st_pay:'🔥 Procéder au paiement',st_cgv:'🔥 CGV acceptées',st_editsave:'🔥 A édité sa démo',st_editopen:'A ouvert l\'éditeur',st_custom:'Domaine perso tapé',st_email:'Étape 3/3 · Email',st_domains:'Étape 2/3 · Domaines',st_pricing:'Étape 1/3 · Tarifs',st_scroll:'A scrollé',st_view:'A vu la page',
       e_view:'Vue page',e_scroll:'Scroll',e_pricing:'Étape 1/3 · Tarifs',e_domains:'Étape 2/3 · Domaines',e_custom:'Domaine perso',e_email:'Étape 3/3 · Email',e_cgv:'CGV acceptées',e_editopen:'Éditeur ouvert',e_editsave:'Démo éditée',e_pay:'Procéder au paiement',
       d_events:'Événements',d_ip:'IP',d_device:'Appareil',d_plan:'Plan choisi',d_devices:'Appareils & connexions',d_visits:'visites',d_connections:'Connexions',d_ua:'Navigateur (UA)',
@@ -184,7 +199,9 @@
     en:{brand:'Mockup tracking',refresh:'Refresh',exp:'CSV',maj:'upd.',back:'← Admin',search:'Search salon, city, email…',humans:'Humans only',auto:'Auto (60s)',loading:'Loading…',
       k_visited:'Salons visited',k_pricing:'Saw pricing',k_domains:'Saw domains',k_custom:'Typed custom domain',k_edited:'Edited demo',k_cgv:'Accepted terms',k_pay:'Clicked pay',k_clients:'Became clients',k_human:'Human traffic',k_human_sub:'{n} bots filtered',
       funnel_title:'Behavioral funnel',f_visited:'Visited the mockup',f_pricing:'Step 1/3 · Pricing',f_domains:'Step 2/3 · Domains',f_pay:'Clicked pay',f_client:'Became client',
-      recall:'To call',th_salon:'Salon',th_level:'Stage reached',th_count:'#',th_scroll:'Scroll',th_date:'Last activity',
+      recall:'To call',th_salon:'Salon',th_level:'Stage reached',th_status:'Status',th_signals:'Signals',th_count:'#',th_scroll:'Scroll',th_date:'Last activity',
+      f_all:'All',stt_client:'✅ Client',stt_hot:'🔥 Hot',stt_engaged:'Engaged',stt_interested:'Interested',stt_curious:'Curious',
+      tg_pay:'Pay',tg_cgv:'Terms',tg_email:'Email 3/3',tg_domains:'Domains 2/3',tg_pricing:'Pricing 1/3',tg_custom:'Custom domain',tg_edited:'Edited demo',tg_editor:'Opened editor',tg_devices:'{n} devices',tg_scroll:'scroll {n}%',
       st_client:'✅ Client',st_pay:'🔥 Clicked pay',st_cgv:'🔥 Accepted terms',st_editsave:'🔥 Edited demo',st_editopen:'Opened editor',st_custom:'Typed custom domain',st_email:'Step 3/3 · Email',st_domains:'Step 2/3 · Domains',st_pricing:'Step 1/3 · Pricing',st_scroll:'Scrolled',st_view:'Viewed page',
       e_view:'Page view',e_scroll:'Scroll',e_pricing:'Step 1/3 · Pricing',e_domains:'Step 2/3 · Domains',e_custom:'Custom domain',e_email:'Step 3/3 · Email',e_cgv:'Accepted terms',e_editopen:'Editor opened',e_editsave:'Demo edited',e_pay:'Clicked pay',
       d_events:'Events',d_ip:'IP',d_device:'Device',d_plan:'Chosen plan',d_devices:'Devices & connections',d_visits:'visits',d_connections:'Connections',d_ua:'Browser (UA)',
@@ -192,7 +209,9 @@
     zh:{brand:'样板追踪',refresh:'刷新',exp:'CSV',maj:'更新',back:'← 后台',search:'搜索沙龙、城市、邮箱…',humans:'仅真人',auto:'自动 (60秒)',loading:'加载中…',
       k_visited:'已访问的沙龙',k_pricing:'查看了价格',k_domains:'查看了域名',k_custom:'输入了自定义域名',k_edited:'编辑了样板',k_cgv:'已接受条款',k_pay:'点击了付款',k_clients:'已成为客户',k_human:'真人流量',k_human_sub:'已过滤 {n} 个机器人',
       funnel_title:'行为漏斗',f_visited:'访问了样板',f_pricing:'步骤 1/3 · 价格',f_domains:'步骤 2/3 · 域名',f_pay:'点击了付款',f_client:'已成为客户',
-      recall:'待联系',th_salon:'沙龙',th_level:'最高阶段',th_count:'次数',th_scroll:'滚动',th_date:'最近活动',
+      recall:'待联系',th_salon:'沙龙',th_level:'最高阶段',th_status:'状态',th_signals:'信号',th_count:'次数',th_scroll:'滚动',th_date:'最近活动',
+      f_all:'全部',stt_client:'✅ 客户',stt_hot:'🔥 高意向',stt_engaged:'已互动',stt_interested:'感兴趣',stt_curious:'浏览',
+      tg_pay:'付款',tg_cgv:'条款',tg_email:'邮箱 3/3',tg_domains:'域名 2/3',tg_pricing:'价格 1/3',tg_custom:'自定义域名',tg_edited:'已编辑',tg_editor:'打开编辑器',tg_devices:'{n} 台设备',tg_scroll:'滚动 {n}%',
       st_client:'✅ 客户',st_pay:'🔥 点击了付款',st_cgv:'🔥 已接受条款',st_editsave:'🔥 编辑了样板',st_editopen:'打开了编辑器',st_custom:'输入了自定义域名',st_email:'步骤 3/3 · 邮箱',st_domains:'步骤 2/3 · 域名',st_pricing:'步骤 1/3 · 价格',st_scroll:'已滚动',st_view:'查看了页面',
       e_view:'页面浏览',e_scroll:'滚动',e_pricing:'步骤 1/3 · 价格',e_domains:'步骤 2/3 · 域名',e_custom:'自定义域名',e_email:'步骤 3/3 · 邮箱',e_cgv:'已接受条款',e_editopen:'打开编辑器',e_editsave:'编辑样板',e_pay:'点击了付款',
       d_events:'事件',d_ip:'IP',d_device:'设备',d_plan:'所选套餐',d_devices:'设备与连接',d_visits:'次访问',d_connections:'连接时间',d_ua:'浏览器 (UA)',
@@ -213,8 +232,40 @@
   var STAGE={preview_ouvert:1,pricing_ouvert:3,etape_domaine:4,etape_email:5,domaine_perso:6,editeur_ouvert:7,editeur_modifie:8,cgv_accepte:9,paiement_initie:10};
   var PLAN={TWO_YEAR:'9,90€ · 24 mois',ONE_YEAR:'17,90€ · 12 mois',FLEX:'29€ · sans engagement'};
   var EVENT_KEY={preview_ouvert:'e_view',scroll_max:'e_scroll',pricing_ouvert:'e_pricing',etape_domaine:'e_domains',domaine_perso:'e_custom',etape_email:'e_email',editeur_ouvert:'e_editopen',editeur_modifie:'e_editsave',cgv_accepte:'e_cgv',paiement_initie:'e_pay'};
-  var HEATLBL={10:['b-hot','st_pay'],9:['b-hot','st_cgv'],8:['b-hot','st_editsave'],7:['b-warm','st_editopen'],6:['b-warm','st_custom'],5:['b-warm','st_email'],4:['b-tiede','st_domains'],3:['b-tiede','st_pricing'],2:['b-cold','st_scroll'],1:['b-cold','st_view']};
-  function stageLabel(score,client){if(client)return['b-client',t('st_client')];var h=HEATLBL[score]||HEATLBL[1];return[h[0],t(h[1])];}
+  // ===== Statut commercial : un seul bucket par salon, ordonné par valeur =====
+  // Remplace l'échelle 1–10 (qui mélangeait achat et édition) : ici le checkout
+  // prime toujours sur l'éditeur. Les signaux parallèles passent en tags.
+  var STATUS_ORDER={client:5,hot:4,engaged:3,interested:2,curious:1};
+  var STATUS_BADGE={client:'b-client',hot:'b-hot',engaged:'b-warm',interested:'b-tiede',curious:'b-cold'};
+  var STATUS_DOT={client:'#138a36',hot:'#c0392b',engaged:'#b8860b',interested:'#4f46e5',curious:'#9aa0a6'};
+  var STATUS_KEYS=['client','hot','engaged','interested','curious'];
+  // Chaud = a atteint le checkout (Email 3/3 / CGV / paiement) sans convertir.
+  function statusOf(s){
+    if(isClient(s))return'client';
+    var e=s.events;
+    if(e['etape_email']||e['cgv_accepte']||e['paiement_initie'])return'hot';
+    if(e['editeur_modifie']||e['domaine_perso'])return'engaged';
+    if(e['pricing_ouvert']||e['etape_prix']||e['etape_domaine']||e['editeur_ouvert'])return'interested';
+    return'curious';
+  }
+  function statusBadge(key){return'<span class="badge '+STATUS_BADGE[key]+'">'+esc(t('stt_'+key))+'</span>';}
+  // Tags = 1 tag pour l'étape de checkout la plus avancée + les signaux distincts.
+  function tagsOf(s){
+    var e=s.events,out=[];
+    if(e['paiement_initie'])out.push(['tg_pay','t-hot',null]);
+    else if(e['cgv_accepte'])out.push(['tg_cgv','t-hot',null]);
+    else if(e['etape_email'])out.push(['tg_email','t-hot',null]);
+    else if(e['etape_domaine'])out.push(['tg_domains','t-warm',null]);
+    else if(e['pricing_ouvert']||e['etape_prix'])out.push(['tg_pricing','t-warm',null]);
+    if(e['domaine_perso'])out.push(['tg_custom','t-warm',null]);
+    if(e['editeur_modifie'])out.push(['tg_edited','t-warm',null]);
+    else if(e['editeur_ouvert'])out.push(['tg_editor','',null]);
+    if(s.scroll>0)out.push(['tg_scroll','',{n:s.scroll}]);
+    var nd=Object.keys(s.devices).length;if(nd>1)out.push(['tg_devices','',{n:nd}]);
+    return out;
+  }
+  function tagsHtml(s){var ts=tagsOf(s);if(!ts.length)return'<span style="color:var(--muted);font-size:12px">—</span>';
+    return'<div class="tags">'+ts.map(function(x){return'<span class="tag'+(x[1]?' '+x[1]:'')+'">'+esc(t(x[0],x[2]))+'</span>';}).join('')+'</div>';}
   var BOT_RE=/bot|crawl|spider|slurp|curl|wget|python|http-client|headless|phantom|preview|scan|proofpoint|mimecast|barracuda|safelinks|googleimageproxy|facebookexternalhit|whatsapp|bingpreview|yandex|ahrefs|semrush|monitor/i;
   function isBot(ua){return !ua||BOT_RE.test(ua);}
 
@@ -233,7 +284,8 @@
   function aggregate(events){
     var bySlug={};
     events.forEach(function(e){var slug=e.slug;if(!slug)return;
-      var s=bySlug[slug]||(bySlug[slug]={slug:slug,salon:e.salon||slug,ville:e.ville||'',email:e.email||'',status:e.subscription_status||'',plan:'',token:'',heat:0,last:'',count:0,scroll:0,events:{},devices:{}});
+      var s=bySlug[slug]||(bySlug[slug]={slug:slug,salon:e.salon||slug,ville:e.ville||'',email:e.email||'',status:e.subscription_status||'',plan:'',token:'',heat:0,last:'',count:0,scroll:0,events:{},devices:{},real:false});
+      if(e.salon&&e.salon.trim())s.real=true;
       if(e.salon)s.salon=e.salon;if(e.ville)s.ville=e.ville;if(e.email)s.email=e.email;if(e.subscription_status)s.status=e.subscription_status;
       if(e.edit_token&&!s.token)s.token=e.edit_token;
       var st=STAGE[e.event]||0;if(st>s.heat)s.heat=st;s.count++;
@@ -246,10 +298,10 @@
       if(e.ts>s.last)s.last=e.ts;});
     // "A scrollé" (niveau 2) seulement si scroll réel >0% (un scroll_max à 0%
     // = vu sans scroller, ne doit pas surclasser un simple preview).
-    return Object.keys(bySlug).map(function(k){var s=bySlug[k];if(s.scroll>0&&s.heat<2)s.heat=2;return s;});
+    // .filter(real) écarte les slugs sans salon réel = scanners (phpinfo.php, .env…).
+    return Object.keys(bySlug).map(function(k){var s=bySlug[k];if(s.scroll>0&&s.heat<2)s.heat=2;s.skey=statusOf(s);return s;}).filter(function(s){return s.real;});
   }
   function isClient(s){return s.status==='live'||s.status==='active'||s.status==='trialing';}
-  function heatOf(s){return isClient(s)?10:s.heat;}
   function fmtWhen(ts){if(!ts)return'—';var v=Date.parse(ts.replace(' ','T')+'Z');if(isNaN(v))return ts;var d=(Date.now()-v)/1000;
     if(d<3600)return Math.max(1,Math.round(d/60))+' '+t('u_min');if(d<86400)return Math.round(d/3600)+' '+t('u_h');return Math.round(d/86400)+' '+t('u_d');}
   function fmtDate(ts){if(!ts)return'';var p=ts.split(' ');if(p.length<2)return ts;var d=p[0].split('-');return d[2]+'/'+d[1]+' '+p[1].slice(0,5);}
@@ -338,30 +390,41 @@
     html+=frow(t('f_visited'),visited,maxF)+frow(t('f_pricing'),pricing,maxF)+frow(t('f_domains'),domains,maxF)+frow(t('f_pay'),pay,maxF)+frow(t('f_client'),clients,maxF);
     html+='</div>';
 
-    salons.sort(function(a,b){var av,bv;
-      if(sortKey==='heat'){av=heatOf(a);bv=heatOf(b);if(av===bv){av=a.last;bv=b.last;}}
+    // Comptes par statut (périmètre recherché, tous statuts) → barre de filtres
+    var counts={all:salons.length,client:0,hot:0,engaged:0,interested:0,curious:0};
+    salons.forEach(function(s){counts[s.skey]=(counts[s.skey]||0)+1;});
+    var shown=(statusFilter==='all')?salons.slice():salons.filter(function(s){return s.skey===statusFilter;});
+
+    shown.sort(function(a,b){var av,bv;
+      if(sortKey==='status'){av=STATUS_ORDER[a.skey]||0;bv=STATUS_ORDER[b.skey]||0;if(av===bv){av=a.last;bv=b.last;}}
       else if(sortKey==='salon'){av=a.salon.toLowerCase();bv=b.salon.toLowerCase();}
       else if(sortKey==='count'){av=a.count;bv=b.count;}
-      else if(sortKey==='scroll'){av=a.scroll;bv=b.scroll;}
       else{av=a.last;bv=b.last;}
       return av<bv?-1*sortDir:(av>bv?1*sortDir:0);});
 
-    html+='<div class="section-title">'+t('recall')+' ('+salons.length+')</div>';
-    if(!salons.length)html+='<div class="msg">'+t('none')+'</div>';
+    html+='<div class="section-title">'+t('recall')+' ('+counts.all+')</div>';
+    html+='<div class="filterbar">';
+    html+='<button class="fbtn'+(statusFilter==='all'?' on':'')+'" data-filter="all">'+t('f_all')+' <span class="c">'+counts.all+'</span></button>';
+    STATUS_KEYS.forEach(function(k){
+      if(!counts[k])return;
+      html+='<button class="fbtn'+(statusFilter===k?' on':'')+'" data-filter="'+k+'"><span class="fdot" style="background:'+STATUS_DOT[k]+'"></span>'+esc(t('stt_'+k))+' <span class="c">'+counts[k]+'</span></button>';
+    });
+    html+='</div>';
+    if(!shown.length)html+='<div class="msg">'+t('none')+'</div>';
     else{
       html+='<div class="tbl-wrap"><table><thead><tr>'
         +'<th class="sortable" data-k="salon">'+t('th_salon')+arrow('salon')+'</th>'
-        +'<th class="sortable" data-k="heat">'+t('th_level')+arrow('heat')+'</th>'
+        +'<th class="sortable" data-k="status">'+t('th_status')+arrow('status')+'</th>'
+        +'<th>'+t('th_signals')+'</th>'
         +'<th class="sortable num" data-k="count">'+t('th_count')+arrow('count')+'</th>'
-        +'<th class="sortable hide-sm" data-k="scroll">'+t('th_scroll')+arrow('scroll')+'</th>'
         +'<th class="sortable" data-k="last">'+t('th_date')+arrow('last')+'</th>'
         +'<th></th></tr></thead><tbody>';
-      salons.forEach(function(s){var sl=stageLabel(s.heat,isClient(s));var open=expanded[s.slug];
+      shown.forEach(function(s){var open=expanded[s.slug];
         html+='<tr class="row" data-slug="'+esc(s.slug)+'">'
           +'<td><span class="caret">'+(open?'▾':'▸')+'</span><span class="salon">'+esc(s.salon)+'</span><div class="loc" style="margin-left:14px">'+esc(s.ville)+(s.email?' · '+esc(s.email):'')+'</div></td>'
-          +'<td><span class="badge '+sl[0]+'">'+esc(sl[1])+'</span></td>'
+          +'<td>'+statusBadge(s.skey)+'</td>'
+          +'<td>'+tagsHtml(s)+'</td>'
           +'<td class="num">'+s.count+'</td>'
-          +'<td class="hide-sm"><span class="scrollbar"><i style="width:'+(s.scroll||0)+'%"></i></span> '+(s.scroll||0)+'%</td>'
           +'<td class="when" title="'+esc(s.last)+'">'+fmtDate(s.last)+'<div style="font-size:11px">'+fmtWhen(s.last)+'</div></td>'
           +'<td style="white-space:nowrap"><a class="tlink" href="'+PREVIEW_BASE+encodeURIComponent(s.slug)+(s.token?'?token='+encodeURIComponent(s.token):'')+'" target="_blank" rel="noopener" data-stop="1">'+t('see')+'</a> <a class="tlink" href="#" data-stop="1" data-photos="'+esc(s.slug)+'" title="Photos du salon (héro + galerie)" style="font-size:15px;text-decoration:none">📷</a></td></tr>';
         if(open)html+=detailRow(s);
@@ -372,6 +435,8 @@
 
     Array.prototype.forEach.call(document.querySelectorAll('th.sortable'),function(th){
       th.onclick=function(){var k=th.getAttribute('data-k');if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==='salon')?1:-1;}render();};});
+    Array.prototype.forEach.call(document.querySelectorAll('.fbtn'),function(b){
+      b.onclick=function(){statusFilter=b.getAttribute('data-filter');render();};});
     Array.prototype.forEach.call(document.querySelectorAll('tr.row'),function(tr){
       tr.onclick=function(e){if(e.target.closest('[data-stop]'))return;var sl=tr.getAttribute('data-slug');expanded[sl]=!expanded[sl];render();};});
     Array.prototype.forEach.call(document.querySelectorAll('[data-photos]'),function(a){

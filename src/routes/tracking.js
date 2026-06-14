@@ -43,6 +43,18 @@ export function logEvent({ event, slug = null, token = null, src = null, meta = 
   } catch { /* best-effort : ne JAMAIS casser la requête appelante */ }
 }
 
+// Vrai uniquement si le slug correspond à un salon réel. Bloque le bruit des
+// scanners qui sondent /admin/<x> (phpinfo.php, .env, controller…) : sans salon
+// correspondant, on ne logge pas l'event (sinon il pollue le suivi des maquettes).
+let existsStmt = null;
+function salonExists(slug) {
+  try {
+    if (!slug) return false;
+    if (!existsStmt) existsStmt = db.prepare('SELECT 1 FROM salons WHERE slug = ? LIMIT 1');
+    return !!existsStmt.get(String(slug));
+  } catch { return false; }
+}
+
 function clientIp(req) {
   return (req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.ip || '')
     .toString().split(',')[0].trim();
@@ -59,17 +71,26 @@ export function trackingMiddleware(req, res, next) {
       if (m === 'GET') {
         let mm = p.match(/^\/preview\/([^/?#]+)/);
         if (mm) {
-          logEvent({ event: 'preview_ouvert', slug: decodeURIComponent(mm[1]), token: req.query.token || null, src: req.query.src || null, ip: clientIp(req), ua: req.headers['user-agent'] });
+          const slug = decodeURIComponent(mm[1]);
+          if (salonExists(slug)) {
+            logEvent({ event: 'preview_ouvert', slug, token: req.query.token || null, src: req.query.src || null, ip: clientIp(req), ua: req.headers['user-agent'] });
+          }
         } else {
           mm = p.match(/^\/admin\/([^/?#]+)/);
           if (mm && !RESERVED.has(mm[1])) {
-            logEvent({ event: 'editeur_ouvert', slug: decodeURIComponent(mm[1]), token: req.query.token || null, src: req.query.src || null, ip: clientIp(req), ua: req.headers['user-agent'] });
+            const slug = decodeURIComponent(mm[1]);
+            if (salonExists(slug)) {
+              logEvent({ event: 'editeur_ouvert', slug, token: req.query.token || null, src: req.query.src || null, ip: clientIp(req), ua: req.headers['user-agent'] });
+            }
           }
         }
       } else if (m === 'POST') {
         const mm = p.match(/^\/api\/edit\/([^/?#]+)/);
         if (mm) {
-          logEvent({ event: 'editeur_modifie', slug: decodeURIComponent(mm[1]), ip: clientIp(req), ua: req.headers['user-agent'] });
+          const slug = decodeURIComponent(mm[1]);
+          if (salonExists(slug)) {
+            logEvent({ event: 'editeur_modifie', slug, ip: clientIp(req), ua: req.headers['user-agent'] });
+          }
         }
       }
     }
@@ -81,7 +102,7 @@ export function trackingMiddleware(req, res, next) {
 router.post('/track', express.json({ limit: '4kb' }), (req, res) => {
   try {
     const b = req.body || {};
-    if (b.event && ALLOWED_CLIENT_EVENTS.has(b.event)) {
+    if (b.event && ALLOWED_CLIENT_EVENTS.has(b.event) && salonExists(b.slug)) {
       logEvent({ event: b.event, slug: b.slug, token: b.token, src: b.src, meta: b.meta, ip: clientIp(req), ua: req.headers['user-agent'] });
     }
   } catch {}
