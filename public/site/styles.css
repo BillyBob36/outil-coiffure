@@ -457,6 +457,8 @@ body {
     transition: var(--transition);
     position: relative;
     overflow: hidden;
+    display: flex;            /* carte en colonne pour aligner le prix en bas */
+    flex-direction: column;
 }
 
 .service-card::before {
@@ -505,6 +507,8 @@ body {
     font-weight: 600;
     color: var(--color-gold);
     letter-spacing: 1px;
+    margin-top: auto;        /* pousse le prix en bas : prix alignes entre cartes */
+    align-self: center;      /* garde le prix centre horizontalement */
 }
 
 /* ========================================
