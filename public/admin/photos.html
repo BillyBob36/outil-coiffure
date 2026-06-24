@@ -90,6 +90,29 @@
   #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);background:#1a1a1a;color:#fff;padding:11px 20px;border-radius:11px;font-size:14px;font-weight:600;transition:transform .25s;z-index:120;max-width:90vw;}
   #toast.on{transform:translateX(-50%) translateY(0);}
   @media(max-width:680px){.crit-row{grid-template-columns:1fr 60px;}.crit-row textarea{grid-column:1/-1;}}
+  /* Sélecteur de vue (IA / Manuel) */
+  .vtabs{display:flex;gap:6px;margin-bottom:16px;background:#ece8de;padding:5px;border-radius:13px;}
+  .vtab{flex:1;border:none;background:transparent;padding:11px 14px;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;color:var(--cool);}
+  .vtab.active{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.09);}
+  /* Grille de sélection manuelle */
+  .mbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin:10px 0 4px;}
+  .mit{border:1.5px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;transition:box-shadow .15s,border-color .15s;}
+  .mit.galon{border-color:var(--gold);box-shadow:0 0 0 2px rgba(200,162,75,.35);}
+  .mim{position:relative;height:108px;background:#eee;cursor:zoom-in;}
+  .mim img{width:100%;height:100%;object-fit:cover;display:block;}
+  .mim.heronow{outline:3px solid var(--ok);outline-offset:-3px;}
+  .mtag{position:absolute;top:5px;left:5px;background:rgba(0,0,0,.65);color:#fff;border-radius:6px;padding:1px 7px;font-size:10.5px;font-weight:700;}
+  .mtag.ld{top:auto;bottom:5px;background:rgba(192,57,43,.85);}
+  .mtag.star{background:rgba(200,162,75,.92);}
+  .mtag.ok{background:rgba(19,138,54,.92);}
+  .macts{display:flex;gap:6px;padding:7px;align-items:center;}
+  .mhero-btn{flex:1;border:1.5px solid var(--border);background:#fff;border-radius:7px;padding:6px 8px;font-size:12px;font-weight:700;cursor:pointer;color:var(--ink);}
+  .mhero-btn:hover{border-color:var(--gold);background:#fdf3dc;}
+  .mhero-btn.done{border-color:var(--ok);background:#dcfce7;color:#14532d;}
+  .mhero-btn:disabled{opacity:.55;cursor:default;}
+  .mgal{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--cool);cursor:pointer;white-space:nowrap;user-select:none;}
+  .mgal input{width:15px;height:15px;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -105,6 +128,10 @@
   </div>
 </header>
 <main>
+  <div class="vtabs">
+    <button class="vtab active" data-v="ia">🤖 Sélection IA</button>
+    <button class="vtab" data-v="manual">✋ Sélection manuelle</button>
+  </div>
   <div id="content"><div class="msg">Chargement…</div></div>
 </main>
 
@@ -117,6 +144,10 @@
 var $=function(id){return document.getElementById(id);};
 var stats=null, criteria=null, filter='feedback_pending', rows=[], total=0, offset=0, LIMIT=15;
 var jobTimer=null, currentJob=null;
+var view='ia';
+var mState={sources:null, src:null, total:0, offset:0, salons:[], sel:{}};
+var M_LIMIT=8;
+function cap(s){return s?String(s).charAt(0).toUpperCase()+String(s).slice(1):s;}
 
 function esc(s){return s==null?'':String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function toast(m,ms){var t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('on');},ms||3200);}
@@ -363,7 +394,166 @@ function pollJob(size){
   },2500);
 }
 
+// ============ VUE MANUELLE (sélection à la main par région) ============
+function renderManual(){
+  var h='<div class="panel"><h3>✋ Sélection manuelle des photos par région</h3>'
+    +'<div style="font-size:13px;color:var(--cool);margin-bottom:12px">Choisis une région, puis pour chaque salon : clique <b>« Héros »</b> sur la meilleure photo de fond, et coche <b>« Galerie »</b> sur les photos à mettre dans la galerie. Même résultat que l\'onglet IA, mais c\'est toi qui choisis.</div>'
+    +'<div class="mbar"><label style="font-weight:600">Région / CSV :</label>'
+    +'<select class="pos" id="m-src" style="min-width:210px"><option value="">— choisir —</option></select>'
+    +'<span id="m-srcinfo" style="font-size:12.5px;color:var(--muted)"></span></div></div>'
+    +'<div id="m-list"><div class="msg">Choisis une région ci-dessus pour afficher ses salons et leurs photos.</div></div>';
+  $('content').innerHTML=h;
+  var sel=$('m-src');
+  function fillSel(){
+    sel.innerHTML='<option value="">— choisir —</option>'+(mState.sources||[]).map(function(s){
+      var val=(s.src==null?'__null__':s.src);
+      var label=(s.src==null?'(sans région)':cap(s.src));
+      return '<option value="'+esc(val)+'">'+esc(label)+' ('+s.salons+')</option>';
+    }).join('');
+    if(mState.src)sel.value=mState.src;
+  }
+  if(!mState.sources){
+    api('/admin/api/picker/csv-sources').then(function(j){mState.sources=j.sources||[];fillSel();}).catch(function(e){toast('Erreur : '+e.message);});
+  } else { fillSel(); }
+  sel.onchange=function(){
+    mState.src=sel.value; mState.offset=0; mState.salons=[]; mState.sel={};
+    if(!mState.src){$('m-list').innerHTML='<div class="msg">Choisis une région.</div>';var i=$('m-srcinfo');if(i)i.textContent='';return;}
+    loadManualSalons();
+  };
+  if(mState.src && mState.salons.length) renderManualList();
+}
+function loadManualSalons(){
+  if(mState.offset===0)$('m-list').innerHTML='<div class="msg">Chargement des salons…</div>';
+  return api('/admin/api/picker/manual-salons?csv_source='+encodeURIComponent(mState.src)+'&limit='+M_LIMIT+'&offset='+mState.offset)
+    .then(function(j){
+      mState.total=j.total;
+      mState.salons=(mState.offset===0)?j.salons:mState.salons.concat(j.salons);
+      renderManualList();
+    }).catch(function(e){$('m-list').innerHTML='<div class="msg">Erreur : '+esc(e.message)+'</div>';});
+}
+function mCard(s){
+  var h='<div class="card" data-slug="'+esc(s.slug)+'">';
+  h+='<div class="card-head"><span class="nm">'+esc(s.nom)+'</span><span class="vl">'+esc(s.ville||'')+'</span>';
+  if(s.hero_applied)h+='<span class="badge b-applied">✓ héros perso</span>';
+  if(s.gallery_custom)h+='<span class="badge b-good">galerie ×'+s.gallery_custom+'</span>';
+  h+='<span class="meta"><a class="tlink" href="https://maquickpage.fr/preview/'+encodeURIComponent(s.slug)+'" target="_blank" rel="noopener">Voir la démo ↗</a></span></div>';
+  if(!s.photos||!s.photos.length){h+='<div class="msg" style="padding:14px">Aucune photo.</div></div>';return h;}
+  h+='<div class="mgrid">';
+  s.photos.forEach(function(p){
+    var galSel=!!(mState.sel[s.slug]&&mState.sel[s.slug][p.photo_id]);
+    var isAi=p.photo_id===s.ai_pick_photo_id;
+    var isHero=p.photo_id===s._heroPid;
+    h+='<div class="mit'+(galSel?' galon':'')+'" data-pid="'+esc(p.photo_id)+'">'
+      +'<div class="mim'+(isHero?' heronow':'')+'" data-lg="'+esc(p.lg)+'"><img loading="lazy" src="'+esc(p.th)+'" alt="">'
+      +(isHero?'<span class="mtag ok">✓ héros</span>':(isAi?'<span class="mtag star">⭐ IA</span>':''))
+      +(p.lowdef?'<span class="mtag ld">basse déf</span>':'')
+      +'</div>'
+      +'<div class="macts"><button class="mhero-btn'+(isHero?' done':'')+'" data-hero="'+esc(p.photo_id)+'">'+(isHero?'✓ Héros':'Héros')+'</button>'
+      +'<label class="mgal"><input type="checkbox" data-gal="'+esc(p.photo_id)+'"'+(galSel?' checked':'')+'>Galerie</label></div>'
+      +'</div>';
+  });
+  h+='</div>';
+  h+='<div class="actions">'
+    +'<select class="pos m-pos"><option value="centre">Cadrage centre</option><option value="haut">Cadrage haut</option><option value="bas">Cadrage bas</option></select>'
+    +'<button class="btn primary sm" data-galmode="replace">Remplacer la galerie (0)</button>'
+    +'<button class="btn sm" data-galmode="append">＋ Ajouter (0)</button>'
+    +'<button class="btn sm" data-reset="1">↺ Réinitialiser</button>'
+    +'<span class="m-status" style="font-size:12.5px;color:var(--cool)"></span>'
+    +'</div></div>';
+  return h;
+}
+function renderManualList(){
+  var el=$('m-list');if(!el)return;
+  var info=$('m-srcinfo');if(info)info.textContent=mState.total+' salon'+(mState.total>1?'s':'')+' avec photos';
+  if(!mState.salons.length){el.innerHTML='<div class="msg">Aucun salon avec photos pour cette région.</div>';return;}
+  var h=mState.salons.map(mCard).join('');
+  if(mState.salons.length<mState.total)h+='<button class="btn more" id="m-more">Charger plus ('+mState.salons.length+'/'+mState.total+')</button>';
+  el.innerHTML=h;
+  document.querySelectorAll('#m-list .card').forEach(bindManualCard);
+  var m=$('m-more');if(m)m.onclick=function(){mState.offset+=M_LIMIT;loadManualSalons();};
+}
+function mSetStatus(card,t){var s=card.querySelector('.m-status');if(s)s.textContent=t;}
+function mUpdateGalBtns(card,slug){
+  var bag=mState.sel[slug]||{};
+  var n=Object.keys(bag).filter(function(k){return bag[k];}).length;
+  var over=n>12;
+  var rep=card.querySelector('[data-galmode="replace"]'), add=card.querySelector('[data-galmode="append"]');
+  if(rep){rep.textContent=over?('Max 12 ('+n+')'):('Remplacer la galerie ('+n+')');rep.disabled=(n===0||over);}
+  if(add){add.textContent=over?('Max 12 ('+n+')'):('＋ Ajouter ('+n+')');add.disabled=(n===0||over);}
+}
+function mCardNode(slug){var found=null;document.querySelectorAll('#m-list .card').forEach(function(c){if(c.getAttribute('data-slug')===slug)found=c;});return found;}
+function mRerenderCard(slug){
+  var salon=mState.salons.find(function(x){return x.slug===slug;});
+  var node=mCardNode(slug);
+  if(!salon||!node)return;
+  var tmp=document.createElement('div');tmp.innerHTML=mCard(salon);
+  var fresh=tmp.firstChild;
+  node.parentNode.replaceChild(fresh,node);
+  bindManualCard(fresh);
+}
+function bindManualCard(card){
+  var slug=card.getAttribute('data-slug');
+  var salon=mState.salons.find(function(x){return x.slug===slug;});
+  if(!salon)return;
+  if(!mState.sel[slug])mState.sel[slug]={};
+  card.querySelectorAll('.mim').forEach(function(im){
+    im.onclick=function(){$('lb-img').src=im.getAttribute('data-lg');$('lb').classList.add('on');};
+  });
+  card.querySelectorAll('[data-hero]').forEach(function(b){
+    b.onclick=function(){
+      var pid=b.getAttribute('data-hero');
+      var posEl=card.querySelector('.m-pos'); var pos=posEl?posEl.value:'centre';
+      var old=b.textContent; b.disabled=true; b.textContent='…';
+      mSetStatus(card,'Recadrage + upload du héros…');
+      api('/admin/api/picker/salon/'+encodeURIComponent(slug)+'/hero',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({photo_id:pid,position:pos})})
+        .then(function(){toast('Héros appliqué ✓ — démo à jour, screenshot en recapture');salon.hero_applied=true;salon._heroPid=pid;mRerenderCard(slug);})
+        .catch(function(e){toast('Erreur héros : '+e.message);b.disabled=false;b.textContent=old;mSetStatus(card,'');});
+    };
+  });
+  card.querySelectorAll('[data-gal]').forEach(function(c){
+    c.onchange=function(){
+      var pid=c.getAttribute('data-gal');
+      mState.sel[slug][pid]=c.checked;
+      var it=c.closest('.mit'); if(it)it.classList.toggle('galon',c.checked);
+      mUpdateGalBtns(card,slug);
+    };
+  });
+  card.querySelectorAll('[data-galmode]').forEach(function(b){
+    b.onclick=function(){
+      var mode=b.getAttribute('data-galmode');
+      var bag=mState.sel[slug]||{};
+      var ids=Object.keys(bag).filter(function(k){return bag[k];});
+      if(!ids.length)return;
+      card.querySelectorAll('[data-galmode]').forEach(function(x){x.disabled=true;});
+      mSetStatus(card,'Recadrage + upload de '+ids.length+' image(s)…');
+      api('/admin/api/picker/salon/'+encodeURIComponent(slug)+'/gallery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({photo_ids:ids,mode:mode})})
+        .then(function(r){toast(mode==='append'?('Galerie enrichie : +'+r.added+' photo(s) ✓'):('Galerie remplacée ('+r.count+' image'+(r.count>1?'s':'')+') ✓'));salon.gallery_custom=r.count;mState.sel[slug]={};mRerenderCard(slug);})
+        .catch(function(e){toast('Erreur galerie : '+e.message);mSetStatus(card,'');mUpdateGalBtns(card,slug);card.querySelectorAll('[data-galmode]').forEach(function(x){x.disabled=false;});});
+    };
+  });
+  var rb=card.querySelector('[data-reset]');
+  if(rb)rb.onclick=function(){
+    if(!confirm('Réinitialiser les photos de ce salon ?\n\nLe héros et la galerie repassent aux images du mode démo, et les photos Google appliquées sont retirées.\n\n(Les autres réglages — services, avis, contact — ne changent pas.)'))return;
+    rb.disabled=true; rb.textContent='…'; mSetStatus(card,'Retour aux images de démo…');
+    api('/admin/api/picker/salon/'+encodeURIComponent(slug)+'/reset-images',{method:'POST'})
+      .then(function(r){toast(r.changed?'Photos réinitialisées (mode démo) ✓':'Déjà en mode démo');salon.hero_applied=false;salon.gallery_custom=0;salon._heroPid=null;mState.sel[slug]={};mRerenderCard(slug);})
+      .catch(function(e){toast('Erreur : '+e.message);rb.disabled=false;rb.textContent='↺ Réinitialiser';mSetStatus(card,'');});
+  };
+  mUpdateGalBtns(card,slug);
+}
+
 // ============ INIT ============
+document.querySelectorAll('.vtab').forEach(function(b){
+  b.onclick=function(){
+    if(b.classList.contains('active'))return;
+    document.querySelectorAll('.vtab').forEach(function(x){x.classList.remove('active');});
+    b.classList.add('active');
+    view=b.getAttribute('data-v');
+    if(view==='manual')renderManual();
+    else if(stats)renderShell();
+    else refreshAll().catch(function(){});
+  };
+});
 refreshAll().catch(function(e){
   if(e.message==='auth')authMsg();
   else $('content').innerHTML='<div class="msg">Erreur de chargement : '+esc(e.message)+'</div>';

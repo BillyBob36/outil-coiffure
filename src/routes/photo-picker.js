@@ -436,4 +436,60 @@ router.post('/api/picker/salon/:slug/score', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Sélection MANUELLE par région/CSV (onglet « Sélection manuelle » de photos.html)
+//   GET /api/picker/csv-sources   → régions disponibles (salons en BDD avec photos)
+//   GET /api/picker/manual-salons → salons d'une région + leurs photos dédupliquées
+// ---------------------------------------------------------------------------
+router.get('/api/picker/csv-sources', (req, res) => {
+  const rows = db.prepare(`
+    SELECT s.csv_source AS src, COUNT(*) AS salons
+    FROM salons s
+    WHERE s.google_id IS NOT NULL AND s.google_id != ''
+      AND EXISTS (SELECT 1 FROM salon_photos sp WHERE sp.google_id = s.google_id)
+    GROUP BY s.csv_source
+    ORDER BY salons DESC
+  `).all();
+  res.json({ sources: rows });
+});
+
+router.get('/api/picker/manual-salons', async (req, res) => {
+  const csvSource = (req.query.csv_source || '').toString();
+  if (!csvSource) return res.status(400).json({ error: 'csv_source requis' });
+  const limit = Math.min(parseInt(req.query.limit || '8', 10), 24);
+  const offset = parseInt(req.query.offset || '0', 10);
+  const isNull = csvSource === '__null__';
+  const whereSrc = isNull ? 's.csv_source IS NULL' : 's.csv_source = ?';
+  const srcParams = isNull ? [] : [csvSource];
+  const baseWhere = `${whereSrc} AND s.google_id IS NOT NULL AND s.google_id != '' AND EXISTS (SELECT 1 FROM salon_photos sp WHERE sp.google_id = s.google_id)`;
+
+  const total = db.prepare(`SELECT COUNT(*) AS c FROM salons s WHERE ${baseWhere}`).get(...srcParams).c;
+  const salons = db.prepare(`
+    SELECT s.id, s.slug, s.nom, s.ville, s.google_id, s.overrides_json
+    FROM salons s WHERE ${baseWhere}
+    ORDER BY s.nom COLLATE NOCASE, s.id
+    LIMIT ? OFFSET ?
+  `).all(...srcParams, limit, offset);
+
+  const out = [];
+  for (const s of salons) {
+    const rawPhotos = db.prepare('SELECT id, photo_id, dir, lowdef FROM salon_photos WHERE google_id = ? ORDER BY COALESCE(position,99), id').all(s.google_id);
+    const dedup = await dedupPhotosByPhash(rawPhotos);
+    const lastScoring = db.prepare("SELECT selected_photo_id FROM picker_scorings WHERE google_id = ? AND error IS NULL ORDER BY id DESC LIMIT 1").get(s.google_id);
+    let heroApplied = false, galleryCount = 0;
+    try {
+      const ov = JSON.parse(s.overrides_json || '{}') || {};
+      heroApplied = !!(ov.hero && ov.hero.backgroundImage);
+      if (ov.gallery && ov.gallery.imagesSource === 'photo-picker' && Array.isArray(ov.gallery.images)) galleryCount = ov.gallery.images.length;
+    } catch {}
+    out.push({
+      slug: s.slug, nom: s.nom, ville: s.ville,
+      hero_applied: heroApplied, gallery_custom: galleryCount,
+      ai_pick_photo_id: lastScoring ? lastScoring.selected_photo_id : null,
+      photos: dedup.kept.slice(0, 15).map((p) => ({ photo_id: p.photo_id, lowdef: !!p.lowdef, ...photoUrls(p) })),
+    });
+  }
+  res.json({ total, limit, offset, csv_source: csvSource, salons: out });
+});
+
 export default router;
