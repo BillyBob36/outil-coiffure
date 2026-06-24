@@ -179,6 +179,7 @@
     <div class="mfs-acts">
       <button class="mfs-hero" id="mfs-hero">⭐ Définir héros</button>
       <label class="mfs-gal"><input type="checkbox" id="mfs-gal-input"> Galerie</label>
+      <label class="mfs-gal" title="En cliquant Héros, basculer les autres photos en galerie (en tête)"><input type="checkbox" id="mfs-autogal"> Auto-galerie</label>
     </div>
   </div>
 </div>
@@ -191,7 +192,7 @@ var $=function(id){return document.getElementById(id);};
 var stats=null, criteria=null, filter='feedback_pending', rows=[], total=0, offset=0, LIMIT=15;
 var jobTimer=null, currentJob=null;
 var view='ia';
-var mState={sources:null, src:null, total:0, offset:0, salons:[], sel:{}};
+var mState={sources:null, src:null, total:0, offset:0, salons:[], sel:{}, autoGallery:true};
 var M_LIMIT=8;
 function cap(s){return s?String(s).charAt(0).toUpperCase()+String(s).slice(1):s;}
 
@@ -446,9 +447,11 @@ function renderManual(){
     +'<div style="font-size:13px;color:var(--cool);margin-bottom:12px">Choisis une région, puis pour chaque salon : clique <b>« Héros »</b> sur la meilleure photo de fond, et coche <b>« Galerie »</b> sur les photos à mettre dans la galerie. Même résultat que l\'onglet IA, mais c\'est toi qui choisis.</div>'
     +'<div class="mbar"><label style="font-weight:600">Région / CSV :</label>'
     +'<select class="pos" id="m-src" style="min-width:210px"><option value="">— choisir —</option></select>'
-    +'<span id="m-srcinfo" style="font-size:12.5px;color:var(--muted)"></span></div></div>'
+    +'<span id="m-srcinfo" style="font-size:12.5px;color:var(--muted)"></span></div>'
+    +'<label class="mopt" style="display:flex;align-items:flex-start;gap:8px;margin-top:12px;font-size:13.5px;cursor:pointer"><input type="checkbox" id="m-autogal" style="width:16px;height:16px;flex:0 0 auto;margin-top:1px"><span>En choisissant un héros, basculer automatiquement <b>les autres photos</b> du salon en galerie (placées en tête).</span></label></div>'
     +'<div id="m-list"><div class="msg">Choisis une région ci-dessus pour afficher ses salons et leurs photos.</div></div>';
   $('content').innerHTML=h;
+  var ag=$('m-autogal'); if(ag){ag.checked=!!mState.autoGallery; ag.onchange=function(){mSetAutoGallery(ag.checked);};}
   var sel=$('m-src');
   function fillSel(){
     sel.innerHTML='<option value="">— choisir —</option>'+(mState.sources||[]).map(function(s){
@@ -537,6 +540,35 @@ function mRerenderCard(slug){
   node.parentNode.replaceChild(fresh,node);
   bindManualCard(fresh);
 }
+function mSetAutoGallery(v){
+  mState.autoGallery=!!v;
+  var a=$('m-autogal'); if(a)a.checked=mState.autoGallery;
+  var b=$('mfs-autogal'); if(b)b.checked=mState.autoGallery;
+}
+// Applique le héros, et si l'option auto-galerie est active, bascule les autres
+// photos du salon en galerie (en tête, max 12). Renvoie une promesse ; ne rejette
+// que si le héros échoue (l'échec galerie est non bloquant).
+function mApplyHero(slug,photoId,position){
+  var salon=mState.salons.find(function(x){return x.slug===slug;});
+  return api('/admin/api/picker/salon/'+encodeURIComponent(slug)+'/hero',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({photo_id:photoId,position:position})})
+    .then(function(){
+      if(salon){salon.hero_applied=true;salon._heroPid=photoId;}
+      if(mState.autoGallery && salon && salon.photos){
+        var others=salon.photos.filter(function(p){return p.photo_id!==photoId;}).map(function(p){return p.photo_id;}).slice(0,12);
+        if(others.length){
+          return api('/admin/api/picker/salon/'+encodeURIComponent(slug)+'/gallery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({photo_ids:others,mode:'append'})})
+            .then(function(r){
+              if(salon)salon.gallery_custom=r.count;
+              if(mState.sel[slug])mState.sel[slug]={};
+              toast('Héros + galerie : '+r.added+' photo'+(r.added>1?'s':'')+' en tête ✓');
+              return r;
+            }, function(e){ toast('Héros OK · galerie auto échouée : '+e.message); return null; });
+        }
+      }
+      toast('Héros appliqué ✓ — démo à jour, screenshot en recapture');
+      return null;
+    });
+}
 function bindManualCard(card){
   var slug=card.getAttribute('data-slug');
   var salon=mState.salons.find(function(x){return x.slug===slug;});
@@ -551,9 +583,9 @@ function bindManualCard(card){
       var pid=b.getAttribute('data-hero');
       var posEl=card.querySelector('.m-pos'); var pos=posEl?posEl.value:'centre';
       var old=b.textContent; b.disabled=true; b.textContent='…';
-      mSetStatus(card,'Recadrage + upload du héros…');
-      api('/admin/api/picker/salon/'+encodeURIComponent(slug)+'/hero',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({photo_id:pid,position:pos})})
-        .then(function(){toast('Héros appliqué ✓ — démo à jour, screenshot en recapture');salon.hero_applied=true;salon._heroPid=pid;mRerenderCard(slug);})
+      mSetStatus(card,mState.autoGallery?'Héros + galerie en cours…':'Recadrage + upload du héros…');
+      mApplyHero(slug,pid,pos)
+        .then(function(){mRerenderCard(slug);})
         .catch(function(e){toast('Erreur héros : '+e.message);b.disabled=false;b.textContent=old;mSetStatus(card,'');});
     };
   });
@@ -616,6 +648,7 @@ function renderFs(){
   hb.classList.toggle('done',isHero);
   hb.disabled=false;
   $('mfs-gal-input').checked=!!(mState.sel[s.slug]&&mState.sel[s.slug][p.photo_id]);
+  var agf=$('mfs-autogal'); if(agf)agf.checked=!!mState.autoGallery;
   if(s.photos.length>1){
     [(fs.pi+1)%s.photos.length,(fs.pi-1+s.photos.length)%s.photos.length].forEach(function(i){var im=new Image();im.src=s.photos[i].lg;});
   }
@@ -641,8 +674,8 @@ function fsApplyHero(){
   var pos='centre', card=mCardNode(s.slug);
   if(card){var psel=card.querySelector('.m-pos'); if(psel)pos=psel.value;}
   var hb=$('mfs-hero'); hb.disabled=true; hb.textContent='…';
-  api('/admin/api/picker/salon/'+encodeURIComponent(s.slug)+'/hero',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({photo_id:p.photo_id,position:pos})})
-    .then(function(){toast('Héros appliqué ✓ — démo à jour, screenshot en recapture');s.hero_applied=true;s._heroPid=p.photo_id;mRerenderCard(s.slug);renderFs();})
+  mApplyHero(s.slug,p.photo_id,pos)
+    .then(function(){mRerenderCard(s.slug);renderFs();})
     .catch(function(e){toast('Erreur héros : '+e.message);renderFs();});
 }
 function fsToggleGal(checked){
@@ -664,6 +697,7 @@ $('mfs-nav-up').onclick=function(){fsSalonStep(-1);};
 $('mfs-nav-down').onclick=function(){fsSalonStep(1);};
 $('mfs-hero').onclick=fsApplyHero;
 $('mfs-gal-input').onchange=function(){fsToggleGal(this.checked);};
+$('mfs-autogal').onchange=function(){mSetAutoGallery(this.checked);};
 document.addEventListener('keydown',function(e){
   if(!fs.open)return;
   if(e.key==='Escape')closeFs();
