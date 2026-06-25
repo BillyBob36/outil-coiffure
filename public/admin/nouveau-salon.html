@@ -46,6 +46,7 @@
   .linkline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
   .linkline a{color:var(--blue);font-weight:600;text-decoration:none;word-break:break-all;}
   .hint{font-size:12.5px;color:var(--muted);margin-top:6px;}
+  .photo-status{margin-top:10px;font-size:14px;line-height:1.5;}
   #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);background:#1a1a1a;color:#fff;padding:11px 20px;border-radius:11px;font-size:14px;font-weight:600;transition:transform .25s;z-index:120;max-width:92vw;text-align:center;}
   #toast.on{transform:translateX(-50%) translateY(0);}
 </style>
@@ -203,15 +204,35 @@ $('manual-btn').onclick=function(){
 function showSuccess(j,nom){
   var area=$('ok-area');
   var box=document.createElement('div');box.className='ok-box';
+  var pid='ph-'+Math.random().toString(36).slice(2,8);
   box.innerHTML='<h2>✓ Démo créé : '+esc(nom||j.slug)+'</h2>'
     +'<div class="linkline"><b>Démo à montrer :</b> <a href="'+esc(j.preview_url)+'" target="_blank" rel="noopener">'+esc(j.preview_url)+'</a> <button class="btn sm" data-copy="'+esc(j.preview_url)+'">Copier</button></div>'
     +(j.admin_url?'<div class="linkline"><b>Éditeur :</b> <a href="'+esc(j.admin_url)+'" target="_blank" rel="noopener">ouvrir l\'éditeur du salon ↗</a></div>':'')
-    +'<div class="hint">Le démo utilise des images par défaut pour l\'instant. Les vraies photos Google seront ajoutables ensuite via l\'onglet Photos.</div>';
+    +'<div class="photo-status" id="'+pid+'"></div>';
   area.insertBefore(box,area.firstChild);
   var cp=box.querySelector('[data-copy]');
   if(cp)cp.onclick=function(){navigator.clipboard&&navigator.clipboard.writeText(cp.getAttribute('data-copy'));toast('Lien copié ✓');};
+  var ps=$(pid);
+  if(j.photos_pending){
+    ps.innerHTML='⏳ Récupération des vraies photos Google et application du héros…';
+    pollPhotos(j.slug,j.preview_url,ps,0);
+  } else {
+    ps.innerHTML='<div class="hint">Démo avec images par défaut. Tu peux ajouter des photos via l\'onglet Photos.</div>';
+  }
   window.scrollTo({top:0,behavior:'smooth'});
   toast('Salon créé ✓');
+}
+function pollPhotos(slug,previewUrl,el,tries){
+  api('/admin/api/salon-new/photo-status?slug='+encodeURIComponent(slug)).then(function(st){
+    var done=(st.hero_applied&&st.screenshot)||tries>28;
+    if(done){
+      var shot=st.screenshot?('<div style="margin-top:8px"><a href="'+esc(previewUrl)+'" target="_blank" rel="noopener"><img src="https://maquickpage.fr'+esc(st.screenshot)+'?t='+Date.now()+'" alt="aperçu du démo" style="max-width:340px;width:100%;border-radius:10px;border:1px solid var(--border)"></a></div>'):'';
+      el.innerHTML=(st.hero_applied?'<div style="color:var(--ok);font-weight:700">✓ '+st.photos+' vraies photos · héros + galerie ('+st.gallery+') appliqués</div>':'<div class="hint">Photos en cours côté serveur — recharge le démo dans un instant.</div>')+shot;
+    } else {
+      el.innerHTML='⏳ '+(st.hero_applied?'Aperçu du démo en cours…':'Récupération des vraies photos Google…')+' ('+(st.photos||0)+' photos)';
+      setTimeout(function(){pollPhotos(slug,previewUrl,el,tries+1);},3000);
+    }
+  }).catch(function(){if(tries<=28)setTimeout(function(){pollPhotos(slug,previewUrl,el,tries+1);},3500);});
 }
 })();
 </script>

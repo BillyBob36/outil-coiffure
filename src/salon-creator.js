@@ -6,6 +6,25 @@ import { generateSlug } from './slug-generator.js';
 import { generateEditToken } from './token-generator.js';
 import { captureSalon } from './screenshot-worker.js';
 
+// Nettoie le libellé Google (souvent « Nom - coiffeur Ville ») en nom d'affichage propre.
+// Garde le 1er segment ; retire les segments « filler SEO » (coiffeur/coiffure/salon/ville).
+export function cleanDisplayName(nom, ville) {
+  if (!nom) return nom;
+  let s = String(nom).trim();
+  const parts = s.split(/\s+[-|–—]\s+/);
+  if (parts.length > 1) {
+    const villeLow = (ville || '').toLowerCase().trim();
+    const isFiller = (p) => {
+      const low = p.toLowerCase();
+      return /\b(coiffeur|coiffure|barbier|salon)\b/.test(low) || (villeLow && low.includes(villeLow));
+    };
+    const kept = [parts[0]];
+    for (let i = 1; i < parts.length; i++) if (!isFiller(parts[i])) kept.push(parts[i]);
+    s = kept.join(' - ');
+  }
+  return s.trim() || String(nom).trim();
+}
+
 const insertSalon = db.prepare(`
   INSERT INTO salons (
     slug, nom, nom_clean, ville, code_postal, adresse, telephone, email,
@@ -14,7 +33,7 @@ const insertSalon = db.prepare(`
     meta_image, titre_site, meta_description, site_internet_original,
     google_id, data_json, csv_source, edit_token, group_id
   ) VALUES (
-    @slug, @nom, @nom, @ville, @code_postal, @adresse, @telephone, @email,
+    @slug, @nom, @nom_clean, @ville, @code_postal, @adresse, @telephone, @email,
     @latitude, @longitude, @types, @note_avis, @nb_avis, @heures_ouverture,
     @lien_facebook, @lien_instagram, @lien_tiktok, @lien_youtube, @lien_google_maps,
     @meta_image, @titre_site, @meta_description, @site_internet_original,
@@ -35,6 +54,7 @@ export function createSalon(data, { csvSource = 'manuel', groupId = null } = {})
   const row = {
     slug,
     nom: data.nom,
+    nom_clean: cleanDisplayName(data.nom, data.ville),
     ville: data.ville || null,
     code_postal: data.code_postal || null,
     adresse: data.adresse || null,

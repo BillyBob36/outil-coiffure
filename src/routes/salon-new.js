@@ -9,6 +9,7 @@ import express from 'express';
 import db from '../db.js';
 import { searchText, placeDetails, isPlacesConfigured } from '../places-client.js';
 import { createSalon, mapPlaceToSalonData } from '../salon-creator.js';
+import { enrichSalonWithPlacePhotos } from '../place-photos.js';
 
 const router = express.Router();
 router.use(express.json({ limit: '1mb' }));
@@ -68,7 +69,16 @@ router.post('/api/salon-new/from-place', async (req, res) => {
     if (!data.nom) return res.status(422).json({ error: 'Nom introuvable pour ce lieu' });
 
     const r = createSalon(data, { csvSource: 'manuel', groupId });
-    res.json({ ok: true, slug: r.slug, edit_token: r.edit_token, data, ...urlsFor(r.slug, r.edit_token) });
+
+    // Photos Google EN ARRIÈRE-PLAN (ne bloque pas la réponse) : fetch + stockage
+    // + application auto d'un héros + galerie. Le front suit via /photo-status.
+    const photosPending = !!(place.photos && place.photos.length);
+    if (photosPending && data.google_id) {
+      enrichSalonWithPlacePhotos({ slug: r.slug, googleId: data.google_id, photos: place.photos, nom: data.nom, ville: data.ville })
+        .then((x) => console.log(`[salon-new] ${r.slug}: ${x.stored} photos, hero=${x.hero}, gallery=${x.gallery}`))
+        .catch((e) => console.warn(`[salon-new] enrich ${r.slug} fail: ${e.message}`));
+    }
+    res.json({ ok: true, slug: r.slug, edit_token: r.edit_token, data, photos_pending: photosPending, ...urlsFor(r.slug, r.edit_token) });
   } catch (e) {
     res.status(e.status === 403 ? 403 : 500).json({ error: e.message });
   }
@@ -97,6 +107,22 @@ router.post('/api/salon-new/manual', (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// Suivi de la récupération des photos d'un salon (poll par le front après création).
+router.get('/api/salon-new/photo-status', (req, res) => {
+  const slug = (req.query.slug ? String(req.query.slug) : '').trim();
+  if (!slug) return res.status(400).json({ error: 'slug requis' });
+  const s = db.prepare('SELECT google_id, overrides_json, screenshot_path FROM salons WHERE slug = ?').get(slug);
+  if (!s) return res.status(404).json({ error: 'introuvable' });
+  const photos = s.google_id ? db.prepare('SELECT COUNT(*) AS c FROM salon_photos WHERE google_id = ?').get(s.google_id).c : 0;
+  let hero = false, gallery = 0;
+  try {
+    const ov = JSON.parse(s.overrides_json || '{}') || {};
+    hero = !!(ov.hero && ov.hero.backgroundImage);
+    if (ov.gallery && ov.gallery.imagesSource === 'photo-picker' && Array.isArray(ov.gallery.images)) gallery = ov.gallery.images.length;
+  } catch {}
+  res.json({ slug, photos, hero_applied: hero, gallery, screenshot: s.screenshot_path || null });
 });
 
 export default router;
