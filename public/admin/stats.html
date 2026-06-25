@@ -126,10 +126,29 @@
   #pm-zoom img{max-width:96vw;max-height:92vh;border-radius:8px;}
   #st-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(90px);background:#1a1a1a;color:#fff;padding:11px 20px;border-radius:11px;font-size:14px;font-weight:600;transition:transform .25s;z-index:130;max-width:90vw;}
   #st-toast.on{transform:translateX(-50%) translateY(0);}
+  .stats-toolbar header{position:static;}
 </style>
+<link rel="stylesheet" href="/admin/admin-nav.css">
 </head>
 <body>
-<header>
+<header class="anav">
+  <div class="anav-inner">
+    <a class="anav-brand" href="/admin/">✂️ Outil coiffure</a>
+    <nav class="anav-tabs">
+      <a class="anav-tab" data-path="/admin" href="/admin/">Tableau de bord</a>
+      <a class="anav-tab" data-path="/admin/photos.html" href="/admin/photos.html">Photos</a>
+      <a class="anav-tab" data-path="/admin/stats.html" href="/admin/stats.html">Suivi</a>
+      <a class="anav-tab" data-path="/admin/nouveau-salon.html" href="/admin/nouveau-salon.html">➕ Nouveau salon</a>
+    </nav>
+    <span class="anav-spacer"></span>
+    <div class="anav-right">
+      <button class="anav-logout" id="anav-logout" type="button">Déconnexion</button>
+    </div>
+  </div>
+</header>
+<script src="/admin/admin-nav.js"></script>
+
+<div class="stats-toolbar">
   <div class="topbar">
     <div class="topbar-inner">
       <span class="brand" id="t-brand">Suivi des maquettes</span>
@@ -140,8 +159,6 @@
         <button class="lang-btn" data-lang="zh" type="button">中</button>
       </span>
       <span class="updated" id="updated"></span>
-      <a class="hbtn" href="/admin/" id="back-admin">← Admin</a>
-      <a class="hbtn" href="/admin/photos.html" id="nav-photos">📷 Photos IA</a>
       <button class="hbtn" id="refresh">↻ Actualiser</button>
       <button class="hbtn gold" id="export">⬇ CSV</button>
     </div>
@@ -153,7 +170,7 @@
       <label class="toggle"><input type="checkbox" id="autorefresh"> <span id="t-auto">Auto (60s)</span></label>
     </div>
   </div>
-</header>
+</div>
 <main><div id="content"><div class="msg" id="t-loading">Chargement…</div></div></main>
 
 <!-- Modale photos salon (héro + galerie depuis les photos Google scrapées) -->

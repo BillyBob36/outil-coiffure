@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>MaQuickPage · Photos IA</title>
+<link rel="stylesheet" href="/admin/admin-nav.css">
 <style>
   :root{--gold:#C8A24B;--gold-d:#A8842F;--ink:#15130E;--bg:#f6f4ef;--card:#fff;--border:#e7e2d6;--muted:#8a8270;--blue:#002FA7;--ok:#138a36;--hot:#c0392b;--cool:#5b6470;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -147,17 +148,22 @@
 </style>
 </head>
 <body>
-<header>
-  <div class="topbar">
-    <div class="topbar-inner">
-      <span class="brand">📷 Photos IA</span>
-      <span class="spacer"></span>
-      <a class="hbtn" href="/admin/">← Admin</a>
-      <a class="hbtn" href="/admin/stats.html">Suivi</a>
-      <span class="hbtn gold">Photos IA</span>
+<header class="anav">
+  <div class="anav-inner">
+    <a class="anav-brand" href="/admin/">✂️ Outil coiffure</a>
+    <nav class="anav-tabs">
+      <a class="anav-tab" data-path="/admin" href="/admin/">Tableau de bord</a>
+      <a class="anav-tab" data-path="/admin/photos.html" href="/admin/photos.html">Photos</a>
+      <a class="anav-tab" data-path="/admin/stats.html" href="/admin/stats.html">Suivi</a>
+      <a class="anav-tab" data-path="/admin/nouveau-salon.html" href="/admin/nouveau-salon.html">➕ Nouveau salon</a>
+    </nav>
+    <span class="anav-spacer"></span>
+    <div class="anav-right">
+      <button class="anav-logout" id="anav-logout" type="button">Déconnexion</button>
     </div>
   </div>
 </header>
+<script src="/admin/admin-nav.js"></script>
 <main>
   <div class="vtabs">
     <button class="vtab active" data-v="ia">🤖 Sélection IA</button>
