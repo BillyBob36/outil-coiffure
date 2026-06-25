@@ -224,7 +224,8 @@ function showSuccess(j,nom){
 }
 function pollPhotos(slug,previewUrl,el,tries){
   api('/admin/api/salon-new/photo-status?slug='+encodeURIComponent(slug)).then(function(st){
-    var done=(st.hero_applied&&st.screenshot)||tries>28;
+    var multi=(st.photos||0)>1;
+    var done=(st.hero_applied&&st.screenshot&&(st.gallery>0||!multi))||tries>32;
     if(done){
       var shot=st.screenshot?('<div style="margin-top:8px"><a href="'+esc(previewUrl)+'" target="_blank" rel="noopener"><img src="https://maquickpage.fr'+esc(st.screenshot)+'?t='+Date.now()+'" alt="aperçu du démo" style="max-width:340px;width:100%;border-radius:10px;border:1px solid var(--border)"></a></div>'):'';
       el.innerHTML=(st.hero_applied?'<div style="color:var(--ok);font-weight:700">✓ '+st.photos+' vraies photos · héros + galerie ('+st.gallery+') appliqués</div>':'<div class="hint">Photos en cours côté serveur — recharge le démo dans un instant.</div>')+shot;

@@ -109,6 +109,26 @@ router.post('/api/salon-new/manual', (req, res) => {
   }
 });
 
+// Re-récupère les photos Google d'un salon existant (par slug) + ré-applique héros/galerie.
+// Utile pour un salon créé avant le pipeline photos, ou pour rafraîchir.
+router.post('/api/salon-new/refetch-photos', async (req, res) => {
+  const slug = (req.body && req.body.slug ? String(req.body.slug) : '').trim();
+  if (!slug) return res.status(400).json({ error: 'slug requis' });
+  const s = db.prepare('SELECT slug, nom, ville, google_id FROM salons WHERE slug = ?').get(slug);
+  if (!s) return res.status(404).json({ error: 'introuvable' });
+  if (!s.google_id) return res.status(409).json({ error: 'pas de google_id (salon non issu de Google)' });
+  try {
+    const place = await placeDetails(s.google_id);
+    if (!place.photos || !place.photos.length) return res.json({ ok: true, pending: false, photos_available: 0, note: 'aucune photo Google' });
+    enrichSalonWithPlacePhotos({ slug: s.slug, googleId: s.google_id, photos: place.photos, nom: s.nom, ville: s.ville })
+      .then((x) => console.log(`[salon-new] refetch ${s.slug}: ${x.stored} photos, hero=${x.hero}, gallery=${x.gallery}`))
+      .catch((e) => console.warn(`[salon-new] refetch ${s.slug} fail: ${e.message}`));
+    res.json({ ok: true, pending: true, photos_available: place.photos.length });
+  } catch (e) {
+    res.status(e.status === 403 ? 403 : 500).json({ error: e.message });
+  }
+});
+
 // Suivi de la récupération des photos d'un salon (poll par le front après création).
 router.get('/api/salon-new/photo-status', (req, res) => {
   const slug = (req.query.slug ? String(req.query.slug) : '').trim();

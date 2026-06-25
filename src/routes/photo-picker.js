@@ -450,7 +450,14 @@ router.get('/api/picker/groups', (req, res) => {
     FROM salon_groups g
     ORDER BY salons DESC
   `).all().filter((r) => r.salons > 0);
-  res.json({ groups: rows });
+  // Entrée synthétique : salons créés à la main (csv_source='manuel') avec photos.
+  const manuel = db.prepare(`
+    SELECT COUNT(*) AS c FROM salons s
+    WHERE s.csv_source = 'manuel' AND s.google_id IS NOT NULL AND s.google_id != ''
+      AND EXISTS (SELECT 1 FROM salon_photos sp WHERE sp.google_id = s.google_id)
+  `).get().c;
+  const out = manuel > 0 ? [{ group_id: 'manuel', name: '✋ Créés à la main', salons: manuel }, ...rows] : rows;
+  res.json({ groups: out });
 });
 
 router.get('/api/picker/manual-salons', async (req, res) => {
@@ -458,9 +465,10 @@ router.get('/api/picker/manual-salons', async (req, res) => {
   if (!groupId) return res.status(400).json({ error: 'group_id requis' });
   const limit = Math.min(parseInt(req.query.limit || '8', 10), 24);
   const offset = parseInt(req.query.offset || '0', 10);
+  const isManuel = groupId === 'manuel';
   const isNone = groupId === 'none';
-  const whereGrp = isNone ? 's.group_id IS NULL' : 's.group_id = ?';
-  const grpParams = isNone ? [] : [parseInt(groupId, 10)];
+  const whereGrp = isManuel ? "s.csv_source = 'manuel'" : (isNone ? 's.group_id IS NULL' : 's.group_id = ?');
+  const grpParams = (isManuel || isNone) ? [] : [parseInt(groupId, 10)];
   const baseWhere = `${whereGrp} AND s.google_id IS NOT NULL AND s.google_id != '' AND EXISTS (SELECT 1 FROM salon_photos sp WHERE sp.google_id = s.google_id)`;
 
   const total = db.prepare(`SELECT COUNT(*) AS c FROM salons s WHERE ${baseWhere}`).get(...grpParams).c;
