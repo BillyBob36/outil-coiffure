@@ -10,6 +10,7 @@ import db from '../db.js';
 import { searchText, placeDetails, isPlacesConfigured } from '../places-client.js';
 import { createSalon, mapPlaceToSalonData } from '../salon-creator.js';
 import { enrichSalonWithPlacePhotos } from '../place-photos.js';
+import { regionGroupIdForPostalCode } from '../dept-region.js';
 
 const router = express.Router();
 router.use(express.json({ limit: '1mb' }));
@@ -68,7 +69,8 @@ router.post('/api/salon-new/from-place', async (req, res) => {
     const data = mapPlaceToSalonData(place);
     if (!data.nom) return res.status(422).json({ error: 'Nom introuvable pour ce lieu' });
 
-    const r = createSalon(data, { csvSource: 'manuel', groupId });
+    const finalGroup = groupId || regionGroupIdForPostalCode(data.code_postal);
+    const r = createSalon(data, { csvSource: 'manuel', groupId: finalGroup });
 
     // Photos Google EN ARRIÈRE-PLAN (ne bloque pas la réponse) : fetch + stockage
     // + application auto d'un héros + galerie. Le front suit via /photo-status.
@@ -102,7 +104,8 @@ router.post('/api/salon-new/manual', (req, res) => {
       site_internet_original: b.site_internet_original || null,
       lien_google_maps: b.lien_google_maps || null,
     };
-    const r = createSalon(data, { csvSource: 'manuel', groupId });
+    const finalGroup = groupId || regionGroupIdForPostalCode(data.code_postal);
+    const r = createSalon(data, { csvSource: 'manuel', groupId: finalGroup });
     res.json({ ok: true, slug: r.slug, edit_token: r.edit_token, ...urlsFor(r.slug, r.edit_token) });
   } catch (e) {
     res.status(500).json({ error: e.message });
