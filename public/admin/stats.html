@@ -142,6 +142,11 @@
     </nav>
     <span class="anav-spacer"></span>
     <div class="anav-right">
+      <span class="lang-switcher">
+        <button class="lang-btn" data-lang="fr" type="button">FR</button>
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+        <button class="lang-btn" data-lang="zh" type="button">中</button>
+      </span>
       <button class="anav-logout" id="anav-logout" type="button">Déconnexion</button>
     </div>
   </div>
@@ -153,11 +158,6 @@
     <div class="topbar-inner">
       <span class="brand" id="t-brand">Suivi des maquettes</span>
       <span class="spacer"></span>
-      <span class="lang-switcher">
-        <button class="lang-btn" data-lang="fr" type="button">FR</button>
-        <button class="lang-btn" data-lang="en" type="button">EN</button>
-        <button class="lang-btn" data-lang="zh" type="button">中</button>
-      </span>
       <span class="updated" id="updated"></span>
       <button class="hbtn" id="refresh">↻ Actualiser</button>
       <button class="hbtn gold" id="export">⬇ CSV</button>
@@ -482,7 +482,7 @@
     });
   }
 
-  Array.prototype.forEach.call(document.querySelectorAll('.lang-btn'),function(b){b.onclick=function(){setLang(b.dataset.lang);};});
+  // (langue gérée par admin-nav.js, partagé sur toutes les pages)
   $('refresh').onclick=load;
   $('export').onclick=function(){window.open(CSV_URL,'_blank');};
   $('q').addEventListener('input',function(){if(raw.length)render();});

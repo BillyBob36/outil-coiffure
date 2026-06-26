@@ -19,4 +19,15 @@
       .catch(function () {})
       .then(function () { location.href = '/admin/login'; });
   });
+
+  var LANG_KEY = 'outil-coiffure-lang';
+  var curLang = 'fr';
+  try { curLang = localStorage.getItem(LANG_KEY) || 'fr'; } catch (e) {}
+  Array.prototype.forEach.call(document.querySelectorAll('.anav .lang-btn'), function (b) {
+    b.classList.toggle('active', b.getAttribute('data-lang') === curLang);
+    b.addEventListener('click', function () {
+      try { localStorage.setItem(LANG_KEY, b.getAttribute('data-lang')); } catch (e) {}
+      location.reload();
+    });
+  });
 })();

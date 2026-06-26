@@ -1297,11 +1297,9 @@ if ($('presentation-modal')) {
   });
 }
 
-// Language switcher
+// Language switcher : applique la langue au chargement. Le CLIC sur FR/EN/中 est
+// géré par admin-nav.js (partagé sur toutes les pages : set localStorage + reload).
 applyTranslations();
-document.querySelectorAll('.lang-btn').forEach(b => {
-  b.addEventListener('click', () => setLang(b.dataset.lang));
-});
 // Re-render dynamic content (table + select) when language changes
 window.onLangChange = () => {
   loadGroups();

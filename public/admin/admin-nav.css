@@ -12,6 +12,10 @@
 .anav-right{display:flex;align-items:center;gap:10px;}
 .anav-logout{background:transparent;border:1px solid rgba(255,255,255,.32);color:#fff;padding:6px 13px;border-radius:8px;font-size:.85rem;font-weight:500;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;}
 .anav-logout:hover{background:rgba(255,255,255,.12);}
+.anav .lang-switcher{display:inline-flex;gap:4px;align-items:center;}
+.anav .lang-btn{border:1px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.82);padding:4px 8px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;line-height:1;font-family:inherit;}
+.anav .lang-btn:hover{background:rgba(255,255,255,.12);}
+.anav .lang-btn.active{background:#c9a96e;color:#1a1a1a;border-color:#c9a96e;}
 @media(max-width:720px){
   .anav-inner{flex-wrap:wrap;padding:8px 12px;gap:6px 14px;min-height:0;}
   .anav-tabs{order:3;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
