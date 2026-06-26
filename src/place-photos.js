@@ -76,10 +76,13 @@ export async function autoApplyHeroGallery(slug, googleId) {
   const okdef = photos.find((p) => !p.lowdef);
   const hero = landscape || okdef || photos[0];
   await applyHero({ slug, photoId: hero.photo_id, position: 'centre', googleId });
+  // mode 'append' : vraies photos EN TÊTE, puis les images template d'origine à la
+  // suite (plafonné à 12 au total par applyGallery). Les templates restent donc
+  // visibles, mais après les vraies photos du salon.
   const galleryIds = photos.filter((p) => p.photo_id !== hero.photo_id).slice(0, 12).map((p) => p.photo_id);
   let galleryCount = 0;
   if (galleryIds.length) {
-    const r = await applyGallery({ slug, photoIds: galleryIds, mode: 'replace', googleId });
+    const r = await applyGallery({ slug, photoIds: galleryIds, mode: 'append', googleId });
     galleryCount = r.count;
   }
   return { hero: hero.photo_id, gallery: galleryCount };
