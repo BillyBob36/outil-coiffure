@@ -11,6 +11,7 @@ import { searchText, placeDetails, isPlacesConfigured } from '../places-client.j
 import { createSalon, mapPlaceToSalonData } from '../salon-creator.js';
 import { enrichSalonWithPlacePhotos } from '../place-photos.js';
 import { regionGroupIdForPostalCode } from '../dept-region.js';
+import { runCreationPipeline, getPipelineStatus } from '../salon-pipeline.js';
 
 const router = express.Router();
 router.use(express.json({ limit: '1mb' }));
@@ -72,15 +73,13 @@ router.post('/api/salon-new/from-place', async (req, res) => {
     const finalGroup = groupId || regionGroupIdForPostalCode(data.code_postal);
     const r = createSalon(data, { csvSource: 'manuel', groupId: finalGroup });
 
-    // Photos Google EN ARRIÈRE-PLAN (ne bloque pas la réponse) : fetch + stockage
-    // + application auto d'un héros + galerie. Le front suit via /photo-status.
+    // Pipeline complet EN ARRIÈRE-PLAN (ne bloque pas la réponse), dans l'ordre du
+    // Tableau de bord : photos → IA (nom ‖ présentation ‖ domaines) → capture finale.
+    // Le front suit via /photo-status (champ `pipeline`).
     const photosPending = !!(place.photos && place.photos.length);
-    if (photosPending && data.google_id) {
-      enrichSalonWithPlacePhotos({ slug: r.slug, googleId: data.google_id, photos: place.photos, nom: data.nom, ville: data.ville })
-        .then((x) => console.log(`[salon-new] ${r.slug}: ${x.stored} photos, hero=${x.hero}, gallery=${x.gallery}`))
-        .catch((e) => console.warn(`[salon-new] enrich ${r.slug} fail: ${e.message}`));
-    }
-    res.json({ ok: true, slug: r.slug, edit_token: r.edit_token, data, photos_pending: photosPending, ...urlsFor(r.slug, r.edit_token) });
+    runCreationPipeline({ slug: r.slug, googleId: data.google_id, photos: place.photos, nom: data.nom, ville: data.ville, withPhotos: true })
+      .catch((e) => console.warn(`[salon-new] pipeline ${r.slug} fail: ${e.message}`));
+    res.json({ ok: true, slug: r.slug, edit_token: r.edit_token, data, photos_pending: photosPending, pipeline: true, ...urlsFor(r.slug, r.edit_token) });
   } catch (e) {
     res.status(e.status === 403 ? 403 : 500).json({ error: e.message });
   }
@@ -106,7 +105,11 @@ router.post('/api/salon-new/manual', (req, res) => {
     };
     const finalGroup = groupId || regionGroupIdForPostalCode(data.code_postal);
     const r = createSalon(data, { csvSource: 'manuel', groupId: finalGroup });
-    res.json({ ok: true, slug: r.slug, edit_token: r.edit_token, ...urlsFor(r.slug, r.edit_token) });
+    // Pipeline IA (nom ‖ présentation ‖ domaines) + capture finale en arrière-plan
+    // (pas de photos Google en saisie manuelle).
+    runCreationPipeline({ slug: r.slug, withPhotos: false })
+      .catch((e) => console.warn(`[salon-new] pipeline ${r.slug} fail: ${e.message}`));
+    res.json({ ok: true, slug: r.slug, edit_token: r.edit_token, pipeline: true, ...urlsFor(r.slug, r.edit_token) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -136,7 +139,7 @@ router.post('/api/salon-new/refetch-photos', async (req, res) => {
 router.get('/api/salon-new/photo-status', (req, res) => {
   const slug = (req.query.slug ? String(req.query.slug) : '').trim();
   if (!slug) return res.status(400).json({ error: 'slug requis' });
-  const s = db.prepare('SELECT google_id, overrides_json, screenshot_path FROM salons WHERE slug = ?').get(slug);
+  const s = db.prepare('SELECT google_id, overrides_json, screenshot_path, nom_clean_at, domain_suggestions_at FROM salons WHERE slug = ?').get(slug);
   if (!s) return res.status(404).json({ error: 'introuvable' });
   const photos = s.google_id ? db.prepare('SELECT COUNT(*) AS c FROM salon_photos WHERE google_id = ?').get(s.google_id).c : 0;
   let hero = false, gallery = 0;
@@ -145,7 +148,13 @@ router.get('/api/salon-new/photo-status', (req, res) => {
     hero = !!(ov.hero && ov.hero.backgroundImage);
     if (ov.gallery && ov.gallery.imagesSource === 'photo-picker' && Array.isArray(ov.gallery.images)) gallery = ov.gallery.images.length;
   } catch {}
-  res.json({ slug, photos, hero_applied: hero, gallery, screenshot: s.screenshot_path || null });
+  const pipe = getPipelineStatus(slug);
+  res.json({
+    slug, photos, hero_applied: hero, gallery, screenshot: s.screenshot_path || null,
+    pipeline: pipe ? { step: pipe.step, photos: pipe.photos, names: pipe.names, presentation: pipe.presentation, domains: pipe.domains, captured: pipe.captured, done: pipe.done } : null,
+    names_done: pipe ? pipe.names : !!s.nom_clean_at,
+    domains_done: pipe ? pipe.domains : !!s.domain_suggestions_at,
+  });
 });
 
 export default router;
