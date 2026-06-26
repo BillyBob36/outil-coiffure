@@ -81,9 +81,11 @@
 
     <label class="lab" for="q" style="margin-top:16px">Rechercher sur Google</label>
     <div class="searchbar">
-      <div class="grow"><input id="q" placeholder="Ex : Studio Coiffure Commercy" autocomplete="off"></div>
+      <div class="grow"><input id="q" placeholder="Nom du salon (ex : Florence Coiffure)" autocomplete="off"></div>
+      <input id="q-ville" placeholder="Ville / commune" autocomplete="off" style="flex:0 0 180px">
       <button class="btn primary" id="search-btn">Rechercher</button>
     </div>
+    <div class="hint">Mets le <b>nom</b> + la <b>ville</b> : les noms de salons se répètent d'une commune à l'autre, la ville évite de tomber sur le mauvais salon (ou aucun).</div>
     <div id="places-state" class="hint"></div>
     <div class="results" id="results"></div>
   </div>
@@ -139,7 +141,7 @@ api('/admin/api/salon-new/meta').then(function(j){
 
 // ---- recherche ----
 function runSearch(){
-  var q=$('q').value.trim();
+  var q=($('q').value.trim()+' '+$('q-ville').value.trim()).trim();
   if(!q)return;
   var btn=$('search-btn');btn.disabled=true;btn.textContent='…';
   $('results').innerHTML='<div class="msg">Recherche…</div>';
@@ -150,6 +152,7 @@ function runSearch(){
 }
 $('search-btn').onclick=runSearch;
 $('q').addEventListener('keydown',function(e){if(e.key==='Enter')runSearch();});
+$('q-ville').addEventListener('keydown',function(e){if(e.key==='Enter')runSearch();});
 
 function renderResults(rows){
   var el=$('results');

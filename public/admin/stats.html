@@ -240,7 +240,7 @@
   function applyStatic(){
     document.documentElement.lang=lang==='zh'?'zh-CN':lang;
     $('t-brand').textContent=t('brand');$('refresh').textContent='↻ '+t('refresh');$('export').textContent='⬇ '+t('exp');
-    $('back-admin').textContent=t('back');
+    var _ba=$('back-admin');if(_ba)_ba.textContent=t('back');
     $('q').placeholder=t('search');$('t-humans').textContent=t('humans');$('t-auto').textContent=t('auto');
     Array.prototype.forEach.call(document.querySelectorAll('.lang-btn'),function(b){b.classList.toggle('active',b.dataset.lang===lang);});
   }
