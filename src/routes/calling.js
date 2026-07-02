@@ -167,6 +167,65 @@ router.get('/api/calling/stats', (req, res) => {
   });
 });
 
+// === Copilote IA temps réel : jeton Speech + guidage LLM ========================
+// Réutilise la ressource Azure johannfoundry (AIServices = OpenAI + Speech).
+const AZURE_ENDPOINT = (process.env.AZURE_OPENAI_ENDPOINT || 'https://johannfoundry.cognitiveservices.azure.com').replace(/\/$/, '');
+const AZURE_KEY = process.env.AZURE_OPENAI_KEY || '';
+const AZURE_COPILOT_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-5.4-mini-coiffeurs-app';
+const AZURE_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || '2024-12-01-preview';
+const SPEECH_REGION = process.env.AZURE_SPEECH_REGION || 'francecentral';
+
+// Jeton éphémère (~10 min) pour le SDK Speech côté navigateur : la clé reste au serveur.
+router.get('/api/calling/speech-token', async (req, res) => {
+  if (!AZURE_KEY) return res.status(503).json({ error: 'AZURE_OPENAI_KEY non configurée sur le serveur' });
+  try {
+    const r = await fetch(`https://${SPEECH_REGION}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, {
+      method: 'POST', headers: { 'Ocp-Apim-Subscription-Key': AZURE_KEY, 'Content-Length': '0' },
+    });
+    if (!r.ok) return res.status(502).json({ error: `Speech token ${r.status}` });
+    res.json({ token: await r.text(), region: SPEECH_REGION });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Copilote : à partir de la dernière phrase du prospect, classe l'intention,
+// choisit le nœud de l'arbre le plus pertinent et propose une réplique courte.
+// Le catalogue de nœuds est fourni par le front (source unique = call-tree.js).
+router.post('/api/calling/copilot', async (req, res) => {
+  if (!AZURE_KEY) return res.status(503).json({ error: 'AZURE_OPENAI_KEY non configurée sur le serveur' });
+  const b = req.body || {};
+  const utterance = String(b.utterance || '').trim();
+  if (!utterance) return res.status(400).json({ error: 'utterance requis' });
+  const nodes = Array.isArray(b.nodes) ? b.nodes : [];
+  const currentNode = String(b.current_node || '');
+  const salon = b.salon || {};
+  const catalog = nodes.map((n) => `- ${n.id}: ${n.label}${n.summary ? ' — ' + n.summary : ''}`).join('\n');
+  const system = `Tu es le copilote d'un commercial qui vend PAR TÉLÉPHONE des sites web déjà créés à des salons de coiffure (produit MaQuickPage, ~9,90 à 29€/mois, sans engagement possible ; argument clé : le site est DÉJÀ fait à partir de la fiche Google du salon, il suffit de le regarder). Objectif de l'appel : faire regarder la démo / obtenir l'accord d'envoyer le lien — PAS vendre au téléphone.
+Tu reçois la transcription de ce que dit le PROSPECT. À partir de sa dernière phrase :
+1) classe son intention (objection_temps, objection_prix, objection_deja_site, objection_besoin, mefiance, question, signal_achat, refus, hors_sujet…) ;
+2) choisis le nœud le plus pertinent de l'arbre ci-dessous (renvoie son id EXACT) ;
+3) propose en 1 à 2 phrases COURTES ce que le vendeur devrait dire maintenant (français parlé, naturel ; méthode : reconnaître la remarque puis rediriger vers « regardez la démo »). Ne vends pas, cherche le prochain pas.
+Réponds UNIQUEMENT en JSON : {"node_id":"<id>","intent":"<intention>","suggestion":"<réplique courte>"}.
+Arbre d'appel (id : libellé — résumé) :
+${catalog}`;
+  const user = `Salon : ${salon.nom || '?'}${salon.ville ? ' (' + salon.ville + ')' : ''}. Nœud affiché actuellement : ${currentNode || '?'}.
+Dernière phrase du prospect : "${utterance}"`;
+  try {
+    const r = await fetch(`${AZURE_ENDPOINT}/openai/deployments/${AZURE_COPILOT_DEPLOYMENT}/chat/completions?api-version=${AZURE_API_VERSION}`, {
+      method: 'POST', headers: { 'api-key': AZURE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+        max_completion_tokens: 400,
+        response_format: { type: 'json_object' },
+      }),
+    });
+    if (!r.ok) { const t = await r.text(); return res.status(502).json({ error: `Azure ${r.status}: ${t.slice(0, 200)}` }); }
+    const data = await r.json();
+    let parsed = {};
+    try { parsed = JSON.parse(data?.choices?.[0]?.message?.content || '{}'); } catch {}
+    res.json({ node_id: parsed.node_id || null, intent: parsed.intent || '', suggestion: parsed.suggestion || '' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Prochaine fiche à appeler (respecte les filtres status/q). Exclut les fiches
 // closes et les rappels programmés dans le futur.
 router.get('/api/calling/next', (req, res) => {

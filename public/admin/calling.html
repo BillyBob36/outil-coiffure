@@ -154,6 +154,18 @@
   <div id="view"></div>
 </main>
 
+<!-- Panneau Assistance d'appel IA (iframe de call-assist.html) -->
+<div id="assist-panel" style="position:fixed;inset:0;z-index:120;display:none;">
+  <div id="assist-backdrop" style="position:absolute;inset:0;background:rgba(10,10,10,.5);"></div>
+  <div style="position:absolute;top:0;right:0;bottom:0;width:min(900px,97vw);background:#fff;box-shadow:-8px 0 40px rgba(0,0,0,.3);display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;background:#1a1a1a;color:#fff;">
+      <b style="color:#c9a96e;">🧭 Assistance d'appel IA</b><span style="flex:1"></span>
+      <a id="assist-full" href="#" target="_blank" rel="noopener" style="color:#fff;font-size:13px;text-decoration:none;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 11px;">⤢ Plein écran</a>
+      <button id="assist-close" style="border:none;background:#c9a96e;color:#1a1a1a;border-radius:8px;padding:6px 12px;font-weight:800;cursor:pointer;">✕ Fermer</button>
+    </div>
+    <iframe id="assist-frame" title="Assistance d'appel IA" style="flex:1;border:none;width:100%;" allow="display-capture; microphone"></iframe>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -305,6 +317,7 @@
     Array.prototype.forEach.call($('view').querySelectorAll('[data-out]'),function(b){
       b.onclick=function(){recordOutcome(p.slug,b.getAttribute('data-out'));};});
     var ge=$('goempty');if(ge)ge.onclick=function(e){e.preventDefault();setView('list');};
+    var ab=$('assist-btn');if(ab)ab.onclick=function(){openAssist(p.slug);};
   }
   function obtn(out,label,cls){return'<button class="obtn'+(cls?' '+cls:'')+'" data-out="'+out+'">'+label+'</button>';}
 
@@ -348,6 +361,7 @@
         +'<p>• <b>Toujours</b> finir par une action : rappel programmé ou lien envoyé.</p>'
         +'<p>• Un « non » = un « pas maintenant » : relance dans quelques semaines (sauf « ne pas rappeler »).</p>'
       +'</div></details>'
+      +'<button id="assist-btn" style="width:100%;margin-top:14px;border:none;background:var(--ink);color:#fff;border-radius:10px;padding:12px;font-size:14.5px;font-weight:800;cursor:pointer">🧭 Assistance d\'appel IA</button>'
       +'</div></div>';
   }
 
@@ -426,6 +440,17 @@
   }
 
   $('refresh').onclick=function(){loadStats();if(view==='cockpit')renderCockpitLoad();else loadList();};
+
+  // ---- Panneau Assistance d'appel IA ----
+  function openAssist(slug){
+    var q=slug?('&slug='+encodeURIComponent(slug)):'';
+    $('assist-frame').src='/admin/call-assist.html?embed=1'+q;
+    $('assist-full').href='/admin/call-assist.html'+(slug?('?slug='+encodeURIComponent(slug)):'');
+    $('assist-panel').style.display='block';
+  }
+  function closeAssist(){ $('assist-panel').style.display='none'; $('assist-frame').src='about:blank'; }
+  $('assist-close').onclick=closeAssist;
+  $('assist-backdrop').onclick=closeAssist;
 
   loadStats();
   renderCockpitLoad();

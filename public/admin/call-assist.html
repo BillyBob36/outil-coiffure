@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>MaQuickPage · Assistance d'appel IA</title>
+<style>
+  :root{--gold:#C8A24B;--gold-d:#A8842F;--ink:#15130E;--bg:#f6f4ef;--card:#fff;--border:#e7e2d6;--muted:#8a8270;--blue:#002FA7;--ok:#138a36;--hot:#c0392b;--cool:#5b6470;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45;}
+  .topbar{background:#1a1a1a;color:#fff;padding:12px 0;}
+  .topbar-inner{max-width:1240px;margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .brand{font-weight:600;font-size:1.15rem;color:#c9a96e;}
+  .spacer{flex:1;}
+  .seg{display:inline-flex;border:1px solid rgba(255,255,255,.3);border-radius:9px;overflow:hidden;}
+  .seg button{background:transparent;color:#fff;border:none;padding:7px 14px;font-size:13.5px;font-weight:700;cursor:pointer;}
+  .seg button.on{background:#c9a96e;color:#1a1a1a;}
+  main{max-width:1240px;margin:0 auto;padding:14px 16px;}
+  .cols{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;align-items:start;}
+  @media(max-width:900px){.cols{grid-template-columns:1fr;}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:15px;padding:16px;}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 10px;}
+  /* Guided */
+  .cg-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .cg-phase{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 10px;border-radius:999px;background:#eef0f2;color:var(--cool);}
+  .cg-ph-Ouverture{background:#e0e7ff;color:#3730a3;}.cg-ph-Pitch{background:#fef3c7;color:#92400e;}
+  .cg-ph-Objection{background:#fde2e0;color:#9b2c22;}.cg-ph-Closing{background:#dcfce7;color:#14532d;}.cg-ph-Fin{background:#eef0f2;color:#5b6470;}
+  .cg-nav{margin-left:auto;border:1.5px solid var(--border);background:#fff;border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--ink);}
+  .cg-nav+.cg-nav{margin-left:6px;}
+  .cg-label{font-size:19px;font-weight:800;margin-bottom:10px;}
+  .cg-say{font-size:19px;line-height:1.5;background:#faf8f2;border-left:4px solid var(--gold);border-radius:0 10px 10px 0;padding:14px 16px;font-weight:500;}
+  .cg-tip{font-size:13.5px;color:var(--gold-d);margin-top:10px;}
+  .cg-branch-lab{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin:16px 0 8px;}
+  .cg-branches{display:flex;flex-wrap:wrap;gap:8px;}
+  .cg-branch{border:1.5px solid var(--border);background:#fff;border-radius:10px;padding:11px 14px;font-size:14.5px;font-weight:700;cursor:pointer;color:var(--ink);}
+  .cg-branch:hover{border-color:var(--gold);background:#fdf3dc;}
+  .cg-end{color:var(--muted);font-style:italic;margin-top:16px;}
+  /* Copilot */
+  .co-status{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px;}
+  .dot{width:10px;height:10px;border-radius:50%;background:#c9c3b4;display:inline-block;}
+  .dot.live{background:var(--hot);animation:pulse 1.2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+  .co-btn{border:none;border-radius:10px;padding:11px 16px;font-size:14.5px;font-weight:800;cursor:pointer;}
+  .co-btn.start{background:var(--hot);color:#fff;}.co-btn.stop{background:#fff;border:1.5px solid var(--border);color:var(--ink);}
+  .co-sugg{background:linear-gradient(180deg,#fff8e8,#fff);border:1.5px solid var(--gold);border-radius:12px;padding:14px;margin:12px 0;min-height:64px;}
+  .co-sugg .lab{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--gold-d);}
+  .co-sugg .txt{font-size:17px;font-weight:600;margin-top:6px;}
+  .co-sugg .intent{font-size:12px;color:var(--muted);margin-top:8px;}
+  .co-trans{margin-top:12px;max-height:200px;overflow:auto;font-size:13.5px;}
+  .co-line{padding:5px 0;border-bottom:1px solid #f0ece1;}
+  .co-line .who{font-weight:800;font-size:11px;text-transform:uppercase;color:var(--blue);margin-right:6px;}
+  .co-partial{color:var(--muted);font-style:italic;}
+  .note{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.5;}
+  /* Map */
+  #map-view{display:none;}
+  .map-cols{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;}
+  .map-col{min-width:230px;flex:1;}
+  .map-col h3{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 8px;}
+  .map-node{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:10px 12px;margin-bottom:8px;}
+  .map-node .nl{font-weight:800;font-size:14px;}
+  .map-node .ns{font-size:12.5px;color:var(--cool);margin:4px 0 6px;}
+  .map-node .mb{font-size:12px;color:var(--muted);}
+  .map-node .mb b{color:var(--ink);}
+  .hidden{display:none!important;}
+  #sdk-warn{background:#fdecea;border:1px solid #e3b4ae;color:#9b2c22;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:10px;}
+</style>
+<link rel="stylesheet" href="/admin/admin-nav.css">
+<link rel="icon" type="image/png" href="/admin/picto-coif.png">
+</head>
+<body>
+<header class="anav" id="nav">
+  <div class="anav-inner">
+    <a class="anav-brand" href="/admin/"><img class="anav-logo" src="/admin/picto-coif.png" alt=""><span>Outil coiffure</span></a>
+    <nav class="anav-tabs">
+      <a class="anav-tab" data-path="/admin" href="/admin/">Tableau de bord</a>
+      <a class="anav-tab" data-path="/admin/photos.html" href="/admin/photos.html">Photos</a>
+      <a class="anav-tab" data-path="/admin/stats.html" href="/admin/stats.html">Suivi</a>
+      <a class="anav-tab" data-path="/admin/nouveau-salon.html" href="/admin/nouveau-salon.html">➕ Nouveau salon</a>
+      <a class="anav-tab" data-path="/admin/calling.html" href="/admin/calling.html">☎️ Prospection</a>
+    </nav>
+    <span class="anav-spacer"></span>
+    <div class="anav-right"><button class="anav-logout" id="anav-logout" type="button">Déconnexion</button></div>
+  </div>
+</header>
+<script src="/admin/admin-nav.js"></script>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">🧭 Assistance d'appel IA</span>
+    <span id="salon-name" style="font-size:13px;color:rgba(255,255,255,.7)"></span>
+    <span class="spacer"></span>
+    <div class="seg"><button id="tab-guide" class="on">Mode guidé</button><button id="tab-map">Vue carte</button></div>
+  </div>
+</div>
+
+<main>
+  <div id="guided-view">
+    <div class="cols">
+      <div class="card"><h2>Ce que tu dis</h2><div id="guided"></div></div>
+      <div class="card">
+        <h2>🎙 Copilote temps réel</h2>
+        <div id="sdk-warn" class="hidden"></div>
+        <div class="co-status"><span class="dot" id="co-dot"></span><span id="co-state">À l'arrêt</span></div>
+        <button class="co-btn start" id="co-toggle">🎙 Démarrer l'écoute</button>
+        <div class="co-sugg"><div class="lab">💬 Suggestion du copilote</div><div class="txt" id="co-sugg-txt">— L'écoute est arrêtée. Démarre-la pendant l'appel : le copilote détecte ce que dit le prospect et t'oriente.</div><div class="intent" id="co-intent"></div></div>
+        <div class="co-trans" id="co-trans"></div>
+        <div class="note" id="co-note"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="map-view">
+    <div class="card"><h2>Vue carte — le parcours d'appel complet</h2><div class="map-cols" id="map"></div></div>
+  </div>
+</main>
+
+<!-- SDK Azure Speech (navigateur) — async pour ne jamais bloquer l'affichage de l'arbre -->
+<script async src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+<script src="/admin/call-tree.js"></script>
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  var qs=new URLSearchParams(location.search);
+  var EMBED=qs.get('embed')==='1';
+  var SLUG=qs.get('slug')||'';
+  var salon={nom:'',ville:''};
+
+  if(EMBED){ var nav=$('nav'); if(nav) nav.style.display='none'; }
+
+  // ---- Contexte salon (pour le copilote) ----
+  if(SLUG){
+    fetch('/admin/api/calling/'+encodeURIComponent(SLUG),{credentials:'same-origin',headers:{'Accept':'application/json'}})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(d){ if(d&&d.prospect){ salon={nom:d.prospect.nom,ville:d.prospect.ville}; $('salon-name').textContent='· '+d.prospect.nom; } })
+      .catch(function(){});
+  }
+
+  // ---- Mode guidé ----
+  var guide=window.mountGuided($('guided'),{ onNode:function(n){ highlightMap(n.id); } });
+
+  // ---- Onglets guidé / carte ----
+  function setTab(t){
+    $('tab-guide').classList.toggle('on',t==='guide');
+    $('tab-map').classList.toggle('on',t==='map');
+    $('guided-view').style.display=t==='guide'?'':'none';
+    $('map-view').style.display=t==='map'?'':'none';
+  }
+  $('tab-guide').onclick=function(){setTab('guide');};
+  $('tab-map').onclick=function(){setTab('map');buildMap();};
+
+  // ---- Vue carte ----
+  var mapBuilt=false;
+  function esc(s){return s==null?'':String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function buildMap(){
+    if(mapBuilt)return; mapBuilt=true;
+    var T=window.CALL_TREE, N=T.nodes;
+    var byPhase={}; T.phases.forEach(function(p){byPhase[p]=[];});
+    Object.keys(N).forEach(function(k){var n=N[k];(byPhase[n.phase]=byPhase[n.phase]||[]).push(n);});
+    var h='';
+    T.phases.forEach(function(p){
+      h+='<div class="map-col"><h3>'+esc(p)+'</h3>';
+      byPhase[p].forEach(function(n){
+        h+='<div class="map-node" id="mn-'+esc(n.id)+'"><div class="nl">'+esc(n.label)+'</div><div class="ns">'+esc(n.summary)+'</div>';
+        (n.branches||[]).forEach(function(b){var t=N[b.to];h+='<div class="mb">↳ <b>'+esc(b.label)+'</b> → '+esc(t?t.label:b.to)+'</div>';});
+        h+='</div>';
+      });
+      h+='</div>';
+    });
+    $('map').innerHTML=h;
+    highlightMap(guide.current().id);
+  }
+  function highlightMap(id){
+    Array.prototype.forEach.call(document.querySelectorAll('.map-node'),function(el){el.style.outline='';});
+    var el=$('mn-'+id); if(el){el.style.outline='3px solid var(--gold)';}
+  }
+
+  // ---- Copilote temps réel (Azure Speech + gpt-5.4-mini) ----
+  var recognizer=null, audioCtx=null, procNode=null, dispStream=null, listening=false, busy=false;
+  $('co-note').innerHTML='Au démarrage, choisis <b>« Écran entier »</b> et coche <b>« Partager aussi l\'audio système »</b> (c\'est ce qui capte la voix du prospect via ton casque Bluetooth). Le transcript reste à l\'écran, rien n\'est enregistré.';
+
+  function setState(txt,live){ $('co-state').textContent=txt; $('co-dot').classList.toggle('live',!!live); }
+
+  function addLine(text,partial){
+    var t=$('co-trans');
+    if(partial){
+      var p=t.querySelector('.co-partial'); if(!p){p=document.createElement('div');p.className='co-line co-partial';t.appendChild(p);} p.innerHTML='<span class="who">Prospect</span>'+esc(text);
+    }else{
+      var p2=t.querySelector('.co-partial'); if(p2)p2.remove();
+      var d=document.createElement('div');d.className='co-line';d.innerHTML='<span class="who">Prospect</span>'+esc(text);t.appendChild(d);
+    }
+    t.scrollTop=t.scrollHeight;
+  }
+
+  function askCopilot(utterance){
+    if(busy)return; busy=true;
+    fetch('/admin/api/calling/copilot',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({utterance:utterance,current_node:guide.current().id,nodes:window.CALL_TREE.catalog(),salon:salon})})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        busy=false;
+        if(j.suggestion){ $('co-sugg-txt').textContent=j.suggestion; }
+        if(j.intent){ $('co-intent').textContent='Intention détectée : '+j.intent; }
+        if(j.node_id && window.CALL_TREE.nodes[j.node_id]){ guide.goTo(j.node_id); }
+      })
+      .catch(function(){ busy=false; });
+  }
+
+  function startListening(){
+    var SDK=window.SpeechSDK;
+    if(!SDK){ $('sdk-warn').classList.remove('hidden'); $('sdk-warn').textContent='Le SDK Azure Speech n\'est pas encore chargé (réseau ?). Réessaie dans un instant — le mode guidé fonctionne quand même.'; return; }
+    navigator.mediaDevices.getDisplayMedia({video:true,audio:true}).then(function(stream){
+      var at=stream.getAudioTracks();
+      if(!at.length){ stream.getTracks().forEach(function(t){t.stop();}); alert('Aucun audio partagé. Relance et coche « Partager aussi l\'audio système ».'); return; }
+      dispStream=stream;
+      stream.getVideoTracks().forEach(function(t){ t.onended=stopListening; }); // stop si l'utilisateur coupe le partage
+
+      fetch('/admin/api/calling/speech-token',{credentials:'same-origin',headers:{'Accept':'application/json'}})
+        .then(function(r){return r.json();})
+        .then(function(tok){
+          if(!tok.token){ throw new Error(tok.error||'token'); }
+          var speechCfg=SDK.SpeechConfig.fromAuthorizationToken(tok.token,tok.region);
+          speechCfg.speechRecognitionLanguage='fr-FR';
+          var pushStream=SDK.AudioInputStream.createPushStream(SDK.AudioStreamFormat.getWaveFormatPCM(16000,16,1));
+
+          audioCtx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
+          var src=audioCtx.createMediaStreamSource(new MediaStream([at[0]]));
+          procNode=audioCtx.createScriptProcessor(4096,1,1);
+          var mute=audioCtx.createGain(); mute.gain.value=0; // évite le larsen
+          src.connect(procNode); procNode.connect(mute); mute.connect(audioCtx.destination);
+          procNode.onaudioprocess=function(e){
+            var input=e.inputBuffer.getChannelData(0);
+            var pcm=new Int16Array(input.length);
+            for(var i=0;i<input.length;i++){var s=Math.max(-1,Math.min(1,input[i]));pcm[i]=s<0?s*0x8000:s*0x7FFF;}
+            pushStream.write(pcm.buffer);
+          };
+
+          var audioCfg=SDK.AudioConfig.fromStreamInput(pushStream);
+          recognizer=new SDK.SpeechRecognizer(speechCfg,audioCfg);
+          recognizer.recognizing=function(s,ev){ if(ev.result.text) addLine(ev.result.text,true); };
+          recognizer.recognized=function(s,ev){
+            var txt=ev.result.text&&ev.result.text.trim();
+            if(txt){ addLine(txt,false); askCopilot(txt); }
+          };
+          recognizer.canceled=function(s,ev){ setState('Erreur : '+(ev.errorDetails||ev.reason),false); };
+          recognizer.startContinuousRecognitionAsync(function(){
+            listening=true; setState('À l\'écoute…',true);
+            $('co-toggle').textContent='■ Arrêter l\'écoute'; $('co-toggle').className='co-btn stop';
+          },function(err){ setState('Impossible de démarrer : '+err,false); });
+        })
+        .catch(function(e){ setState('Erreur token : '+e.message,false); stopListening(); });
+    }).catch(function(e){ setState('Partage annulé',false); });
+  }
+
+  function stopListening(){
+    listening=false; setState('À l\'arrêt',false);
+    $('co-toggle').textContent='🎙 Démarrer l\'écoute'; $('co-toggle').className='co-btn start';
+    try{ if(recognizer){ recognizer.stopContinuousRecognitionAsync(function(){recognizer.close();recognizer=null;}); } }catch(e){}
+    try{ if(procNode){procNode.disconnect();procNode=null;} }catch(e){}
+    try{ if(audioCtx){audioCtx.close();audioCtx=null;} }catch(e){}
+    try{ if(dispStream){dispStream.getTracks().forEach(function(t){t.stop();});dispStream=null;} }catch(e){}
+  }
+
+  $('co-toggle').onclick=function(){ if(listening) stopListening(); else startListening(); };
+})();
+</script>
+</body>
+</html>
